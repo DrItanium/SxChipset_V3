@@ -17,9 +17,8 @@ new terminal is run
 ` . bin/activate `
 
 
-# Project Structure
 
-There are two important folders, the research directory is a scratch space to
-try things out. The projects directory contains the platformio projects that I
-can use to program different chips I have access to. 
+# Projects
 
+- ManagementEngine: Handles a bunch of the timing related aspects when interfacing with the i960Sx
+- Chipset: Primary transaction handler
