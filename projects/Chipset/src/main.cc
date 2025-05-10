@@ -87,43 +87,40 @@ enum class Pin : PinIndex {
     PB04,
     Neopixel = PIN_NEOPIXEL,
     SD_Detect = 95,
-    // custom signals
-    READY = PD12,
-    ADRMUX_DEN1 = PA12,
-    ADRMUX_DEN2 = PA13,
-    ADRMUX_CLK = PA14,
-    // Alternate view for the pinout
-    ADRMUX_SEL0 = ADRMUX_DEN1,
-    ADRMUX_SEL1 = ADRMUX_DEN2,
-    ADRMUX_EN = ADRMUX_CLK,
-    BLAST = PA15,
-    ADRMUX0 = PA16,
-    ADRMUX1 = PA17,
-    ADRMUX2 = PA18,
-    ADRMUX3 = PA19,
-    ADRMUX4 = PA20,
-    ADRMUX5 = PA21,
-    ADRMUX6 = PA22,
-    ADRMUX7 = PA23,
-    BE0 = PB14,
-    BE1 = PB15,
-    WR = PB19,
-    Data0 = PC00,
-    Data1 = PC01,
-    Data2 = PC02,
-    Data3 = PC03,
-    Data4 = PC04,
-    Data5 = PC05,
-    Data6 = PC06,
-    Data7 = PC07,
-    Data8 = PC10,
-    Data9 = PC11,
-    Data10 = PC12,
-    Data11 = PC13,
-    Data12 = PC14,
-    Data13 = PC15,
-    Data14 = PC16,
-    Data15 = PC17,
+    // custom signals (with comments about the digital index as well, mostly
+    // sorted based on the digital connector block but not fully)
+    READY = PD12, // 22
+    BLAST = PA15, // 23
+    ADRMUX_SEL0 = PA12, // 26
+    ADRMUX_SEL1 = PA13, // 27
+    ADRMUX_EN = PA14, // 28
+    WR = PB19, // 29
+    ADRMUX0 = PA16, // 37
+    ADRMUX1 = PA17, // 36
+    ADRMUX2 = PA18, // 35
+    ADRMUX3 = PA19, // 34
+    ADRMUX4 = PA20, // 33
+    ADRMUX5 = PA21, // 32
+    ADRMUX6 = PA22, // 31
+    ADRMUX7 = PA23, // 30
+    BE1 = PB15, // 38
+    BE0 = PB14, // 39
+    Data0 = PC00, // 70/A3
+    Data1 = PC01, // 71/A4
+    Data2 = PC02, // 72/A5
+    Data3 = PC03, // 73/A6
+    Data4 = PC04, // 48
+    Data5 = PC05, // 49
+    Data6 = PC06, // 46
+    Data7 = PC07, // 47
+    Data8 = PC10, // 45
+    Data9 = PC11, // 44
+    Data10 = PC12, // 41
+    Data11 = PC13, // 40
+    Data12 = PC14, // 43
+    Data13 = PC15, // 42
+    Data15 = PC17, // 24
+    Data14 = PC16, // 25
 
 };
 
@@ -328,7 +325,7 @@ doNeopixel() noexcept {
     pixel.show();
 }
 std::tuple<uint16_t, uint16_t, tc_clock_prescaler>
-computeFrequency(float freq) noexcept {
+constexpr computeFrequency(float freq) noexcept {
     uint16_t divider = 1;
     uint16_t compare = 0;
     tc_clock_prescaler prescaler = TC_CLOCK_PRESCALER_DIV1;
