@@ -84,9 +84,7 @@ enum class Pin : PinIndex {
     PB04,
     Neopixel = PIN_NEOPIXEL,
     SD_Detect = 95,
-
-    DAC0 = PA02,
-    DAC1 = PA05,
+    // custom signals
     READY = PD12,
     ADRMUX_DEN1 = PA12,
     ADRMUX_DEN2 = PA13,
@@ -123,7 +121,9 @@ enum class Pin : PinIndex {
     Data13 = PC15,
     Data14 = PC16,
     Data15 = PC17,
+
 };
+
 
 [[gnu::always_inline]]
 inline void 
@@ -180,15 +180,84 @@ outputPin() noexcept {
     pinMode<p, OUTPUT>();
     digitalWrite<p, initialValue>();
 }
+template<Pin p>
+decltype(auto) getCorrespondingPort() noexcept {
+    return digitalPinToPort(static_cast<std::underlying_type_t<Pin>>(p));
+}
+// Memory interface operations
+union DataLines {
+    uint32_t receive;
+    uint16_t send;
+    struct {
+        uint32_t lo : 8;
+        uint32_t free2 : 2;
+        uint32_t hi : 8;
+    } from960;
+    struct {
+        uint32_t lo : 8;
+        uint32_t hi : 8;
+    } to960;
+};
+constexpr uint32_t DataMask = 0x0003FCFF;
+[[gnu::always_inline]]
+inline void setDataLines(uint16_t value) noexcept {
+    DataLines d;
+    d.receive = 0;
+    d.send = value;
+    d.from960.hi = d.to960.hi;
+    d.from960.free2 = 0;
+    getCorrespondingPort<Pin::Data0>()->OUTCLR.reg = DataMask;
+    getCorrespondingPort<Pin::Data0>()->OUTSET.reg = DataMask & d.receive;
+}
+[[gnu::always_inline]]
+inline uint16_t getDataLines() noexcept {
+    DataLines d;
+    d.receive = getCorrespondingPort<Pin::Data0>()->IN.reg;
+    d.to960.hi = d.from960.hi;
+    return d.send;
+}
 // tracking information
-// SERCOM0 -> Serial1 (D0/D1 pair)
-// SERCOM1 -> Serial3 (D16/D17 pair)
-// SERCOM2 -> SD (Reserved)
-// SERCOM3 -> Wire (D20/D21 pair)
-// SERCOM4 -> Serial2 (D18/D19 pair)
-// SERCOM5 -> Serial4 (D14/D15 pair)
-// SERCOM6 -> Wire1 (D24/D25 pair) [optional]
-// SERCOM7 -> SPI
+// SERCOM0 -> Serial1 (D0/D1 pair) [optional]
+// --- PAD[0]: PB24 (D1)
+// --- PAD[1]: PB25 (D0)
+// --- PAD[2]: Unused
+// --- PAD[3]: Unused
+// SERCOM1 -> Serial3 (D16/D17 pair) [optional]
+// --- PAD[0]: PC22 (D16)
+// --- PAD[1]: PC23 (D17)
+// --- PAD[2]: Unused
+// --- PAD[3]: Unused
+// SERCOM2 -> SD (Reserved) [required]
+// --- PAD[0]: PB26 (MOSI)
+// --- PAD[1]: PB27 (SCK)
+// --- PAD[2]: PB28 (CS)
+// --- PAD[3]: PB29 (MISO)
+// SERCOM3 -> Wire (D20/D21 pair) [required]
+// --- PAD[0]: PB20 (SDA)
+// --- PAD[1]: PB21 (SCL)
+// --- PAD[2]: Unused
+// --- PAD[3]: Unused
+// SERCOM4 -> Serial2 (D18/D19 pair) [optional]
+// --- PAD[0]: PB12 (D18)
+// --- PAD[1]: PB13 (D19)
+// --- PAD[2]: Unused
+// --- PAD[3]: Unused
+// SERCOM5 -> Serial4 (D14/D15 pair) [optional]
+// --- PAD[0]: PB16 (D14)
+// --- PAD[1]: PB17 (D15)
+// --- PAD[2]: Unused
+// --- PAD[3]: Unused
+// SERCOM6 -> Free for other use since Wire1 is being used for data lines
+// -- Pads free for use --
+// --- PAD[0]: Unavailable
+// --- PAD[1]: Unavailable
+// --- PAD[2]: PC18 (D2)
+// --- PAD[3]: PC19 (D3)
+// SERCOM7 -> SPI (D50,D51,D52 triple + ISP)
+// --- PAD[0]: PD09 (SCK)
+// --- PAD[1]: PD08 (MOSI)
+// --- PAD[2]: PD10 (~CS)
+// --- PAD[3]: PD11 (MISO)
 // system init functions
 void
 setupRTC() noexcept {
