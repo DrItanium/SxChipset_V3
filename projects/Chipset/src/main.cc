@@ -180,6 +180,16 @@ outputPin() noexcept {
     pinMode<p, OUTPUT>();
     digitalWrite<p, initialValue>();
 }
+// tracking information
+// SERCOM0 -> Serial1 (D0/D1 pair)
+// SERCOM1 -> Serial3 (D16/D17 pair)
+// SERCOM2 -> SD (Reserved)
+// SERCOM3 -> Wire (D20/D21 pair)
+// SERCOM4 -> Serial2 (D18/D19 pair)
+// SERCOM5 -> Serial4 (D14/D15 pair)
+// SERCOM6 -> Wire1 (D24/D25 pair) [optional]
+// SERCOM7 -> SPI
+// system init functions
 void
 setupRTC() noexcept {
     if (!rtc.begin()) {
