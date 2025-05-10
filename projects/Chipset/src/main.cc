@@ -163,6 +163,16 @@ setupRTC() noexcept {
     }
 }
 void
+setNeopixelColor(uint32_t value) noexcept {
+    pixel.clear();
+    pixel.setPixelColor(0, value);
+    pixel.show();
+}
+void
+setNeopixelColor(uint8_t r, uint8_t g, uint8_t b) noexcept {
+    setNeopixelColor(Adafruit_NeoPixel::Color(r, g, b));
+}
+void
 setupNeopixel() noexcept {
     // enable the onboard neopixel
     pixel.begin();
@@ -183,9 +193,7 @@ void
 doNeopixel() noexcept {
     if (!systemBooted) 
         return;
-    pixel.clear();
-    pixel.setPixelColor(0, pixel.Color(random(), random(), random()));
-    pixel.show();
+    setNeopixelColor(random(), random(), random());
 }
 std::tuple<uint16_t, uint16_t, tc_clock_prescaler>
 constexpr computeFrequency(float freq) noexcept {
@@ -261,27 +269,29 @@ configureSDCard() noexcept {
         hasSDCard = true;
     }
 }
+template<uint8_t brightnessMax = 64, int wait = 10>
 void 
 waitForSerialConnection_Update() noexcept {
+    static_assert(wait >= 0, "Negative wait provided!");
     // use a purple intensity
-    static uint8_t intensity = 255;
-    pixel.clear();
-    pixel.setPixelColor(0, pixel.Color(intensity, 0, intensity));
-    pixel.show();
-    --intensity;
+    static uint8_t index = 0;
+    pixel.setBrightness(map(index < 128 ? index : static_cast<uint8_t>(~index), 0, 127, 0, brightnessMax));
+    setNeopixelColor(255, 0, 255);
+    ++index;
+    delay(wait);
+
 }
 void
 setup() {
     Serial.begin(9600);
     setupNeopixel();
+    setNeopixelColor(255, 0, 255);
     while (!Serial) {
         // just configure the neopixel to inform me that we are waiting for a
         // serial connection
         waitForSerialConnection_Update();
     }
-    pixel.clear();
-    pixel.setPixelColor(0, pixel.Color(0, 0, 0));
-    pixel.show();
+    setNeopixelColor(0, 0, 0);
     pinMode<Pin::SD_Detect, INPUT>();
     SPI.begin();
     Wire.begin();
