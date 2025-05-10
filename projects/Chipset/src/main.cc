@@ -1,13 +1,21 @@
+// core arduino stuff
 #include <Arduino.h>
-#include <SD.h>
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_NeoPixel.h>
-#include <RTClib.h>
-#include <type_traits>
-#include <Adafruit_ZeroTimer.h>
+// std lib :)
 #include <tuple>
 #include <optional>
+#include <type_traits>
+// builtin device libraries 
+#include <Adafruit_NeoPixel.h> 
+#include <Adafruit_ZeroTimer.h>
+#include <SdFat_Adafruit_Fork.h>
+#include <Adafruit_SPIFlash.h>
+#include <SPI.h>
+#include <Wire.h>
+// over i2c
+#include <RTClib.h>
+Adafruit_FlashTransport_QSPI flashTransport; // for the 8MB of onboard FLASH
+Adafruit_SPIFlash onboardFlash(&flashTransport);
+SdFat onboardSdCard;
 Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL);
 volatile bool hasRTC = false;
 volatile bool hasSDCard = false;
@@ -377,10 +385,32 @@ setupTimers() noexcept {
     neopixelTimer.enable(true);
 }
 void
+configureOnboardFlash() noexcept {
+    Serial.print("Starting up onboard QSPI Flash...");
+    onboardFlash.begin();
+    Serial.println("Done");
+    Serial.println("Onboard Flash information");
+    Serial.print("JEDEC ID: 0x");
+    Serial.println(onboardFlash.getJEDECID(), HEX);
+    Serial.print("Flash size: ");
+    Serial.print(onboardFlash.size() / 1024);
+    Serial.println(" KB");
+}
+void
+configureSDCard() noexcept {
+    Serial.print("Starting up SD Card...");
+    if (!onboardSdCard.begin(SDCARD_SS_PIN)) {
+        Serial.println("No card found (is one inserted?)");
+    } else {
+        Serial.println("Card found!");
+        hasSDCard = true;
+    }
+}
+void
 setup() {
     Serial.begin(9600);
+    while (!Serial);
     pinMode<Pin::SD_Detect, INPUT>();
-    SD.begin();
     SPI.begin();
     Wire.begin();
     // @todo figure out why the pinout is locking up the upload port
@@ -415,6 +445,8 @@ setup() {
     outputPin<Pin::Data13, LOW>();
     outputPin<Pin::Data14, LOW>();
     outputPin<Pin::Data15, LOW>();
+    configureOnboardFlash();
+    configureSDCard();
     setupRTC();
     setupNeopixel();
     setupTimers();
