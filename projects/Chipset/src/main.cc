@@ -269,28 +269,23 @@ configureSDCard() noexcept {
         hasSDCard = true;
     }
 }
-template<uint8_t brightnessMax = 64, int wait = 10>
-void 
-waitForSerialConnection_Update() noexcept {
-    static_assert(wait >= 0, "Negative wait provided!");
-    // use a purple intensity
-    static uint8_t index = 0;
-    pixel.setBrightness(map(index < 128 ? index : static_cast<uint8_t>(~index), 0, 127, 0, brightnessMax));
-    setNeopixelColor(255, 0, 255);
-    ++index;
-    delay(wait);
-
-}
 void
 setup() {
     Serial.begin(9600);
     setupNeopixel();
-    setNeopixelColor(255, 0, 255);
+    uint8_t index = 0;
     while (!Serial) {
         // just configure the neopixel to inform me that we are waiting for a
         // serial connection
-        waitForSerialConnection_Update();
+        //
+        // this pattern will actually get really bright and then falloff and
+        // repeat
+        pixel.setBrightness(map(index < 128 ? index : static_cast<uint8_t>(~index), 0, 127, 0, 64));
+        setNeopixelColor(255, 0, 255);
+        ++index;
+        delay(10);
     }
+    pixel.setBrightness(10);
     setNeopixelColor(0, 0, 0);
     pinMode<Pin::SD_Detect, INPUT>();
     SPI.begin();
