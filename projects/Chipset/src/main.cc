@@ -63,24 +63,38 @@ union DataLines {
     } to960;
 };
 constexpr uint32_t DataMask = 0x0003FCFF;
+[[gnu::used]]
 [[gnu::always_inline]]
 inline void 
 setDataLines(uint16_t value) noexcept {
+    // properly updating the output port without causing problems requires two
+    // port writes
+    //
+    // First, we need to set everything to low to create a normal state
+    // Second, we then need to update only the bits that make up the 16-bit
+    // data bus lines via OUTSET. So the value specified (and then transformed
+    // internally) describes which bits should be HIGH with everything else
+    // being kept low
+    PORT->Group[PORTC].OUTCLR.reg = DataMask;
     DataLines d;
-    d.receive = 0;
-    d.send = value;
-    d.from960.hi = d.to960.hi;
-    d.from960.free2 = 0;
-    getCorrespondingPort<Pin::Data0>()->OUTCLR.reg = DataMask;
-    getCorrespondingPort<Pin::Data0>()->OUTSET.reg = DataMask & d.receive;
+    d.send = value; // load the 16-bit value directly
+    d.from960.hi = d.to960.hi; // then have the compiler shift the upper half
+                               // left by two places
+    // However, this creates a potentially damaging state since the two bits
+    // (8, 9) will be preserved. At the end we clear those bits via an and
+    // operation.
+    PORT->Group[PORTC].OUTSET.reg = DataMask & d.receive;
 }
+[[gnu::used]]
 [[gnu::always_inline]]
 inline uint16_t 
 getDataLines() noexcept {
     DataLines d;
-    d.receive = getCorrespondingPort<Pin::Data0>()->IN.reg;
-    d.to960.hi = d.from960.hi;
-    return d.send;
+    d.receive = PORT->Group[PORTC].IN.reg; // Read the input port fully
+    d.to960.hi = d.from960.hi; // make the compiler actually fix the off by two
+                               // piece. In the process of doing this, the
+                               // lower 16-bits are now correct.
+    return d.send; // just return the lower half of the 32-bit allocation
 }
 
 volatile bool systemBooted = false;
@@ -345,5 +359,5 @@ setup() {
 }
 void
 loop() {
-    delay(500);
+    executionLoop();
 }
