@@ -49,6 +49,16 @@ volatile bool hasRTC = false;
 volatile bool hasSDCard = false;
 RTC_DS3231 rtc;
 // Memory interface operations
+// The way that the SAMD51P20A on the GCM4 is laid out means that there is
+// actually no contiguous 16-bit block of bits starting from position 0 and
+// walking upward. Working around this means that we actually use PC00-PC07 for
+// the lower half of the data lines and PC10-PC17 for the upper half of the
+// data lines. What it requires is that we shift the upper half right two places
+// and combine when handling a write operation. On a read operation, we take the upper
+// half of the data value and shift it left by 2 places. This makes it possible
+// to fairly quickly update the data ports. 
+// 
+//
 union DataLines {
     uint32_t receive;
     uint16_t send;
@@ -99,9 +109,29 @@ getDataLines() noexcept {
 
 volatile bool systemBooted = false;
 volatile bool addressTransactionFound = false;
+// this is an interrupt which is fired when ADS goes from low to high
+// The ADS pin is meant to denote when a new transaction starts. It acts as a
+// synchronization point and is also stable throughout the lifetime of the
+// processor. I used to use the DEN pin exclusively but the problem with using
+// it is that it can wildly cavitate as well. Same thing with the BLAST pin as
+// well!
+//
+// 
 void 
 leftAddressState() noexcept {
     addressTransactionFound = true;
+}
+
+void
+readySyncDetected() noexcept {
+    // we can continue at this point
+    digitalWrite<Pin::READY, HIGH>();
+}
+
+void
+signalReady() noexcept {
+    // we signal ready and then wait
+    digitalWrite<Pin::READY, LOW>();
 }
 
 void 
@@ -114,10 +144,10 @@ executionLoop() noexcept {
     addressTransactionFound = false;
     if (digitalRead<Pin::WR>() == LOW) {
         // read operation (output)
-        getCorrespondingPort<Pin::Data0>()->DIRSET.reg = DataMask;
+        PORT->Group[PORTC].DIRSET.reg = DataMask;
     } else {
         // write operation (input)
-        getCorrespondingPort<Pin::Data0>()->DIRCLR.reg = DataMask;
+        PORT->Group[PORTC].DIRCLR.reg = DataMask;
     }
 }
 // tracking information
