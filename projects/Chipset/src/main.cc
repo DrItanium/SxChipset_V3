@@ -270,27 +270,8 @@ configureSDCard() noexcept {
     }
 }
 void
-setup() {
-    Serial.begin(9600);
-    setupNeopixel();
-    uint8_t index = 0;
-    while (!Serial) {
-        // just configure the neopixel to inform me that we are waiting for a
-        // serial connection
-        //
-        // this pattern will actually get really bright and then falloff and
-        // repeat
-        pixel.setBrightness(map(index < 128 ? index : static_cast<uint8_t>(~index), 0, 127, 0, 64));
-        setNeopixelColor(255, 0, 255);
-        ++index;
-        delay(10);
-    }
-    pixel.setBrightness(10);
-    setNeopixelColor(0, 0, 0);
+configurePins() noexcept {
     pinMode<Pin::SD_Detect, INPUT>();
-    SPI.begin();
-    Wire.begin();
-    // @todo figure out why the pinout is locking up the upload port
     outputPin<Pin::READY, HIGH>();
     outputPin<Pin::ADRMUX_SEL0, LOW>();
     outputPin<Pin::ADRMUX_SEL1, LOW>();
@@ -322,6 +303,31 @@ setup() {
     outputPin<Pin::Data13, LOW>();
     outputPin<Pin::Data14, LOW>();
     outputPin<Pin::Data15, LOW>();
+}
+void
+setupSerialConsole() noexcept {
+    Serial.begin(9600);
+    // now we wait until we get an actual serial link up
+    uint8_t index = 0;
+    while (!Serial) {
+        // just configure the neopixel to inform me that we are waiting for a
+        // serial connection
+        //
+        // this pattern will actually get really bright and then falloff and
+        // repeat
+        pixel.setBrightness(map(index < 128 ? index : static_cast<uint8_t>(~index), 0, 127, 0, 64));
+        setNeopixelColor(255, 0, 255);
+        ++index;
+        delay(10);
+    }
+    pixel.setBrightness(10);
+    setNeopixelColor(0, 0, 0);
+}
+void
+setup() {
+    setupNeopixel();
+    setupSerialConsole();
+    configurePins();
     configureOnboardFlash();
     configureSDCard();
     setupRTC();
