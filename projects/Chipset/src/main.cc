@@ -5,6 +5,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <RTClib.h>
 #include <type_traits>
+#include <Adafruit_ZeroTimer.h>
+#include <tuple>
+#include <optional>
 Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL);
 volatile bool hasRTC = false;
 volatile bool hasSDCard = false;
@@ -220,6 +223,7 @@ getDataLines() noexcept {
     return d.send;
 }
 
+volatile bool systemBooted = false;
 volatile bool addressTransactionFound = false;
 void 
 leftAddressState() noexcept {
@@ -228,7 +232,9 @@ leftAddressState() noexcept {
 
 void 
 executionLoop() noexcept {
+    // just sit and spin in a loop
     while (!addressTransactionFound) {
+        yield(); // yield time to other things
         // do nothing
     }
     addressTransactionFound = false;
@@ -307,6 +313,72 @@ bool
 sdcardInstalled() noexcept {
     return digitalRead<Pin::SD_Detect>() == HIGH;
 }
+Adafruit_ZeroTimer neopixelTimer(3);
+void
+TC3_Handler() {
+    Adafruit_ZeroTimer::timerHandler(3);
+}
+
+void
+doNeopixel() noexcept {
+    if (!systemBooted) 
+        return;
+    pixel.clear();
+    pixel.setPixelColor(0, pixel.Color(random(), random(), random()));
+    pixel.show();
+}
+std::tuple<uint16_t, uint16_t, tc_clock_prescaler>
+computeFrequency(float freq) noexcept {
+    uint16_t divider = 1;
+    uint16_t compare = 0;
+    tc_clock_prescaler prescaler = TC_CLOCK_PRESCALER_DIV1;
+    if ((freq < 24000000) && (freq > 800)) {
+        divider = 1;
+        prescaler = TC_CLOCK_PRESCALER_DIV1;
+        compare = 48000000/freq;
+    } else if (freq > 400) {
+        divider = 2;
+        prescaler = TC_CLOCK_PRESCALER_DIV2;
+        compare = (48000000/2)/freq;
+    } else if (freq > 200) {
+        divider = 4;
+        prescaler = TC_CLOCK_PRESCALER_DIV4;
+        compare = (48000000/4)/freq;
+    } else if (freq > 100) {
+        divider = 8;
+        prescaler = TC_CLOCK_PRESCALER_DIV8;
+        compare = (48000000/8)/freq;
+    } else if (freq > 50) {
+        divider = 16;
+        prescaler = TC_CLOCK_PRESCALER_DIV16;
+        compare = (48000000/16)/freq;
+    } else if (freq > 12) {
+        divider = 64;
+        prescaler = TC_CLOCK_PRESCALER_DIV64;
+        compare = (48000000/64)/freq;
+    } else if (freq > 3) {
+        divider = 256;
+        prescaler = TC_CLOCK_PRESCALER_DIV256;
+        compare = (48000000/256)/freq;
+    } else if (freq >= 0.75) {
+        divider = 1024;
+        prescaler = TC_CLOCK_PRESCALER_DIV1024;
+        compare = (48000000/1024)/freq;
+    } 
+    return std::make_tuple(divider, compare, prescaler);
+}
+void
+setupTimers() noexcept {
+    auto [div, cmp, scale] = computeFrequency(2.0f); // two times per second
+    neopixelTimer.enable(false);
+    neopixelTimer.configure(scale, 
+            TC_COUNTER_SIZE_16BIT,
+            TC_WAVE_GENERATION_MATCH_PWM
+            );
+    neopixelTimer.setCompare(0, cmp);
+    neopixelTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, doNeopixel);
+    neopixelTimer.enable(true);
+}
 void
 setup() {
     Serial.begin(9600);
@@ -348,11 +420,16 @@ setup() {
     outputPin<Pin::Data15, LOW>();
     setupRTC();
     setupNeopixel();
+    setupTimers();
+    systemBooted = true;
 }
 void
 loop() {
-    pixel.clear();
-    pixel.setPixelColor(0, pixel.Color(random(), random(), random()));
-    pixel.show();
     delay(500);
+}
+void
+yield() noexcept {
+    if (!systemBooted) {
+        return;
+    }
 }
