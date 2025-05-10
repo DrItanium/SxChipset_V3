@@ -181,7 +181,8 @@ outputPin() noexcept {
     digitalWrite<p, initialValue>();
 }
 template<Pin p>
-decltype(auto) getCorrespondingPort() noexcept {
+decltype(auto) 
+getCorrespondingPort() noexcept {
     return digitalPinToPort(static_cast<std::underlying_type_t<Pin>>(p));
 }
 // Memory interface operations
@@ -200,7 +201,8 @@ union DataLines {
 };
 constexpr uint32_t DataMask = 0x0003FCFF;
 [[gnu::always_inline]]
-inline void setDataLines(uint16_t value) noexcept {
+inline void 
+setDataLines(uint16_t value) noexcept {
     DataLines d;
     d.receive = 0;
     d.send = value;
@@ -210,15 +212,26 @@ inline void setDataLines(uint16_t value) noexcept {
     getCorrespondingPort<Pin::Data0>()->OUTSET.reg = DataMask & d.receive;
 }
 [[gnu::always_inline]]
-inline uint16_t getDataLines() noexcept {
+inline uint16_t 
+getDataLines() noexcept {
     DataLines d;
     d.receive = getCorrespondingPort<Pin::Data0>()->IN.reg;
     d.to960.hi = d.from960.hi;
     return d.send;
 }
 
-[[gnu::always_inline]]
-inline void setDataLinesDirection() noexcept {
+volatile bool addressTransactionFound = false;
+void 
+leftAddressState() noexcept {
+    addressTransactionFound = true;
+}
+
+void 
+executionLoop() noexcept {
+    while (!addressTransactionFound) {
+        // do nothing
+    }
+    addressTransactionFound = false;
     if (digitalRead<Pin::WR>() == LOW) {
         // read operation (output)
         getCorrespondingPort<Pin::Data0>()->DIRSET.reg = DataMask;
