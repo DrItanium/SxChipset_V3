@@ -82,24 +82,8 @@ enum class Pin : PinIndex {
     PC02,
     PC03,
     PB04,
-
-    Analog0 = A0,
-    Analog1 = A1,
-    Analog2 = A2,
-    Analog3 = A3,
-    Analog4 = A4,
-    Analog5 = A5,
-    Analog6 = A6,
-    Analog7 = A7,
-    Analog8 = A8,
-    Analog9 = A9,
-    Analog10 = A10,
-    Analog11 = A11,
-    Analog12 = A12,
-    Analog13 = A13,
-    Analog14 = A14,
-    Analog15 = A15,
-
+    Neopixel = PIN_NEOPIXEL,
+    SD_Detect = 95,
 
     DAC0 = PA02,
     DAC1 = PA05,
@@ -147,10 +131,29 @@ pinMode(Pin targetPin, decltype(OUTPUT) direction) noexcept {
     ::pinMode(static_cast<std::underlying_type_t<Pin>>(targetPin), direction);
 }
 
+template<Pin p, decltype(OUTPUT) direction> 
+[[gnu::always_inline]]
+inline void 
+pinMode() noexcept {
+    pinMode(p, direction);
+}
+
 [[gnu::always_inline]]
 inline void
 digitalWrite(Pin targetPin, decltype(LOW) value) noexcept {
     ::digitalWrite(static_cast<std::underlying_type_t<Pin>>(targetPin), value);
+}
+template<Pin p>
+[[gnu::always_inline]]
+inline void
+digitalWrite(decltype(LOW) value) noexcept {
+    digitalWrite(p, value);
+}
+template<Pin p, decltype(LOW) value>
+[[gnu::always_inline]]
+inline void
+digitalWrite() noexcept {
+    digitalWrite(p, value);
 }
 
 [[gnu::always_inline]]
@@ -158,11 +161,24 @@ inline auto
 digitalRead(Pin targetPin) noexcept {
     return ::digitalRead(static_cast<std::underlying_type_t<Pin>>(targetPin));
 }
+template<Pin p>
+[[gnu::always_inline]]
+inline decltype(auto)
+digitalRead() noexcept {
+    return digitalRead(p);
+}
 [[gnu::always_inline]]
 inline void
 outputPin(Pin targetPin, decltype(LOW) initialValue = HIGH) noexcept {
     pinMode(targetPin, OUTPUT);
     digitalWrite(targetPin, initialValue);
+}
+template<Pin p, decltype(LOW) initialValue = HIGH>
+[[gnu::always_inline]]
+inline void 
+outputPin() noexcept {
+    pinMode<p, OUTPUT>();
+    digitalWrite<p, initialValue>();
 }
 void
 setupRTC() noexcept {
@@ -183,44 +199,50 @@ setupNeopixel() noexcept {
     pixel.begin();
     pixel.setBrightness(1);
 }
+[[nodiscard]]
+bool
+sdcardInstalled() noexcept {
+    return digitalRead<Pin::SD_Detect>() == HIGH;
+}
 void
 setup() {
     Serial.begin(9600);
+    pinMode<Pin::SD_Detect, INPUT>();
     SD.begin();
     SPI.begin();
     Wire.begin();
     // @todo figure out why the pinout is locking up the upload port
-    //outputPin(Pin::READY, HIGH);
-    //outputPin(Pin::ADRMUX_SEL0, LOW);
-    //outputPin(Pin::ADRMUX_SEL1, LOW);
-    //outputPin(Pin::ADRMUX_EN, HIGH);
-    //pinMode(Pin::ADRMUX0, INPUT);
-    //pinMode(Pin::ADRMUX1, INPUT);
-    //pinMode(Pin::ADRMUX2, INPUT);
-    //pinMode(Pin::ADRMUX3, INPUT);
-    //pinMode(Pin::ADRMUX4, INPUT);
-    //pinMode(Pin::ADRMUX5, INPUT);
-    //pinMode(Pin::ADRMUX6, INPUT);
-    //pinMode(Pin::ADRMUX7, INPUT);
-    //pinMode(Pin::BE0, INPUT);
-    //pinMode(Pin::BE1, INPUT);
-    //pinMode(Pin::WR, INPUT);
-    //outputPin(Pin::Data0, LOW);
-    //outputPin(Pin::Data1, LOW);
-    //outputPin(Pin::Data2, LOW);
-    //outputPin(Pin::Data3, LOW);
-    //outputPin(Pin::Data4, LOW);
-    //outputPin(Pin::Data5, LOW);
-    //outputPin(Pin::Data6, LOW);
-    //outputPin(Pin::Data7, LOW);
-    //outputPin(Pin::Data8, LOW);
-    //outputPin(Pin::Data9, LOW);
-    //outputPin(Pin::Data10, LOW);
-    //outputPin(Pin::Data11, LOW);
-    //outputPin(Pin::Data12, LOW);
-    //outputPin(Pin::Data13, LOW);
-    //outputPin(Pin::Data14, LOW);
-    //outputPin(Pin::Data15, LOW);
+    outputPin<Pin::READY, HIGH>();
+    outputPin<Pin::ADRMUX_SEL0, LOW>();
+    outputPin<Pin::ADRMUX_SEL1, LOW>();
+    outputPin<Pin::ADRMUX_EN, HIGH>();
+    pinMode<Pin::ADRMUX0, INPUT>();
+    pinMode<Pin::ADRMUX1, INPUT>();
+    pinMode<Pin::ADRMUX2, INPUT>();
+    pinMode<Pin::ADRMUX3, INPUT>();
+    pinMode<Pin::ADRMUX4, INPUT>();
+    pinMode<Pin::ADRMUX5, INPUT>();
+    pinMode<Pin::ADRMUX6, INPUT>();
+    pinMode<Pin::ADRMUX7, INPUT>();
+    pinMode<Pin::BE0, INPUT>();
+    pinMode<Pin::BE1, INPUT>();
+    pinMode<Pin::WR, INPUT>();
+    outputPin<Pin::Data0, LOW>();
+    outputPin<Pin::Data1, LOW>();
+    outputPin<Pin::Data2, LOW>();
+    outputPin<Pin::Data3, LOW>();
+    outputPin<Pin::Data4, LOW>();
+    outputPin<Pin::Data5, LOW>();
+    outputPin<Pin::Data6, LOW>();
+    outputPin<Pin::Data7, LOW>();
+    outputPin<Pin::Data8, LOW>();
+    outputPin<Pin::Data9, LOW>();
+    outputPin<Pin::Data10, LOW>();
+    outputPin<Pin::Data11, LOW>();
+    outputPin<Pin::Data12, LOW>();
+    outputPin<Pin::Data13, LOW>();
+    outputPin<Pin::Data14, LOW>();
+    outputPin<Pin::Data15, LOW>();
     setupRTC();
     setupNeopixel();
 }
