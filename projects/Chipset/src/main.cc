@@ -427,9 +427,3 @@ void
 loop() {
     delay(500);
 }
-void
-yield() noexcept {
-    if (!systemBooted) {
-        return;
-    }
-}
