@@ -216,6 +216,17 @@ inline uint16_t getDataLines() noexcept {
     d.to960.hi = d.from960.hi;
     return d.send;
 }
+
+[[gnu::always_inline]]
+inline void setDataLinesDirection() noexcept {
+    if (digitalRead<Pin::WR>() == LOW) {
+        // read operation (output)
+        getCorrespondingPort<Pin::Data0>()->DIRSET.reg = DataMask;
+    } else {
+        // write operation (input)
+        getCorrespondingPort<Pin::Data0>()->DIRCLR.reg = DataMask;
+    }
+}
 // tracking information
 // SERCOM0 -> Serial1 (D0/D1 pair) [optional]
 // --- PAD[0]: PB24 (D1)
