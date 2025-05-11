@@ -109,6 +109,7 @@ getDataLines() noexcept {
 
 volatile bool systemBooted = false;
 volatile bool addressTransactionFound = false;
+volatile bool readySignalFeedbackAccepted = false;
 // this is an interrupt which is fired when ADS goes from low to high
 // The ADS pin is meant to denote when a new transaction starts. It acts as a
 // synchronization point and is also stable throughout the lifetime of the
@@ -117,21 +118,34 @@ volatile bool addressTransactionFound = false;
 // well!
 //
 // 
-void 
-leftAddressState() noexcept {
+void
+EIC_4_Handler() {
+    // make the handler as simple as possible
     addressTransactionFound = true;
 }
-
 void
-readySyncDetected() noexcept {
-    // we can continue at this point
-    digitalWrite<Pin::READY, HIGH>();
+EIC_5_Handler() {
+    // make the handler as simple as possible
+    readySignalFeedbackAccepted = true;
 }
 
-void
+bool
 signalReady() noexcept {
-    // we signal ready and then wait
-    digitalWrite<Pin::READY, LOW>();
+    // check the current status of the BLAST pin before we do anything else!
+    // If it is currently enabled then we will terminate after being finished
+    bool isBurstLast = digitalRead<Pin::BLAST>() == LOW;
+    {
+        // this scope is meant to ensure that the check for BLAST is done ahead
+        // of entering this scope
+        readySignalFeedbackAccepted = false;
+        // we signal ready and then wait
+        digitalWrite<Pin::READY, LOW>();
+        // wait until we get the feedback of the ready signal being done
+        while (!readySignalFeedbackAccepted);
+        readySignalFeedbackAccepted = false;
+        digitalWrite<Pin::READY, HIGH>(); // now move the READY signal back up
+    }
+    return isBurstLast;
 }
 
 void 
@@ -320,6 +334,10 @@ configurePins() noexcept {
     outputPin<Pin::ADRMUX_SEL0, LOW>();
     outputPin<Pin::ADRMUX_SEL1, LOW>();
     outputPin<Pin::ADRMUX_EN, HIGH>();
+    // trigger on the rising edge (EIC_4_Handler)
+    pinMode<Pin::ADS, INPUT>();
+    // trigger on the rising edge (EIC_5_Handler)
+    pinMode<Pin::READY_SYNC, INPUT>();
     pinMode<Pin::ADRMUX0, INPUT>();
     pinMode<Pin::ADRMUX1, INPUT>();
     pinMode<Pin::ADRMUX2, INPUT>();
@@ -391,3 +409,4 @@ void
 loop() {
     executionLoop();
 }
+

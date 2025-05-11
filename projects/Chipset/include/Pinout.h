@@ -137,7 +137,8 @@ enum class Pin : PinIndex {
     Data13 = PC15, // 42
     Data15 = PC17, // 24
     Data14 = PC16, // 25
-
+    ADS = PB04, // 74/A7
+    READY_SYNC = PB05, // 54/A8
 };
 
 
