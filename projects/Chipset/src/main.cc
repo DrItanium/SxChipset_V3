@@ -147,6 +147,42 @@ signalReady() noexcept {
     }
     return isBurstLast;
 }
+uint32_t
+readAddress() noexcept {
+    union {
+        uint32_t result;
+        uint8_t bytes[4];
+    } q;
+    digitalWrite<Pin::ADRMUX_SEL0, LOW>();
+    digitalWrite<Pin::ADRMUX_SEL1, LOW>();
+    digitalWrite<Pin::ADRMUX_EN, LOW>();
+    q.bytes[0] = PORT->Group[PORTA].IN.reg >> 16;
+
+    digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
+    digitalWrite<Pin::ADRMUX_SEL1, LOW>();
+    q.bytes[1] = PORT->Group[PORTA].IN.reg >> 16;
+
+    digitalWrite<Pin::ADRMUX_SEL0, LOW>();
+    digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
+    q.bytes[2] = PORT->Group[PORTA].IN.reg >> 16;
+
+    digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
+    digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
+    q.bytes[3] = PORT->Group[PORTA].IN.reg >> 16;
+
+    digitalWrite<Pin::ADRMUX_EN, HIGH>();
+    return q.result;
+}
+void 
+handleReadTransaction(uint32_t address) noexcept {
+    // read operation (output)
+    PORT->Group[PORTC].DIRSET.reg = DataMask;
+}
+void 
+handleWriteTransaction(uint32_t address) noexcept {
+    // write operation (input)
+    PORT->Group[PORTC].DIRCLR.reg = DataMask;
+}
 
 void 
 executionLoop() noexcept {
@@ -156,12 +192,10 @@ executionLoop() noexcept {
         // do nothing
     }
     addressTransactionFound = false;
-    if (digitalRead<Pin::WR>() == LOW) {
-        // read operation (output)
-        PORT->Group[PORTC].DIRSET.reg = DataMask;
+    if (auto address = readAddress(); digitalRead<Pin::WR>() == LOW) {
+        handleReadTransaction(address);
     } else {
-        // write operation (input)
-        PORT->Group[PORTC].DIRCLR.reg = DataMask;
+        handleWriteTransaction(address);
     }
 }
 // tracking information
