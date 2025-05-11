@@ -175,13 +175,72 @@ readAddress() noexcept {
 }
 void 
 handleReadTransaction(uint32_t address) noexcept {
-    // read operation (output)
-    PORT->Group[PORTC].DIRSET.reg = DataMask;
 }
+union DataCell {
+    uint8_t bytes[16];
+    uint16_t halves[8];
+    uint32_t words[4];
+    uint64_t longWords[2];
+};
+static_assert(sizeof(DataCell) == 16, "DataCell needs to be 16-bytes in size");
+DataCell localData[0x10000 / sizeof(DataCell)];
+static_assert(sizeof(localData) == 0x10000, "localData not the correct size");
+template<bool isReadOperation>
+void
+localDataOperation(uint32_t address) noexcept {
+    uint16_t targetCellIndex = static_cast<uint16_t>(address) & 0xFFF0;
+    // least significant bit is always zero
+    uint8_t offset = static_cast<uint8_t>(address & 0x000F);
+    auto& targetCell = localData[targetCellIndex];
+    if constexpr(isReadOperation) {
+        for (uint8_t start = offset >> 1; start < 8; ++start) {
+            setDataLines(targetCell.halves[start]);
+            if (signalReady()) {
+                break;
+            }
+        }
+    } else {
+        for (uint8_t start = offset; start < 16; start += 2) {
+            uint16_t value = getDataLines();
+            if (digitalRead<Pin::BE0>() == LOW) {
+                targetCell.bytes[start] = static_cast<uint8_t>(value);
+            }
+            if (digitalRead<Pin::BE1>() == LOW) {
+                targetCell.bytes[start+1] = static_cast<uint8_t>(value >> 8);
+            }
+            if (signalReady()) {
+                break;
+            }
+        }
+    }
+
+}
+template<bool isReadOperation>
+void
+doNothingOperation() noexcept {
+    if constexpr (isReadOperation) {
+        setDataLines(0);
+    }
+    while (!signalReady());
+}
+template<bool isReadOperation>
 void 
-handleWriteTransaction(uint32_t address) noexcept {
-    // write operation (input)
-    PORT->Group[PORTC].DIRCLR.reg = DataMask;
+handleTransaction(uint32_t address) noexcept {
+    if constexpr (isReadOperation) {
+        // read operation (output)
+        PORT->Group[PORTC].DIRSET.reg = DataMask;
+    } else {
+        // write operation (input)
+        PORT->Group[PORTC].DIRCLR.reg = DataMask;
+    }
+    switch (address) {
+        case 0x0000'0000 ... 0x0000'FFFF:
+            localDataOperation<isReadOperation>(address);
+            break;
+        default:
+            doNothingOperation<isReadOperation>();
+            break;
+    }
 }
 
 void 
@@ -193,9 +252,9 @@ executionLoop() noexcept {
     }
     addressTransactionFound = false;
     if (auto address = readAddress(); digitalRead<Pin::WR>() == LOW) {
-        handleReadTransaction(address);
+        handleTransaction<true>(address);
     } else {
-        handleWriteTransaction(address);
+        handleTransaction<false>(address);
     }
 }
 // tracking information
