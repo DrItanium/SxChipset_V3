@@ -139,6 +139,7 @@ enum class Pin : PinIndex {
     Data14 = PC16, // 25
     ADS = PB04, // 74/A7
     READY_SYNC = PB05, // 54/A8
+    AddressCapture_SPI_EN = PD10, // 53
 };
 
 

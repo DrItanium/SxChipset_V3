@@ -147,30 +147,43 @@ signalReady() noexcept {
     }
     return isBurstLast;
 }
+template<bool useDirectPortReads = false>
 uint32_t
 readAddress() noexcept {
     union {
         uint32_t result;
         uint8_t bytes[4];
     } q;
-    digitalWrite<Pin::ADRMUX_SEL0, LOW>();
-    digitalWrite<Pin::ADRMUX_SEL1, LOW>();
-    digitalWrite<Pin::ADRMUX_EN, LOW>();
-    q.bytes[0] = PORT->Group[PORTA].IN.reg >> 16;
+    if constexpr (useDirectPortReads) {
+        digitalWrite<Pin::ADRMUX_SEL0, LOW>();
+        digitalWrite<Pin::ADRMUX_SEL1, LOW>();
+        digitalWrite<Pin::ADRMUX_EN, LOW>();
+        q.bytes[0] = PORT->Group[PORTA].IN.reg >> 16;
 
-    digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
-    digitalWrite<Pin::ADRMUX_SEL1, LOW>();
-    q.bytes[1] = PORT->Group[PORTA].IN.reg >> 16;
+        digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
+        digitalWrite<Pin::ADRMUX_SEL1, LOW>();
+        q.bytes[1] = PORT->Group[PORTA].IN.reg >> 16;
 
-    digitalWrite<Pin::ADRMUX_SEL0, LOW>();
-    digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
-    q.bytes[2] = PORT->Group[PORTA].IN.reg >> 16;
+        digitalWrite<Pin::ADRMUX_SEL0, LOW>();
+        digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
+        q.bytes[2] = PORT->Group[PORTA].IN.reg >> 16;
 
-    digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
-    digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
-    q.bytes[3] = PORT->Group[PORTA].IN.reg >> 16;
+        digitalWrite<Pin::ADRMUX_SEL0, HIGH>();
+        digitalWrite<Pin::ADRMUX_SEL1, HIGH>();
+        q.bytes[3] = PORT->Group[PORTA].IN.reg >> 16;
 
-    digitalWrite<Pin::ADRMUX_EN, HIGH>();
+        digitalWrite<Pin::ADRMUX_EN, HIGH>();
+    } else {
+        SPI.beginTransaction(SPISettings{5'000'000, MSBFIRST, SPI_MODE0});
+        // access data elements through SPI for now using four device in series
+        digitalWrite<Pin::AddressCapture_SPI_EN, LOW>();
+        q.bytes[3] = SPI.transfer(0);
+        q.bytes[2] = SPI.transfer(0);
+        q.bytes[1] = SPI.transfer(0);
+        q.bytes[0] = SPI.transfer(0);
+        digitalWrite<Pin::AddressCapture_SPI_EN, HIGH>();
+        SPI.endTransaction();
+    }
     return q.result;
 }
 union DataCell {
@@ -455,6 +468,7 @@ configurePins() noexcept {
     outputPin<Pin::Data13, LOW>();
     outputPin<Pin::Data14, LOW>();
     outputPin<Pin::Data15, LOW>();
+    outputPin<Pin::AddressCapture_SPI_EN, HIGH>();
 }
 void
 setupSerialConsole() noexcept {
@@ -489,6 +503,7 @@ setup() {
     setupNeopixel();
     setupSerialConsole();
     configurePins();
+    SPI.begin();
     configureOnboardFlash();
     configureSDCard();
     setupRTC();
