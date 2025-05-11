@@ -173,17 +173,14 @@ readAddress() noexcept {
     digitalWrite<Pin::ADRMUX_EN, HIGH>();
     return q.result;
 }
-void 
-handleReadTransaction(uint32_t address) noexcept {
-}
 union DataCell {
     uint8_t bytes[16];
     uint16_t halves[8];
     uint32_t words[4];
     uint64_t longWords[2];
 };
-static_assert(sizeof(DataCell) == 16, "DataCell needs to be 16-bytes in size");
 DataCell localData[0x10000 / sizeof(DataCell)];
+static_assert(sizeof(DataCell) == 16, "DataCell needs to be 16-bytes in size");
 static_assert(sizeof(localData) == 0x10000, "localData not the correct size");
 template<bool isReadOperation>
 void
