@@ -412,6 +412,13 @@ void
 configureAddressCaptureComponent() noexcept {
     outputPin<Pin::AddressCapture_SPI_EN, HIGH>();
 }
+void 
+configurePSRAMEnables() noexcept {
+    outputPin<Pin::PSRAM_EN0, HIGH>();
+    outputPin<Pin::PSRAM_EN1, HIGH>();
+    outputPin<Pin::PSRAM_EN2, HIGH>();
+    outputPin<Pin::PSRAM_EN3, HIGH>();
+}
 void
 configurePins() noexcept {
     pinMode<Pin::SD_Detect, INPUT>();
@@ -439,6 +446,8 @@ configurePins() noexcept {
     outputPin<Pin::Data13, LOW>();
     outputPin<Pin::Data14, LOW>();
     outputPin<Pin::Data15, LOW>();
+    configureAddressCaptureComponent();
+    configurePSRAMEnables();
 }
 void
 setupSerialConsole() noexcept {
@@ -467,6 +476,92 @@ seedRandom() noexcept {
     }
     randomSeed(newSeed);
 }
+const SPISettings defaultPSRAMSettings{33'000'000, MSBFIRST, SPI_MODE0};
+template<Pin pin>
+void
+activatePSRAM() noexcept {
+    Serial.print("Activating PSRAM Chip enabled by Pin #");
+    Serial.print(static_cast<int>(pin));
+    Serial.print("...");
+    SPI.beginTransaction(defaultPSRAMSettings);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x66);
+    digitalWrite<pin, HIGH>();
+    delay(1);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x99);
+    digitalWrite<pin, HIGH>();
+    SPI.endTransaction();
+    Serial.println("Done");
+}
+template<Pin pin>
+void
+psramWrite32(uint32_t address, uint32_t value) noexcept {
+    SPI.beginTransaction(defaultPSRAMSettings);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x02); // write
+    SPI.transfer(static_cast<uint8_t>(address >> 16)); // MSB doesn't matter
+                                                       // and is actually ignored!
+    SPI.transfer(static_cast<uint8_t>(address >> 8));
+    SPI.transfer(static_cast<uint8_t>(address));
+    SPI.transfer(static_cast<uint8_t>(value));
+    SPI.transfer(static_cast<uint8_t>(value >> 8));
+    SPI.transfer(static_cast<uint8_t>(value >> 16));
+    SPI.transfer(static_cast<uint8_t>(value >> 24));
+    digitalWrite<pin, HIGH>();
+    SPI.endTransaction();
+}
+template<Pin pin>
+uint32_t
+psramRead32(uint32_t address) noexcept {
+    SPI.beginTransaction(defaultPSRAMSettings);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x03); // read
+    SPI.transfer(static_cast<uint8_t>(address >> 16)); // MSB doesn't matter
+                                                       // and is actually ignored!
+    SPI.transfer(static_cast<uint8_t>(address >> 8));
+    SPI.transfer(static_cast<uint8_t>(address));
+    uint32_t value = static_cast<uint32_t>(SPI.transfer(0));
+    value |= static_cast<uint32_t>(SPI.transfer(0)) << 8;
+    value |= static_cast<uint32_t>(SPI.transfer(0)) << 16;
+    value |= static_cast<uint32_t>(SPI.transfer(0)) << 24;
+    digitalWrite<pin, HIGH>();
+    SPI.endTransaction();
+    return value;
+}
+template<Pin pin, uint32_t checkSize = 4096>
+bool
+psramSanityCheck() noexcept {
+    Serial.print("Checking PSRAM Chip enabled by Pin #");
+    Serial.print(static_cast<int>(pin));
+    Serial.print("...");
+    for (uint32_t i = 0; i < checkSize; ++i) {
+        uint32_t value = ~i;
+        psramWrite32<pin>(i, value);
+        auto result = psramRead32<pin>(i);
+        if (result != value) {
+            Serial.println("FAILED");
+            Serial.printf("\t@0x%x: Expected: 0x%x, Got: 0x%x\n", i, value, result);
+            return false;
+        }
+    }
+    Serial.println("PASSED");
+    return true;
+}
+void
+configurePSRAM() noexcept {
+    delay(300);
+    // give a system delay to make sure 
+    activatePSRAM<Pin::PSRAM_EN0>();
+    activatePSRAM<Pin::PSRAM_EN1>();
+    activatePSRAM<Pin::PSRAM_EN2>();
+    activatePSRAM<Pin::PSRAM_EN3>();
+    // okay, now we need to do some sanity checking
+    (void)psramSanityCheck<Pin::PSRAM_EN0>();
+    (void)psramSanityCheck<Pin::PSRAM_EN1>();
+    (void)psramSanityCheck<Pin::PSRAM_EN2>();
+    (void)psramSanityCheck<Pin::PSRAM_EN3>();
+}
 void
 setup() {
     seedRandom();
@@ -476,6 +571,7 @@ setup() {
     SPI.begin();
     configureOnboardFlash();
     configureSDCard();
+    configurePSRAM();
     setupRTC();
     setupTimers();
     systemBooted = true;
