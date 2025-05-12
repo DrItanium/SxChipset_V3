@@ -489,7 +489,9 @@ loop() {
     executionLoop();
 }
 
-const SPISettings defaultPSRAMSettings{33'000'000, MSBFIRST, SPI_MODE0};
+// while 33mhz is the max speed, some of the expansion boards are requiring
+// that I lower the clock speed when interfacing with the PSRAM
+const SPISettings defaultPSRAMSettings{10'000'000, MSBFIRST, SPI_MODE0};
 template<Pin pin>
 void
 activatePSRAM() noexcept {
