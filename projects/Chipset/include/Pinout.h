@@ -107,18 +107,7 @@ enum class Pin : PinIndex {
     // sorted based on the digital connector block but not fully)
     READY = PD12, // 22
     BLAST = PA15, // 23
-    ADRMUX_SEL0 = PA12, // 26
-    ADRMUX_SEL1 = PA13, // 27
-    ADRMUX_EN = PA14, // 28
     WR = PB19, // 29
-    ADRMUX0 = PA16, // 37
-    ADRMUX1 = PA17, // 36
-    ADRMUX2 = PA18, // 35
-    ADRMUX3 = PA19, // 34
-    ADRMUX4 = PA20, // 33
-    ADRMUX5 = PA21, // 32
-    ADRMUX6 = PA22, // 31
-    ADRMUX7 = PA23, // 30
     BE1 = PB15, // 38
     BE0 = PB14, // 39
     Data0 = PC00, // 70/A3
