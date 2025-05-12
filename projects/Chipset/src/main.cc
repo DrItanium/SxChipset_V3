@@ -169,6 +169,10 @@ union DataCell {
     uint16_t halves[8];
     uint32_t words[4];
     uint64_t longWords[2];
+    void clear() noexcept {
+        longWords[0] = 0;
+        longWords[1] = 0;
+    }
 };
 DataCell localData[0x10000 / sizeof(DataCell)];
 static_assert(sizeof(DataCell) == 16, "DataCell needs to be 16-bytes in size");
@@ -477,25 +481,6 @@ void
 loop() {
     executionLoop();
 }
-template<bool isReadOperation>
-void 
-handleTransaction(uint32_t address) noexcept {
-    if constexpr (isReadOperation) {
-        // read operation (output)
-        PORT->Group[PORTC].DIRSET.reg = DataMask;
-    } else {
-        // write operation (input)
-        PORT->Group[PORTC].DIRCLR.reg = DataMask;
-    }
-    switch (address) {
-        case 0x0000'0000 ... 0x0000'FFFF:
-            localDataOperation<isReadOperation>(address);
-            break;
-        default:
-            doNothingOperation<isReadOperation>();
-            break;
-    }
-}
 
 const SPISettings defaultPSRAMSettings{33'000'000, MSBFIRST, SPI_MODE0};
 template<Pin pin>
@@ -524,40 +509,32 @@ psramTransferAddress(uint32_t address) noexcept {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
-template<Pin pin>
+template<Pin pin, bool isReadOperation>
 size_t
-psramWrite(uint32_t address, uint8_t* contents, size_t count) noexcept {
+psramRW(uint32_t address, uint8_t* contents, size_t count) noexcept {
     SPI.beginTransaction(defaultPSRAMSettings);
     digitalWrite<pin, LOW>();
-    SPI.transfer(0x02);
+    if constexpr (isReadOperation) {
+        SPI.transfer(0x03);
+    } else {
+        SPI.transfer(0x02);
+    }
     psramTransferAddress(address);
     SPI.transfer(contents, count);
     digitalWrite<pin, HIGH>();
-    return count;
-}
-template<Pin pin>
-size_t
-psramRead(uint32_t address, uint8_t* contents, size_t count) noexcept {
-    SPI.beginTransaction(defaultPSRAMSettings);
-    digitalWrite<pin, LOW>();
-    SPI.transfer(0x03);
-    psramTransferAddress(address);
-    SPI.transfer(contents, count);
-    digitalWrite<pin, HIGH>();
-    SPI.endTransaction();
     return count;
 }
 template<Pin pin>
 uint32_t
 psramRead32(uint32_t address) noexcept {
     uint32_t result = 0;
-    (void)psramRead<pin>(address, reinterpret_cast<uint8_t*>(&result), sizeof(result));
+    (void)psramRW<pin, true>(address, reinterpret_cast<uint8_t*>(&result), sizeof(result));
     return result;
 }
 template<Pin pin>
 void
 psramWrite32(uint32_t address, uint32_t value) noexcept {
-    (void)psramWrite<pin>(address, reinterpret_cast<uint8_t*>(&value), sizeof(value));
+    (void)psramRW<pin, false>(address, reinterpret_cast<uint8_t*>(&value), sizeof(value));
 }
 template<Pin pin, uint32_t checkSize = 4096>
 bool
@@ -591,4 +568,77 @@ configurePSRAM() noexcept {
     (void)psramSanityCheck<Pin::PSRAM_EN1>();
     (void)psramSanityCheck<Pin::PSRAM_EN2>();
     (void)psramSanityCheck<Pin::PSRAM_EN3>();
+}
+template<Pin pin, bool isReadOperation>
+void 
+commitData(uint32_t alignedAddress, DataCell& contents) noexcept {
+    switch (alignedAddress) {
+        case 0x0000'0000 ... 0x007F'FFFF: // psram0
+            (void)psramRW<Pin::PSRAM_EN0, isReadOperation>(alignedAddress, contents.bytes, sizeof(DataCell));
+            break;
+        case 0x0080'0000 ... 0x00FF'FFFF: // psram1
+            (void)psramRW<Pin::PSRAM_EN1, isReadOperation>(alignedAddress, contents.bytes, sizeof(DataCell));
+            break;
+        case 0x0100'0000 ... 0x017F'FFFF: // psram2
+            (void)psramRW<Pin::PSRAM_EN2, isReadOperation>(alignedAddress, contents.bytes, sizeof(DataCell));
+            break;
+        case 0x0180'0000 ... 0x01FF'FFFF: // psram3
+            (void)psramRW<Pin::PSRAM_EN3, isReadOperation>(alignedAddress, contents.bytes, sizeof(DataCell));
+            break;
+        /// @todo add more backing targets if it makes sense
+        default: // do nothing
+            break;
+    }
+}
+struct CacheLine {
+    uint32_t _targetAddress = 0;
+    bool _valid = false;
+    bool _dirty = false;
+    DataCell contents;
+    void clear() noexcept {
+        _valid = false;
+        _dirty = false;
+        _targetAddress = 0;
+        contents.clear();
+    }
+    static constexpr uint32_t alignAddress(uint32_t newAddress) noexcept {
+        return newAddress & 0xFFFF'FFF0;
+    }
+    [[nodiscard]] constexpr bool matches(uint32_t newAddress) const noexcept {
+        return _valid && (_targetAddress == alignAddress(newAddress));
+    }
+    [[nodiscard]] constexpr bool valid() const noexcept { return _valid; }
+    [[nodiscard]] constexpr auto getTargetAddress() const noexcept { return _targetAddress; }
+    void replace(uint32_t newAddress) noexcept {
+        if (_valid) {
+            if (_dirty) {
+                // commit data
+            }
+        } 
+        _targetAddress = alignAddress(newAddress);
+        _valid = true;
+        _dirty = false;
+        /// @todo load the contents from memory
+    }
+};
+
+template<bool isReadOperation>
+void 
+handleTransaction(uint32_t address) noexcept {
+    if constexpr (isReadOperation) {
+        // read operation (output)
+        PORT->Group[PORTC].DIRSET.reg = DataMask;
+    } else {
+        // write operation (input)
+        PORT->Group[PORTC].DIRCLR.reg = DataMask;
+    }
+    switch (address) {
+
+        case 0xFE01'0000 ... 0xFE01'FFFF:
+            localDataOperation<isReadOperation>(address);
+            break;
+        default:
+            doNothingOperation<isReadOperation>();
+            break;
+    }
 }
