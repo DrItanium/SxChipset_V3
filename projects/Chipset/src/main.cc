@@ -211,25 +211,7 @@ doNothingOperation() noexcept {
     }
     while (!signalReady());
 }
-template<bool isReadOperation>
-void 
-handleTransaction(uint32_t address) noexcept {
-    if constexpr (isReadOperation) {
-        // read operation (output)
-        PORT->Group[PORTC].DIRSET.reg = DataMask;
-    } else {
-        // write operation (input)
-        PORT->Group[PORTC].DIRCLR.reg = DataMask;
-    }
-    switch (address) {
-        case 0x0000'0000 ... 0x0000'FFFF:
-            localDataOperation<isReadOperation>(address);
-            break;
-        default:
-            doNothingOperation<isReadOperation>();
-            break;
-    }
-}
+template<bool isReadOperation> void handleTransaction(uint32_t address) noexcept;
 
 void 
 executionLoop() noexcept {
@@ -476,6 +458,45 @@ seedRandom() noexcept {
     }
     randomSeed(newSeed);
 }
+void configurePSRAM() noexcept;
+void
+setup() {
+    seedRandom();
+    setupNeopixel();
+    setupSerialConsole();
+    configurePins();
+    SPI.begin();
+    configureOnboardFlash();
+    configureSDCard();
+    configurePSRAM();
+    setupRTC();
+    setupTimers();
+    systemBooted = true;
+}
+void
+loop() {
+    executionLoop();
+}
+template<bool isReadOperation>
+void 
+handleTransaction(uint32_t address) noexcept {
+    if constexpr (isReadOperation) {
+        // read operation (output)
+        PORT->Group[PORTC].DIRSET.reg = DataMask;
+    } else {
+        // write operation (input)
+        PORT->Group[PORTC].DIRCLR.reg = DataMask;
+    }
+    switch (address) {
+        case 0x0000'0000 ... 0x0000'FFFF:
+            localDataOperation<isReadOperation>(address);
+            break;
+        default:
+            doNothingOperation<isReadOperation>();
+            break;
+    }
+}
+
 const SPISettings defaultPSRAMSettings{33'000'000, MSBFIRST, SPI_MODE0};
 template<Pin pin>
 void
@@ -494,40 +515,49 @@ activatePSRAM() noexcept {
     SPI.endTransaction();
     Serial.println("Done");
 }
-template<Pin pin>
-void
-psramWrite32(uint32_t address, uint32_t value) noexcept {
-    SPI.beginTransaction(defaultPSRAMSettings);
-    digitalWrite<pin, LOW>();
-    SPI.transfer(0x02); // write
-    SPI.transfer(static_cast<uint8_t>(address >> 16)); // MSB doesn't matter
-                                                       // and is actually ignored!
+
+[[gnu::always_inline]]
+inline void
+psramTransferAddress(uint32_t address) noexcept {
+    // the MSB doesn't actually matter
+    SPI.transfer(static_cast<uint8_t>(address >> 16));
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
-    SPI.transfer(static_cast<uint8_t>(value));
-    SPI.transfer(static_cast<uint8_t>(value >> 8));
-    SPI.transfer(static_cast<uint8_t>(value >> 16));
-    SPI.transfer(static_cast<uint8_t>(value >> 24));
+}
+template<Pin pin>
+size_t
+psramWrite(uint32_t address, uint8_t* contents, size_t count) noexcept {
+    SPI.beginTransaction(defaultPSRAMSettings);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x02);
+    psramTransferAddress(address);
+    SPI.transfer(contents, count);
+    digitalWrite<pin, HIGH>();
+    return count;
+}
+template<Pin pin>
+size_t
+psramRead(uint32_t address, uint8_t* contents, size_t count) noexcept {
+    SPI.beginTransaction(defaultPSRAMSettings);
+    digitalWrite<pin, LOW>();
+    SPI.transfer(0x03);
+    psramTransferAddress(address);
+    SPI.transfer(contents, count);
     digitalWrite<pin, HIGH>();
     SPI.endTransaction();
+    return count;
 }
 template<Pin pin>
 uint32_t
 psramRead32(uint32_t address) noexcept {
-    SPI.beginTransaction(defaultPSRAMSettings);
-    digitalWrite<pin, LOW>();
-    SPI.transfer(0x03); // read
-    SPI.transfer(static_cast<uint8_t>(address >> 16)); // MSB doesn't matter
-                                                       // and is actually ignored!
-    SPI.transfer(static_cast<uint8_t>(address >> 8));
-    SPI.transfer(static_cast<uint8_t>(address));
-    uint32_t value = static_cast<uint32_t>(SPI.transfer(0));
-    value |= static_cast<uint32_t>(SPI.transfer(0)) << 8;
-    value |= static_cast<uint32_t>(SPI.transfer(0)) << 16;
-    value |= static_cast<uint32_t>(SPI.transfer(0)) << 24;
-    digitalWrite<pin, HIGH>();
-    SPI.endTransaction();
-    return value;
+    uint32_t result = 0;
+    (void)psramRead<pin>(address, reinterpret_cast<uint8_t*>(&result), sizeof(result));
+    return result;
+}
+template<Pin pin>
+void
+psramWrite32(uint32_t address, uint32_t value) noexcept {
+    (void)psramWrite<pin>(address, reinterpret_cast<uint8_t*>(&value), sizeof(value));
 }
 template<Pin pin, uint32_t checkSize = 4096>
 bool
@@ -562,22 +592,3 @@ configurePSRAM() noexcept {
     (void)psramSanityCheck<Pin::PSRAM_EN2>();
     (void)psramSanityCheck<Pin::PSRAM_EN3>();
 }
-void
-setup() {
-    seedRandom();
-    setupNeopixel();
-    setupSerialConsole();
-    configurePins();
-    SPI.begin();
-    configureOnboardFlash();
-    configureSDCard();
-    configurePSRAM();
-    setupRTC();
-    setupTimers();
-    systemBooted = true;
-}
-void
-loop() {
-    executionLoop();
-}
-
