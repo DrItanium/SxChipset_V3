@@ -179,32 +179,37 @@ static_assert(sizeof(DataCell) == 16, "DataCell needs to be 16-bytes in size");
 static_assert(sizeof(localData) == 0x10000, "localData not the correct size");
 template<bool isReadOperation>
 void
-localDataOperation(uint32_t address) noexcept {
-    uint16_t targetCellIndex = static_cast<uint16_t>(address) & 0xFFF0;
-    // least significant bit is always zero
-    uint8_t offset = static_cast<uint8_t>(address & 0x000F);
-    auto& targetCell = localData[targetCellIndex];
-    if constexpr(isReadOperation) {
+handleDataCellTransaction(uint8_t offset, DataCell& cell) noexcept {
+    if constexpr (isReadOperation) {
         for (uint8_t start = offset >> 1; start < 8; ++start) {
-            setDataLines(targetCell.halves[start]);
+            setDataLines(cell.halves[start]);
             if (signalReady()) {
                 break;
             }
         }
     } else {
-        for (uint8_t start = offset; start < 16; start += 2) {
+        for (uint8_t start = offset; start < 16; start +=2) {
             uint16_t value = getDataLines();
             if (digitalRead<Pin::BE0>() == LOW) {
-                targetCell.bytes[start] = static_cast<uint8_t>(value);
+                cell.bytes[start] = static_cast<uint8_t>(value);
             }
             if (digitalRead<Pin::BE1>() == LOW) {
-                targetCell.bytes[start+1] = static_cast<uint8_t>(value >> 8);
+                cell.bytes[start+1] = static_cast<uint8_t>(value >> 8);
             }
             if (signalReady()) {
                 break;
             }
         }
     }
+}
+template<bool isReadOperation>
+void
+localDataOperation(uint32_t address) noexcept {
+    uint16_t targetCellIndex = static_cast<uint16_t>(address) & 0xFFF0;
+    // least significant bit is always zero
+    uint8_t offset = static_cast<uint8_t>(address & 0x000F);
+    auto& targetCell = localData[targetCellIndex];
+    handleDataCellTransaction<isReadOperation>(offset, targetCell);
 
 }
 template<bool isReadOperation>
@@ -463,6 +468,7 @@ seedRandom() noexcept {
     randomSeed(newSeed);
 }
 void configurePSRAM() noexcept;
+void configureCache() noexcept;
 void
 setup() {
     seedRandom();
@@ -473,6 +479,7 @@ setup() {
     configureOnboardFlash();
     configureSDCard();
     configurePSRAM();
+    configureCache();
     setupRTC();
     setupTimers();
     systemBooted = true;
@@ -569,7 +576,7 @@ configurePSRAM() noexcept {
     (void)psramSanityCheck<Pin::PSRAM_EN2>();
     (void)psramSanityCheck<Pin::PSRAM_EN3>();
 }
-template<Pin pin, bool isReadOperation>
+template<bool isReadOperation>
 void 
 commitData(uint32_t alignedAddress, DataCell& contents) noexcept {
     switch (alignedAddress) {
@@ -586,20 +593,22 @@ commitData(uint32_t alignedAddress, DataCell& contents) noexcept {
             (void)psramRW<Pin::PSRAM_EN3, isReadOperation>(alignedAddress, contents.bytes, sizeof(DataCell));
             break;
         /// @todo add more backing targets if it makes sense
-        default: // do nothing
+        default: 
+            if constexpr (isReadOperation) {
+                // clear the cell contents if it is a read operation
+                contents.clear();
+            }
             break;
     }
 }
-struct CacheLine {
-    uint32_t _targetAddress = 0;
-    bool _valid = false;
-    bool _dirty = false;
-    DataCell contents;
+class CacheLine {
+public:
+    CacheLine() = default;
     void clear() noexcept {
         _valid = false;
         _dirty = false;
         _targetAddress = 0;
-        contents.clear();
+        _contents.clear();
     }
     static constexpr uint32_t alignAddress(uint32_t newAddress) noexcept {
         return newAddress & 0xFFFF'FFF0;
@@ -609,18 +618,63 @@ struct CacheLine {
     }
     [[nodiscard]] constexpr bool valid() const noexcept { return _valid; }
     [[nodiscard]] constexpr auto getTargetAddress() const noexcept { return _targetAddress; }
+    [[nodiscard]] constexpr auto dirty() const noexcept { return _dirty; }
+    void markDirty() noexcept { _dirty = true; }
+    void synchronize(uint32_t newAddress) noexcept {
+        if (!matches(newAddress)) {
+            replace(newAddress);
+        }
+    }
     void replace(uint32_t newAddress) noexcept {
         if (_valid) {
             if (_dirty) {
-                // commit data
+                commitData<false>(_targetAddress, _contents);
             }
         } 
         _targetAddress = alignAddress(newAddress);
         _valid = true;
         _dirty = false;
-        /// @todo load the contents from memory
+        commitData<true>(_targetAddress, _contents);
     }
+    DataCell& getContents() noexcept {
+        return _contents;
+    }
+private:
+    uint32_t _targetAddress = 0;
+    bool _valid = false;
+    bool _dirty = false;
+    DataCell _contents;
 };
+// A very simple 64k direct mapped data cache
+class Cache {
+public:
+    CacheLine& find(uint32_t address) noexcept {
+        auto& cacheLine = _store[static_cast<uint16_t>(address >> 4) & 0xFFF];
+        if (!cacheLine.matches(address)) {
+            cacheLine.replace(address);
+        }
+        return cacheLine;
+    }
+    void clear() noexcept {
+        for(auto& a : _store) {
+            a.clear();
+        }
+    }
+private:
+    CacheLine _store[4096];
+};
+
+Cache dataCache;
+void 
+configureCache() noexcept {
+    dataCache.clear();
+}
+
+template<bool isReadOperation>
+void cacheOperation(uint32_t address) noexcept {
+    auto& line = dataCache.find(address);
+    handleDataCellTransaction<isReadOperation>(static_cast<uint8_t>(address & 0xF), line.getContents());
+}
 
 template<bool isReadOperation>
 void 
@@ -633,7 +687,10 @@ handleTransaction(uint32_t address) noexcept {
         PORT->Group[PORTC].DIRCLR.reg = DataMask;
     }
     switch (address) {
-
+        // lower two gigabytes are connected to the backing store cache
+        case 0x0000'0000 ... 0x7FFF'FFFF:
+            cacheOperation<isReadOperation>(address);
+            break;
         case 0xFE01'0000 ... 0xFE01'FFFF:
             localDataOperation<isReadOperation>(address);
             break;
