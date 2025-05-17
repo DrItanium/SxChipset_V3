@@ -332,7 +332,7 @@ struct i960Interface {
   }
   static void
   signalReady() noexcept {
-      Serial.println("signalReady");
+      Serial.println("signal ready");
       // run and block until we get the completion pulse
       digitalWriteFast(Pin::READY, LOW);
 
@@ -406,15 +406,14 @@ struct i960Interface {
         Serial.println(offset, HEX);
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
         Serial.println(wordOffset);
+        writeDataLines(target.shorts[wordOffset]);
         if (isBurstLast()) {
-            writeDataLines(target.shorts[wordOffset]);
-            signalReady();
             break;
         } else {
-            writeDataLines(target.shorts[wordOffset]);
             signalReady();
         }
       }
+      signalReady();
 
     } else {
       for (uint8_t wordOffset = offset; wordOffset < 16; wordOffset += 2) {
@@ -460,16 +459,16 @@ struct i960Interface {
   template<bool waitForADS>
   static void
   singleTransaction() noexcept {
+    readyTriggered = false;
     if constexpr (waitForADS) {
         while (!adsTriggered);
     }
-    {
-        readyTriggered = false;
-        adsTriggered = false;
-    }
+    adsTriggered = false;
+    delayNanoseconds(200);
     uint32_t targetAddress = getAddress();
     Serial.print("Target Address: 0x");
     Serial.println(targetAddress, HEX);
+    Serial.print("Waiting for DEN to go HIGH");
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
@@ -506,8 +505,11 @@ void setupRandomSeed() noexcept {
   X(A17);
 #undef X
   randomSeed(newSeed);
+  Serial.print("Random Seed: ");
+  Serial.println(newSeed);
 }
 void setupMemory() noexcept {
+  Serial.println("Clearing PSRAM");
   memset(memory960, 0, sizeof(memory960));
 }
 void
@@ -558,6 +560,10 @@ void setup() {
   digitalWriteFast(Pin::RESET, HIGH);
   // so attaching the interrupt seems to not be functioning fully
   delayNanoseconds(100);
+  Serial.println("Booted i960");
+  // okay so we want to handle the initial boot process
+  i960Interface::singleTransaction<true>();
+  i960Interface::singleTransaction<true>();
 }
 bool waiting = false;
 void loop() {
