@@ -8,7 +8,7 @@ constexpr auto CLK1Out = PIN_PB3;
 constexpr auto CLKOUT = PIN_PA7;
 constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
-constexpr auto i960_READY_SYNC = PIN_PE7;
+constexpr auto i960_READY_SYNC = PIN_PE2;
 
 
 void
@@ -19,6 +19,7 @@ configurePins() noexcept {
   pinMode(CLK2Out, OUTPUT);
   pinMode(RP2350_READY_IN, INPUT);
   pinMode(RP2350_READY_SYNC, OUTPUT);
+  digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
 setupSystemClocks() noexcept {
@@ -86,10 +87,12 @@ configureCCLs() {
   Logic1.init();
   // invert the output pin to make it output the correct pulse shape :)
   PORTC.PIN6CTRL |= PORT_INVEN_bm;
+  PORTE.PIN7CTRL |= PORT_INVEN_bm;
 
   Event0.start();
   Event1.start();
   Event2.start();
+  Event3.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
