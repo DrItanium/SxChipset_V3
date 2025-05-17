@@ -252,7 +252,7 @@ public:
     setAddress(address);
     setDataLines(value);
     digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(150);
+    delayNanoseconds(200);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
   static void
@@ -267,10 +267,10 @@ public:
   }
   static uint8_t
   read8(uint8_t address) noexcept {
-    setDataLinesDirection(INPUT);
+    setDataLinesDirection(INPUT_PULLUP);
     setAddress(address);
     digitalWriteFast(Pin::EBI_RD, LOW);
-    delayNanoseconds(150);
+    delayNanoseconds(200);
     uint8_t result = readDataLines();
     digitalWriteFast(Pin::EBI_RD, HIGH);
     return result;
@@ -464,12 +464,12 @@ struct i960Interface {
         while (!adsTriggered);
     }
     adsTriggered = false;
+    Serial.println("Waiting for DEN to go HIGH");
+    while (digitalReadFast(Pin::DEN) == HIGH) ;
     delayNanoseconds(200);
     uint32_t targetAddress = getAddress();
     Serial.print("Target Address: 0x");
     Serial.println(targetAddress, HEX);
-    Serial.print("Waiting for DEN to go HIGH");
-    while (digitalReadFast(Pin::DEN) == HIGH) ;
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
@@ -531,7 +531,7 @@ void setup() {
   EBIInterface::begin();
   i960Interface::begin();
   setupMemory();
-  pinMode(Pin::ADS, INPUT_PULLUP);
+  pinMode(Pin::ADS, INPUT);
   outputPin(Pin::RESET, LOW);
   inputPin(Pin::DEN);
   outputPin(Pin::HOLD, LOW);
