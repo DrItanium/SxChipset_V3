@@ -332,14 +332,16 @@ struct i960Interface {
   }
   static void
   signalReady() noexcept {
-    // run and block until we get the completion pulse
-    digitalToggleFast(Pin::READY);
+      Serial.println("signalReady");
+      // run and block until we get the completion pulse
+      digitalWriteFast(Pin::READY, LOW);
 
-    while (!readyTriggered) {
-      // wait
-    }
-    readyTriggered = false;
-    delayNanoseconds(200);  // wait 200 ns to make sure that all other signals have "caught up"
+      while (!readyTriggered) {
+          // wait
+      }
+      readyTriggered = false;
+      digitalWriteFast(Pin::READY, HIGH);
+      delayNanoseconds(250);  // wait 200 ns to make sure that all other signals have "caught up"
   }
   static bool
   isReadOperation() noexcept {
@@ -398,13 +400,20 @@ struct i960Interface {
   static void
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
     if (isReadTransaction) {
+        Serial.print("Base Address: 0x");
+        Serial.println(reinterpret_cast<size_t>(&target), HEX);
+        Serial.print("Offset: 0x");
+        Serial.println(offset, HEX);
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-        writeDataLines(target.shorts[wordOffset]);
+        Serial.println(wordOffset);
         if (isBurstLast()) {
-          signalReady();
-          return;
+            writeDataLines(target.shorts[wordOffset]);
+            signalReady();
+            break;
+        } else {
+            writeDataLines(target.shorts[wordOffset]);
+            signalReady();
         }
-        signalReady();
       }
 
     } else {
@@ -417,11 +426,12 @@ struct i960Interface {
           target.bytes[wordOffset + 1] = static_cast<uint8_t>(data >> 8);
         }
         if (isBurstLast()) {
-          signalReady();
-          return;
+            break;
+        } else {
+            signalReady();
         }
-        signalReady();
       }
+      signalReady();
     }
   }
 
@@ -429,19 +439,23 @@ struct i960Interface {
   template<bool isReadTransaction>
   static void
   doMemoryTransaction(uint32_t address) noexcept {
-    if constexpr (isReadTransaction) {
-      configureDataLinesForRead();
-    } else {
-      configureDataLinesForWrite();
-    }
-    switch (address) {
-      case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
-        doPSRAMTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
-        break;
-      default:
-        doNothingTransaction<isReadTransaction>();
-        break;
-    }
+      if constexpr (isReadTransaction) {
+          Serial.println("Configuring Data Lines For Read");
+          configureDataLinesForRead();
+      } else {
+          Serial.println("Configuring Data Lines For Write");
+          configureDataLinesForWrite();
+      }
+      switch (address) {
+          case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
+              Serial.println("PSRAM Transaction");
+              doPSRAMTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              break;
+          default:
+              Serial.println("Do Nothing Transaction");
+              doNothingTransaction<isReadTransaction>();
+              break;
+      }
   }
   template<bool waitForADS>
   static void
@@ -449,16 +463,18 @@ struct i960Interface {
     if constexpr (waitForADS) {
         while (!adsTriggered);
     }
-    adsTriggered = false;
+    {
+        readyTriggered = false;
+        adsTriggered = false;
+    }
     uint32_t targetAddress = getAddress();
     Serial.print("Target Address: 0x");
     Serial.println(targetAddress, HEX);
-    while (digitalReadFast(Pin::DEN) == HIGH)
-      ;
+    while (digitalReadFast(Pin::DEN) == HIGH) ;
     if (isReadOperation()) {
-      doMemoryTransaction<true>(targetAddress);
+        doMemoryTransaction<true>(targetAddress);
     } else {
-      doMemoryTransaction<false>(targetAddress);
+        doMemoryTransaction<false>(targetAddress);
     }
   }
 };
@@ -490,16 +506,17 @@ void setupRandomSeed() noexcept {
   X(A17);
 #undef X
   randomSeed(newSeed);
-  Serial.print("Random Seed: ");
-  Serial.println(newSeed);
 }
 void setupMemory() noexcept {
-  Serial.println("Clearing PSRAM");
   memset(memory960, 0, sizeof(memory960));
 }
 void
 triggerADS() noexcept {
   adsTriggered = true;
+}
+void
+triggerReadySync() noexcept {
+    readyTriggered = true;
 }
 void setup() {
   Serial.begin(9600);
@@ -535,22 +552,12 @@ void setup() {
   } else {
     Serial.println("SDCARD Found");
   }
+  attachInterrupt( Pin::ADS, triggerADS, RISING);
+  attachInterrupt( Pin::READY_SYNC, triggerReadySync, RISING);
   delay(1000);  // make sure that the i960 has enough time to setup
   digitalWriteFast(Pin::RESET, HIGH);
   // so attaching the interrupt seems to not be functioning fully
-  attachInterrupt(
-    Pin::ADS, triggerADS,
-    RISING);
-  attachInterrupt(
-    Pin::READY_SYNC, []() {
-      readyTriggered = true;
-    },
-    RISING);
   delayNanoseconds(100);
-  Serial.println("Booted i960");
-  // okay so we want to handle the initial boot process
-  i960Interface::singleTransaction<true>();
-  i960Interface::singleTransaction<true>();
 }
 bool waiting = false;
 void loop() {
