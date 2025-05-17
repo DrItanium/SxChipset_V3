@@ -64,8 +64,8 @@ enum class Pin : uint8_t {
   EBI_D5 = RPI_D13,
   EBI_D6 = RPI_D14,
   EBI_D7 = RPI_D15,
-  ADS = RPI_D16,
   BLAST = RPI_D17,
+  ADS = RPI_D16,
   WR = RPI_D18,
   DEN = RPI_D19,
   BE0 = RPI_D20,
@@ -134,7 +134,6 @@ inline void inputPin(Pin p) noexcept {
 }
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
-volatile bool systemBooted = false;
 struct CH351 {
   constexpr CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
@@ -444,8 +443,12 @@ struct i960Interface {
         break;
     }
   }
+  template<bool waitForADS>
   static void
   singleTransaction() noexcept {
+    if constexpr (waitForADS) {
+        while (!adsTriggered);
+    }
     adsTriggered = false;
     uint32_t targetAddress = getAddress();
     Serial.print("Target Address: 0x");
@@ -496,7 +499,7 @@ void setupMemory() noexcept {
 }
 void
 triggerADS() noexcept {
-    adsTriggered = true;
+  adsTriggered = true;
 }
 void setup() {
   Serial.begin(9600);
@@ -533,18 +536,33 @@ void setup() {
     Serial.println("SDCARD Found");
   }
   delay(1000);  // make sure that the i960 has enough time to setup
-  attachInterrupt( Pin::ADS, triggerADS, RISING);
-  attachInterrupt(Pin::READY_SYNC, []() { readyTriggered = true; }, RISING);
   digitalWriteFast(Pin::RESET, HIGH);
   // so attaching the interrupt seems to not be functioning fully
+  attachInterrupt(
+    Pin::ADS, triggerADS,
+    RISING);
+  attachInterrupt(
+    Pin::READY_SYNC, []() {
+      readyTriggered = true;
+    },
+    RISING);
   delayNanoseconds(100);
-  //Serial.println("Booted i960");
-  
+  Serial.println("Booted i960");
+  // okay so we want to handle the initial boot process
+  i960Interface::singleTransaction<true>();
+  i960Interface::singleTransaction<true>();
 }
+bool waiting = false;
 void loop() {
-    if (adsTriggered) {
-        Serial.println("ADS triggered");
-        adsTriggered = false;
+  if (adsTriggered) {
+    i960Interface::singleTransaction<false>();
+    waiting = false;
+  } else {
+    if (!waiting) {
+      Serial.println("Waiting for transaction...");
     }
+    waiting = true;
+  }
+  
 }
 
