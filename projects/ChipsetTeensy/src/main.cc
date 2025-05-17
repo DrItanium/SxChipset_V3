@@ -134,6 +134,7 @@ inline void inputPin(Pin p) noexcept {
 }
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
+volatile bool systemBooted = false;
 struct CH351 {
   constexpr CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
@@ -495,10 +496,13 @@ void setupMemory() noexcept {
 }
 void
 triggerADS() noexcept {
-  adsTriggered = true;
+    adsTriggered = true;
 }
 void setup() {
   Serial.begin(9600);
+  while (!Serial) {
+      delay(10);
+  }
   //delay(500);
   setupRandomSeed();
   // put your setup code here, to run once:
@@ -529,31 +533,18 @@ void setup() {
     Serial.println("SDCARD Found");
   }
   delay(1000);  // make sure that the i960 has enough time to setup
+  attachInterrupt( Pin::ADS, triggerADS, RISING);
+  attachInterrupt(Pin::READY_SYNC, []() { readyTriggered = true; }, RISING);
   digitalWriteFast(Pin::RESET, HIGH);
-  attachInterrupt(
-    Pin::ADS, triggerADS,
-    RISING);
-  attachInterrupt(
-    Pin::READY_SYNC, []() {
-      readyTriggered = true;
-    },
-    RISING);
+  // so attaching the interrupt seems to not be functioning fully
   delayNanoseconds(100);
-  Serial.println("Booted i960");
+  //Serial.println("Booted i960");
   
 }
-bool waiting = false;
 void loop() {
-  if (adsTriggered) {
-    i960Interface::singleTransaction();
-    waiting = false;
-  } else {
-    if (!waiting) {
-      Serial.println("Waiting for transaction...");
+    if (adsTriggered) {
+        Serial.println("ADS triggered");
+        adsTriggered = false;
     }
-    waiting = true;
-
-  }
-  
 }
 
