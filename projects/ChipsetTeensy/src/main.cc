@@ -168,23 +168,10 @@ private:
       }
       return result ;
   }
-constexpr uint32_t AddressMasks[16] {
-    generateAddressMask(0),
-    generateAddressMask(1),
-    generateAddressMask(2),
-    generateAddressMask(3),
-    generateAddressMask(4),
-    generateAddressMask(5),
-    generateAddressMask(6),
-    generateAddressMask(7),
-    generateAddressMask(8),
-    generateAddressMask(9),
-    generateAddressMask(10),
-    generateAddressMask(11),
-    generateAddressMask(12),
-    generateAddressMask(13),
-    generateAddressMask(14),
-    generateAddressMask(15),
+constexpr uint32_t AddressMasks[256] {
+#define X(index) generateAddressMask(index),
+#include "Entry255.def"
+#undef X
 };
 static_assert(generateAddressMask(0b1111) == 0b101110000);
 constexpr uint32_t generateDataLineMiddleMask(uint8_t value) noexcept {
@@ -209,8 +196,23 @@ constexpr uint32_t generateDataLineMiddleMask(uint8_t value) noexcept {
     }
     return result;
 }
+constexpr uint32_t generateDataLineUpperMask(uint8_t value) noexcept {
+    uint32_t result = 0;
+    if ((value & 0b0100'0000)) {
+        result |= (1ul << 18);
+    }
+    if ((value & 0b1000'0000)) {
+        result |= (1ul << 19);
+    }
+    return result;
+}
 constexpr uint32_t DataLineMiddleMasks[256] {
 #define X(index) generateDataLineMiddleMask(index),
+#include "Entry255.def"
+#undef X
+};
+constexpr uint32_t DataLineUpperMasks[256] {
+#define X(index) generateDataLineUpperMask(index),
 #include "Entry255.def"
 #undef X
 };
@@ -258,11 +260,11 @@ public:
   static inline void
   setAddress(uint8_t address) noexcept {
       // clear then set
-      IMXRT_GPIO9.DR_CLEAR = AddressMasks[0b1111]; // make sure that we have
+      IMXRT_GPIO9.DR_CLEAR = AddressMasks[0xFF]; // make sure that we have
                                                    // the address bits properly
                                                    // cleared in all cases
 
-      IMXRT_GPIO9.DR_SET = AddressMasks[address & 0b1111];
+      IMXRT_GPIO9.DR_SET = AddressMasks[address];
       if constexpr (setUpperTwoBits) {
           digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
           digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
@@ -272,24 +274,32 @@ public:
   readDataLines() noexcept {
     uint8_t value = 0;
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
+    //@todo accelerate using direct GPIO port reads
     X(Pin::EBI_D0, 0b00000001);
     X(Pin::EBI_D1, 0b00000010);
     X(Pin::EBI_D2, 0b00000100);
     X(Pin::EBI_D3, 0b00001000);
     X(Pin::EBI_D4, 0b00010000);
     X(Pin::EBI_D5, 0b00100000);
+#if 0
     X(Pin::EBI_D6, 0b01000000);
     X(Pin::EBI_D7, 0b10000000);
+#else
+    // direct reads from the fast gpio port
+    value |= (static_cast<uint8_t>((IMXRT_GPIO6.DR) >> 12) & 0b110000);
+#endif
 #undef X
     return value;
   }
   static inline void
   setDataLines(uint8_t value) noexcept {
-      constexpr auto FullMask = DataLineMiddleMasks[0xFF];
-      auto TargetMask = DataLineMiddleMasks[value];
-      // clear then set the lower 6 bits
-      IMXRT_GPIO7.DR_CLEAR = FullMask;
-      IMXRT_GPIO7.DR_SET = TargetMask;
+      // clear then set the corresponding bits
+      // @todo rearrange the data lines pinout so that they line up with a
+      // single GPIO port
+      IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
+      IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
+      IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
+      IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
 #if 0
       // B1_00
       digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
@@ -303,11 +313,11 @@ public:
       digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
       // B0_03
       digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
-#endif
       // AD_B1_02
       digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
       // AD_B1_03
       digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+#endif
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
