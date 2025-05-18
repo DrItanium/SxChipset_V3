@@ -215,16 +215,23 @@ public:
 #undef X
     return value;
   }
+  template<bool compareWithPrevious = false>
   static void
   setDataLines(uint8_t value) noexcept {
-    digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
-    digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+      if constexpr (compareWithPrevious) {
+        if (value == _previousOutputValue) {
+            return;
+        }
+      }
+      digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+      _previousOutputValue = value; // always keep this up to date
   }
   static void
   setDataLinesDirection(PinDirection direction) noexcept {
@@ -252,15 +259,67 @@ public:
     delayNanoseconds(delay);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
+  template<uint32_t delay = 50>
   static void
   write16(uint8_t baseAddress, uint16_t value) noexcept {
-    write8(baseAddress, static_cast<uint8_t>(value));
-    write8(baseAddress + 1, static_cast<uint8_t>(value >> 8));
+      if ((baseAddress & 0b1) == 0) {
+          // it is aligned so we don't need to worry
+          setDataLinesDirection(OUTPUT);
+          setAddress(baseAddress);
+          setDataLines(static_cast<uint8_t>(value));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          digitalToggleFast(Pin::EBI_A0); // since it is aligned to 16-bit
+                                          // boundaries we can safely bump it
+                                          // forward by one
+          setDataLines<true>(static_cast<uint8_t>(value >> 8));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+      } else {
+          write8<delay>(baseAddress, static_cast<uint8_t>(value));
+          write8<delay>(baseAddress + 1, static_cast<uint8_t>(value >> 8));
+
+      } 
+
   }
+  template<uint32_t delay = 50>
   static void
   write32(uint8_t baseAddress, uint32_t value) noexcept {
-    write16(baseAddress, static_cast<uint16_t>(value));
-    write16(baseAddress + 2, static_cast<uint16_t>(value >> 16));
+      if ((baseAddress & 0b11) == 0) {
+          // it is aligned so we don't need to worry
+          setDataLinesDirection(OUTPUT);
+          setAddress(baseAddress);
+          setDataLines(static_cast<uint8_t>(value));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          digitalToggleFast(Pin::EBI_A0); // since it is aligned to 16-bit
+                                          // boundaries we can safely bump it
+                                          // forward by one
+          setDataLines<true>(static_cast<uint8_t>(value >> 8));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+
+          digitalWriteFast(Pin::EBI_A0, LOW);
+          digitalWriteFast(Pin::EBI_A1, HIGH);
+          setDataLines<true>(static_cast<uint8_t>(value >> 16));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+
+          digitalWriteFast(Pin::EBI_A0, HIGH);
+          setDataLines<true>(static_cast<uint8_t>(value >> 24));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+
+      } else {
+        write16<delay>(baseAddress, static_cast<uint16_t>(value));
+        write16<delay>(baseAddress + 2, static_cast<uint16_t>(value >> 16));
+      }
   }
   template<uint32_t delay = 50>
   static uint8_t
@@ -299,6 +358,7 @@ public:
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
+  static inline uint8_t _previousOutputValue = 0;
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 
@@ -418,9 +478,7 @@ struct i960Interface {
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
               writeDataLines(target.shorts[wordOffset]);
-              digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
               if (isBurstLast()) {
                   break;
               } else {
@@ -452,11 +510,13 @@ struct i960Interface {
   template<bool isReadTransaction>
   static void
   doMemoryTransaction(uint32_t address) noexcept {
+      digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
       if constexpr (isReadTransaction) {
           configureDataLinesForRead();
       } else {
           configureDataLinesForWrite();
       }
+      digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
       switch (address) {
           case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
               doPSRAMTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
@@ -466,18 +526,12 @@ struct i960Interface {
               break;
       }
   }
-  template<bool waitForADS>
   static void
   singleTransaction() noexcept {
     readyTriggered = false;
-    if constexpr (waitForADS) {
-        while (!adsTriggered);
-    }
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     uint32_t targetAddress = getAddress();
-    Serial.print("Target Address: 0x");
-    Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
@@ -580,18 +634,10 @@ setup() {
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
-bool waiting = false;
 void 
 loop() {
     if (adsTriggered) {
-        i960Interface::singleTransaction<false>();
-        waiting = false;
-    } else {
-        if (!waiting) {
-            Serial.println("Waiting for transaction...");
-        }
-        waiting = true;
-    }
-
+        i960Interface::singleTransaction();
+    } 
 }
 
