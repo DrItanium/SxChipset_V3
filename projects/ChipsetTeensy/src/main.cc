@@ -378,11 +378,6 @@ struct i960Interface {
   writeDataLines(uint16_t value) noexcept {
     EBIInterface::write16(dataLines.getDataPortBaseAddress(), value);
   }
-  static void
-  writeDataLines(uint8_t lo, uint8_t hi) noexcept {
-    EBIInterface::write8(dataLines.getDataPortBaseAddress(), lo);
-    EBIInterface::write8(dataLines.getDataPortBaseAddress() + 1, hi);
-  }
   static uint16_t
   readDataLines() noexcept {
     return EBIInterface::read16(dataLines.getDataPortBaseAddress());
@@ -422,7 +417,7 @@ struct i960Interface {
   template<bool isReadTransaction>
   static void
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
-      if (isReadTransaction) {
+      if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
