@@ -186,19 +186,23 @@ public:
       pinMode(a, OUTPUT);
       digitalWrite(a, LOW);
     }
-    setAddress(0);
+    // force EBI_A4 and A5 to low  since we will never be accessing that
+    setAddress<true>(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
   }
+  template<bool setUpperTwoBits = false>
   static void
   setAddress(uint8_t address) noexcept {
       digitalWriteFast(Pin::EBI_A0, address & 0b1 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A1, address & 0b10 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A2, address & 0b100 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A3, address & 0b1000 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
+      if constexpr (setUpperTwoBits) {
+          digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
+          digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
+      }
   }
   static uint8_t
   readDataLines() noexcept {
@@ -532,6 +536,8 @@ struct i960Interface {
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     uint32_t targetAddress = getAddress();
+    Serial.print("Target Address: 0x");
+    Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
