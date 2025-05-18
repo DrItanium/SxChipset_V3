@@ -12,9 +12,9 @@ union MemoryCell {
   uint32_t words[4];
   uint64_t longs[2];
   void clear() noexcept {
-    for (auto& a : words) {
-      a = 0;
-    }
+      for (auto& a : words) {
+          a = 0;
+      }
   }
 };
 static_assert(sizeof(MemoryCell) == 16, "MemoryCell needs to be 16 bytes in size");
@@ -64,25 +64,23 @@ enum class Pin : uint8_t {
   EBI_D5 = RPI_D13,
   EBI_D6 = RPI_D14,
   EBI_D7 = RPI_D15,
-  BLAST = RPI_D17,
   ADS = RPI_D16,
-  WR = RPI_D18,
-  DEN = RPI_D19,
+  BLAST = RPI_D17,
+  DEN = RPI_D18,
+  WR = RPI_D19,
   BE0 = RPI_D20,
   BE1 = RPI_D21,
   HOLD = RPI_D22,
-  HLDA = RPI_D23,
-  RESET = RPI_D24,
-  LOCK = RPI_D25,
-  READY = RPI_D26,
-  READY_SYNC = RPI_D27,
-  FAIL = 31,
-  INT960_0 = 32,
-  INT960_1 = 35,
-  INT960_2 = 34,
-  INT960_3 = 33,  
-  
-
+  LOCK = RPI_D23,
+  INT960_0 = RPI_D24,
+  INT960_1 = RPI_D25,
+  INT960_2 = RPI_D26,
+  INT960_3 = RPI_D27,  
+  READY = 30,
+  READY_SYNC = 31,
+  RESET = 32,
+  HLDA = 33,
+  FAIL = 34,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -192,17 +190,42 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
   }
+  template<uint8_t address>
+  static inline void
+  setAddressCompileTime() noexcept {
+      static_assert(address < 64);
+#define X(pin, mask) \
+    if constexpr (address & mask) { \
+        digitalWriteFast(pin, HIGH); \
+    } else { \
+        digitalWriteFast(pin, LOW); \
+    } 
+      X(Pin::EBI_A0, 0b00000001);
+      X(Pin::EBI_A1, 0b00000010);
+      X(Pin::EBI_A2, 0b00000100);
+      X(Pin::EBI_A3, 0b00001000);
+      X(Pin::EBI_A4, 0b00010000);
+      X(Pin::EBI_A5, 0b00100000);
+#undef X
+  }
   static void
   setAddress(uint8_t address) noexcept {
-    if ((address & 0b0011'1111) != _currentAddress) {
-      digitalWriteFast(Pin::EBI_A0, (address & 0b000001) != 0 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A1, (address & 0b000010) != 0 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A2, (address & 0b000100) != 0 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A3, (address & 0b001000) != 0 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A4, (address & 0b010000) != 0 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A5, (address & 0b100000) != 0 ? HIGH : LOW);
-      _currentAddress = address & 0b0011'1111;
-    }
+      switch (address & 0b11'1111) {
+#define X(index) case index : setAddressCompileTime<index>(); break
+#define Y(base) X((base + 0)); X((base + 1)); X((base + 2)); X((base + 3)); X((base + 4)); X((base + 5)); X((base + 6)); X((base + 7))
+          Y(0);
+          Y(8);
+          Y(16);
+          Y(24);
+          Y(32);
+          Y(40);
+          Y(48);
+          Y(56);
+#undef Y
+#undef X
+          default:
+              break;
+      }
   }
   static uint8_t
   readDataLines() noexcept {
@@ -246,13 +269,14 @@ public:
       _currentDirection = direction;
     }
   }
+  template<uint32_t delay = 50>
   static void
   write8(uint8_t address, uint8_t value) noexcept {
     setDataLinesDirection(OUTPUT);
     setAddress(address);
     setDataLines(value);
     digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(100);
+    delayNanoseconds(delay);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
   static void
@@ -265,12 +289,13 @@ public:
     write16(baseAddress, static_cast<uint16_t>(value));
     write16(baseAddress + 2, static_cast<uint16_t>(value >> 16));
   }
+  template<uint32_t delay = 50>
   static uint8_t
   read8(uint8_t address) noexcept {
-    setDataLinesDirection(INPUT_PULLUP);
+    setDataLinesDirection(INPUT);
     setAddress(address);
     digitalWriteFast(Pin::EBI_RD, LOW);
-    delayNanoseconds(100);
+    delayNanoseconds(delay);
     uint8_t result = readDataLines();
     digitalWriteFast(Pin::EBI_RD, HIGH);
     return result;
@@ -287,21 +312,20 @@ public:
   }
   static uint32_t
   read32(uint8_t baseAddress) noexcept {
-    union {
-      uint8_t bytes[4];
-      uint32_t result;
-    } storage;
-    storage.bytes[0] = read8(baseAddress);
-    storage.bytes[1] = read8(baseAddress + 1);
-    storage.bytes[2] = read8(baseAddress + 2);
-    storage.bytes[3] = read8(baseAddress + 3);
-    return storage.result;
+      union {
+          uint8_t bytes[4];
+          uint32_t result;
+      } storage;
+      storage.bytes[0] = read8(baseAddress);
+      storage.bytes[1] = read8(baseAddress + 1);
+      storage.bytes[2] = read8(baseAddress + 2);
+      storage.bytes[3] = read8(baseAddress + 3);
+      return storage.result;
   }
   
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
-  static inline uint8_t _currentAddress = 0xFF;  // start with an illegal value to make sure
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 
@@ -400,7 +424,6 @@ struct i960Interface {
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              Serial.println(wordOffset);
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
                   break;
@@ -457,6 +480,8 @@ struct i960Interface {
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     uint32_t targetAddress = getAddress();
+    Serial.print("Target Address: 0x");
+    Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
@@ -507,6 +532,11 @@ void
 triggerReadySync() noexcept {
     readyTriggered = true;
 }
+volatile uint32_t failCount = 0;
+void
+triggerFAIL() noexcept {
+    ++failCount;
+}
 void setup() {
   pinMode(Pin::ADS, INPUT);
   outputPin(Pin::RESET, LOW);
@@ -542,6 +572,7 @@ void setup() {
   }
   attachInterrupt( Pin::ADS, triggerADS, RISING);
   attachInterrupt( Pin::READY_SYNC, triggerReadySync, RISING);
+  attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
   delay(1000);  // make sure that the i960 has enough time to setup
   digitalWriteFast(Pin::RESET, HIGH);
   // so attaching the interrupt seems to not be functioning fully
