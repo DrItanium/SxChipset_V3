@@ -81,6 +81,7 @@ enum class Pin : uint8_t {
   RESET = 32,
   HLDA = 33,
   FAIL = 34,
+  SCOPE_SIGNAL0 = 35,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -360,7 +361,7 @@ struct i960Interface {
       digitalWriteFast(Pin::READY, LOW);
 
       while (!readyTriggered) {
-          // wait
+          yield();
       }
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
@@ -419,7 +420,9 @@ struct i960Interface {
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+              digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
               writeDataLines(target.shorts[wordOffset]);
+              digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
               if (isBurstLast()) {
                   break;
               } else {
@@ -526,66 +529,71 @@ triggerADS() noexcept {
 void
 triggerReadySync() noexcept {
     readyTriggered = true;
+    //digitalWriteFast(Pin::READY, HIGH);
 }
 volatile uint32_t failCount = 0;
 void
 triggerFAIL() noexcept {
     ++failCount;
 }
-void setup() {
-  pinMode(Pin::ADS, INPUT);
-  outputPin(Pin::RESET, LOW);
-  inputPin(Pin::DEN);
-  outputPin(Pin::HOLD, LOW);
-  inputPin(Pin::HLDA);
-  Serial.begin(9600);
-  while (!Serial) {
-      delay(10);
-  }
-  //delay(500);
-  setupRandomSeed();
-  // put your setup code here, to run once:
-  EBIInterface::begin();
-  i960Interface::begin();
-  setupMemory();
-  outputPin(Pin::INT960_0, HIGH);
-  outputPin(Pin::INT960_1, LOW);
-  outputPin(Pin::INT960_2, LOW);
-  outputPin(Pin::INT960_3, HIGH);
-  inputPin(Pin::LOCK);
-  inputPin(Pin::FAIL);
-  inputPin(Pin::BE0);
-  inputPin(Pin::BE1);
-  inputPin(Pin::WR);
-  outputPin(Pin::READY, HIGH);
-  inputPin(Pin::BLAST);
-  inputPin(Pin::READY_SYNC);
-  if (!SD.begin(BUILTIN_SDCARD)) {
-    Serial.println("No SDCARD found!");
-  } else {
-    Serial.println("SDCARD Found");
-  }
-  attachInterrupt( Pin::ADS, triggerADS, RISING);
-  attachInterrupt( Pin::READY_SYNC, triggerReadySync, RISING);
-  attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
-  delay(1000);  // make sure that the i960 has enough time to setup
-  digitalWriteFast(Pin::RESET, HIGH);
-  // so attaching the interrupt seems to not be functioning fully
-  delayNanoseconds(100);
-  Serial.println("Booted i960");
-  // okay so we want to handle the initial boot process
+void 
+setup() {
+    pinMode(Pin::SCOPE_SIGNAL0, OUTPUT);
+    digitalWrite(Pin::SCOPE_SIGNAL0, HIGH);
+    pinMode(Pin::ADS, INPUT);
+    outputPin(Pin::RESET, LOW);
+    inputPin(Pin::DEN);
+    outputPin(Pin::HOLD, LOW);
+    inputPin(Pin::HLDA);
+    Serial.begin(9600);
+    while (!Serial) {
+        delay(10);
+    }
+    //delay(500);
+    setupRandomSeed();
+    // put your setup code here, to run once:
+    EBIInterface::begin();
+    i960Interface::begin();
+    setupMemory();
+    outputPin(Pin::INT960_0, HIGH);
+    outputPin(Pin::INT960_1, LOW);
+    outputPin(Pin::INT960_2, LOW);
+    outputPin(Pin::INT960_3, HIGH);
+    inputPin(Pin::LOCK);
+    inputPin(Pin::FAIL);
+    inputPin(Pin::BE0);
+    inputPin(Pin::BE1);
+    inputPin(Pin::WR);
+    outputPin(Pin::READY, HIGH);
+    inputPin(Pin::BLAST);
+    inputPin(Pin::READY_SYNC);
+    if (!SD.begin(BUILTIN_SDCARD)) {
+        Serial.println("No SDCARD found!");
+    } else {
+        Serial.println("SDCARD Found");
+    }
+    attachInterrupt( Pin::ADS, triggerADS, RISING);
+    attachInterrupt( Pin::READY_SYNC, triggerReadySync, FALLING);
+    attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
+    delay(1000);  // make sure that the i960 has enough time to setup
+    digitalWriteFast(Pin::RESET, HIGH);
+    // so attaching the interrupt seems to not be functioning fully
+    delayNanoseconds(100);
+    Serial.println("Booted i960");
+    // okay so we want to handle the initial boot process
 }
 bool waiting = false;
-void loop() {
-  if (adsTriggered) {
-    i960Interface::singleTransaction<false>();
-    waiting = false;
-  } else {
-    if (!waiting) {
-      Serial.println("Waiting for transaction...");
+void 
+loop() {
+    if (adsTriggered) {
+        i960Interface::singleTransaction<false>();
+        waiting = false;
+    } else {
+        if (!waiting) {
+            Serial.println("Waiting for transaction...");
+        }
+        waiting = true;
     }
-    waiting = true;
-  }
-  
+
 }
 

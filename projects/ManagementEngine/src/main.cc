@@ -65,10 +65,17 @@ configureCCLs() {
   Event1.set_generator(gen::ccl2_out); // 12/10MHz
   Event1.set_user(user::ccl4_event_a);
   Event1.set_user(user::ccl5_event_a);
-  Event2.set_generator(gen::ccl4_out); // 6/5MHz
-  Event2.set_user(user::ccl1_event_a);
-  Event3.set_generator(gen::ccl1_out);
-  Event3.set_user(user::evoute_pin_pe7); // i960 "5V" Ready transmit
+
+  Event2.set_generator(gen2::pin_pc0); // READY from the teensy / rp2350 / GCM4
+  Event2.set_user(user::evoutc_pin_pc7); // I need to be able to inspect the
+                                         // results from a scope
+
+  Event3.set_generator(gen::ccl4_out); // 6/5MHz
+  Event3.set_user(user::ccl1_event_a);
+
+  Event4.set_generator(gen::ccl1_out);
+  Event4.set_user(user::evoute_pin_pe7); // i960 "5V" Ready transmit
+
 
   configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
   configureDivideByTwoCCL<true>(Logic4, Logic5); // divide by four
@@ -93,6 +100,7 @@ configureCCLs() {
   Event1.start();
   Event2.start();
   Event3.start();
+  Event4.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
