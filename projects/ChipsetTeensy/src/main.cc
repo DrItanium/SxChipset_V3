@@ -191,42 +191,14 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
   }
-  template<uint8_t address>
-  static inline void
-  setAddressCompileTime() noexcept {
-      static_assert(address < 64);
-#define X(pin, mask) \
-    if constexpr (address & mask) { \
-        digitalWriteFast(pin, HIGH); \
-    } else { \
-        digitalWriteFast(pin, LOW); \
-    } 
-      X(Pin::EBI_A0, 0b00000001);
-      X(Pin::EBI_A1, 0b00000010);
-      X(Pin::EBI_A2, 0b00000100);
-      X(Pin::EBI_A3, 0b00001000);
-      X(Pin::EBI_A4, 0b00010000);
-      X(Pin::EBI_A5, 0b00100000);
-#undef X
-  }
   static void
   setAddress(uint8_t address) noexcept {
-      switch (address & 0b11'1111) {
-#define X(index) case index : setAddressCompileTime<index>(); break
-#define Y(base) X((base + 0)); X((base + 1)); X((base + 2)); X((base + 3)); X((base + 4)); X((base + 5)); X((base + 6)); X((base + 7))
-          Y(0);
-          Y(8);
-          Y(16);
-          Y(24);
-          Y(32);
-          Y(40);
-          Y(48);
-          Y(56);
-#undef Y
-#undef X
-          default:
-              break;
-      }
+      digitalWriteFast(Pin::EBI_A0, address & 0b1 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A1, address & 0b10 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A2, address & 0b100 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A3, address & 0b1000 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
   }
   static uint8_t
   readDataLines() noexcept {
@@ -377,7 +349,17 @@ struct i960Interface {
   }
   static void
   writeDataLines(uint16_t value) noexcept {
-    EBIInterface::write16(dataLines.getDataPortBaseAddress(), value);
+    EBIInterface::setDataLinesDirection(OUTPUT);
+    EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+    EBIInterface::setDataLines(static_cast<uint8_t>(value));
+    digitalWriteFast(Pin::EBI_WR, LOW);
+    delayNanoseconds(50);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+    digitalWriteFast(Pin::EBI_A0, HIGH);
+    EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
+    digitalWriteFast(Pin::EBI_WR, LOW);
+    delayNanoseconds(50);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
   }
   static uint16_t
   readDataLines() noexcept {
@@ -386,7 +368,23 @@ struct i960Interface {
   
   static uint32_t
   getAddress() noexcept {
-    return EBIInterface::read32(addressLines.getDataPortBaseAddress());
+      EBIInterface::setDataLinesDirection(INPUT);
+      EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(50);
+      uint32_t a = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      delayNanoseconds(50);
+      uint32_t b = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_A0, LOW);
+      digitalWriteFast(Pin::EBI_A1, HIGH);
+      delayNanoseconds(50);
+      uint32_t c = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      delayNanoseconds(50);
+      uint32_t d = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static bool
   isBurstLast() noexcept {
