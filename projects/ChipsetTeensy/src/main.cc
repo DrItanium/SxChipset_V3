@@ -152,6 +152,68 @@ private:
   uint8_t _cfgPortBaseAddress;
 };
 
+  constexpr uint32_t generateAddressMask(uint8_t value) noexcept {
+      uint32_t result = 0;
+      if ((value & 0b1)) {
+          result |= (1ul << 8);
+      }
+      if ((value & 0b10)) {
+          result |= (1ul << 6);
+      }
+      if ((value & 0b100)) {
+          result |= (1ul << 5);
+      }
+      if ((value & 0b1000)) {
+          result |= (1ul << 4);
+      }
+      return result ;
+  }
+constexpr uint32_t AddressMasks[16] {
+    generateAddressMask(0),
+    generateAddressMask(1),
+    generateAddressMask(2),
+    generateAddressMask(3),
+    generateAddressMask(4),
+    generateAddressMask(5),
+    generateAddressMask(6),
+    generateAddressMask(7),
+    generateAddressMask(8),
+    generateAddressMask(9),
+    generateAddressMask(10),
+    generateAddressMask(11),
+    generateAddressMask(12),
+    generateAddressMask(13),
+    generateAddressMask(14),
+    generateAddressMask(15),
+};
+static_assert(generateAddressMask(0b1111) == 0b101110000);
+constexpr uint32_t generateDataLineMiddleMask(uint8_t value) noexcept {
+    uint32_t result = 0;
+    if ((value & 0b1)) {
+        result |= (1ul << 16);
+    }
+    if ((value & 0b10)) {
+        result |= (1ul << 11);
+    }
+    if ((value & 0b100)) {
+        result |= (1ul << 0);
+    }
+    if ((value & 0b1000)) {
+        result |= (1ul << 2);
+    }
+    if ((value & 0b10000)) {
+        result |= (1ul << 1);
+    }
+    if ((value & 0b100000)) {
+        result |= (1ul << 3);
+    }
+    return result;
+}
+constexpr uint32_t DataLineMiddleMasks[256] {
+#define X(index) generateDataLineMiddleMask(index),
+#include "Entry255.def"
+#undef X
+};
 
 
 struct EBIInterface {
@@ -193,51 +255,61 @@ public:
     setDataLines(0);
   }
   template<bool setUpperTwoBits = false>
-  static void
+  static inline void
   setAddress(uint8_t address) noexcept {
-      digitalWriteFast(Pin::EBI_A0, address & 0b1 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A1, address & 0b10 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A2, address & 0b100 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A3, address & 0b1000 ? HIGH : LOW);
+      // clear then set
+      IMXRT_GPIO9.DR_CLEAR = AddressMasks[0b1111]; // make sure that we have
+                                                   // the address bits properly
+                                                   // cleared in all cases
+
+      IMXRT_GPIO9.DR_SET = AddressMasks[address & 0b1111];
       if constexpr (setUpperTwoBits) {
           digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
           digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
       }
   }
-  static uint8_t
+  static inline uint8_t
   readDataLines() noexcept {
     uint8_t value = 0;
-#define X(p, t) value |= ((digitalReadFast(p) != LOW) ? t : 0)
-    X(Pin::EBI_D0, 0b0000'0001);
-    X(Pin::EBI_D1, 0b0000'0010);
-    X(Pin::EBI_D2, 0b0000'0100);
-    X(Pin::EBI_D3, 0b0000'1000);
-    X(Pin::EBI_D4, 0b0001'0000);
-    X(Pin::EBI_D5, 0b0010'0000);
-    X(Pin::EBI_D6, 0b0100'0000);
-    X(Pin::EBI_D7, 0b1000'0000);
+#define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
+    X(Pin::EBI_D0, 0b00000001);
+    X(Pin::EBI_D1, 0b00000010);
+    X(Pin::EBI_D2, 0b00000100);
+    X(Pin::EBI_D3, 0b00001000);
+    X(Pin::EBI_D4, 0b00010000);
+    X(Pin::EBI_D5, 0b00100000);
+    X(Pin::EBI_D6, 0b01000000);
+    X(Pin::EBI_D7, 0b10000000);
 #undef X
     return value;
   }
-  template<bool compareWithPrevious = false>
-  static void
+  static inline void
   setDataLines(uint8_t value) noexcept {
-      if constexpr (compareWithPrevious) {
-        if (value == _previousOutputValue) {
-            return;
-        }
-      }
+      constexpr auto FullMask = DataLineMiddleMasks[0xFF];
+      auto TargetMask = DataLineMiddleMasks[value];
+      // clear then set the lower 6 bits
+      IMXRT_GPIO7.DR_CLEAR = FullMask;
+      IMXRT_GPIO7.DR_SET = TargetMask;
+#if 0
+      // B1_00
       digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
+      // B0_11
       digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
+      // B0_00
       digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
+      // B0_02
       digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
+      // B0_01
       digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
+      // B0_03
       digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
+#endif
+      // AD_B1_02
       digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
+      // AD_B1_03
       digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
-      _previousOutputValue = value; // always keep this up to date
   }
-  static void
+  static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
     if (_currentDirection != direction) {
 #define X(p) pinMode(p, direction)
@@ -254,7 +326,7 @@ public:
     }
   }
   template<uint32_t delay = 50>
-  static void
+  static inline void
   write8(uint8_t address, uint8_t value) noexcept {
     setDataLinesDirection(OUTPUT);
     setAddress(address);
@@ -264,7 +336,7 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
   template<uint32_t delay = 50>
-  static void
+  static inline void
   write16(uint8_t baseAddress, uint16_t value) noexcept {
       if ((baseAddress & 0b1) == 0) {
           // it is aligned so we don't need to worry
@@ -277,7 +349,7 @@ public:
           digitalToggleFast(Pin::EBI_A0); // since it is aligned to 16-bit
                                           // boundaries we can safely bump it
                                           // forward by one
-          setDataLines<true>(static_cast<uint8_t>(value >> 8));
+          setDataLines(static_cast<uint8_t>(value >> 8));
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -289,7 +361,7 @@ public:
 
   }
   template<uint32_t delay = 50>
-  static void
+  static inline void
   write32(uint8_t baseAddress, uint32_t value) noexcept {
       if ((baseAddress & 0b11) == 0) {
           // it is aligned so we don't need to worry
@@ -302,20 +374,20 @@ public:
           digitalToggleFast(Pin::EBI_A0); // since it is aligned to 16-bit
                                           // boundaries we can safely bump it
                                           // forward by one
-          setDataLines<true>(static_cast<uint8_t>(value >> 8));
+          setDataLines(static_cast<uint8_t>(value >> 8));
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
 
           digitalWriteFast(Pin::EBI_A0, LOW);
           digitalWriteFast(Pin::EBI_A1, HIGH);
-          setDataLines<true>(static_cast<uint8_t>(value >> 16));
+          setDataLines(static_cast<uint8_t>(value >> 16));
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
 
           digitalWriteFast(Pin::EBI_A0, HIGH);
-          setDataLines<true>(static_cast<uint8_t>(value >> 24));
+          setDataLines(static_cast<uint8_t>(value >> 24));
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -326,7 +398,7 @@ public:
       }
   }
   template<uint32_t delay = 50>
-  static uint8_t
+  static inline uint8_t
   read8(uint8_t address) noexcept {
     setDataLinesDirection(INPUT);
     setAddress(address);
@@ -336,7 +408,7 @@ public:
     digitalWriteFast(Pin::EBI_RD, HIGH);
     return result;
   }
-  static uint16_t
+  static inline uint16_t
   read16(uint8_t baseAddress) noexcept {
     union {
       uint8_t bytes[2];
@@ -346,7 +418,7 @@ public:
     storage.bytes[1] = read8(baseAddress + 1);
     return storage.result;
   }
-  static uint32_t
+  static inline uint32_t
   read32(uint8_t baseAddress) noexcept {
       union {
           uint8_t bytes[4];
@@ -362,7 +434,6 @@ public:
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
-  static inline uint8_t _previousOutputValue = 0;
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 
@@ -376,20 +447,29 @@ struct i960Interface {
   static void
   begin() noexcept {
     EBIInterface::write32(addressLines.getConfigPortBaseAddress(), 0);
-    configureDataLinesForRead();
+    configureDataLinesForRead<false>();
     EBIInterface::setDataLines(0);
   }
-  static void
+  template<bool compareWithPrevious = true>
+  static inline void
   configureDataLinesDirection(uint16_t pattern) noexcept {
+      if constexpr (compareWithPrevious) {
+        if (_dataLinesDirection == pattern) {
+            return;
+        }
+      }
     EBIInterface::write16(dataLines.getConfigPortBaseAddress(), pattern);
+    _dataLinesDirection = pattern;
   }
-  static void
+  template<bool compareWithPrevious = true>
+  static inline void
   configureDataLinesForRead() noexcept {
-    configureDataLinesDirection(0xFFFF);
+    configureDataLinesDirection<compareWithPrevious>(0xFFFF);
   }
-  static void
+  template<bool compareWithPrevious = true>
+  static inline void
   configureDataLinesForWrite() noexcept {
-    configureDataLinesDirection(0);
+    configureDataLinesDirection<compareWithPrevious>(0);
   }
   static void
   signalReady() noexcept {
@@ -514,13 +594,11 @@ struct i960Interface {
   template<bool isReadTransaction>
   static void
   doMemoryTransaction(uint32_t address) noexcept {
-      digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
       if constexpr (isReadTransaction) {
           configureDataLinesForRead();
       } else {
           configureDataLinesForWrite();
       }
-      digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
       switch (address) {
           case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
               doPSRAMTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
@@ -532,18 +610,22 @@ struct i960Interface {
   }
   static void
   singleTransaction() noexcept {
+    digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
     readyTriggered = false;
     adsTriggered = false;
-    while (digitalReadFast(Pin::DEN) == HIGH) ;
     uint32_t targetAddress = getAddress();
     Serial.print("Target Address: 0x");
     Serial.println(targetAddress, HEX);
+    while (digitalReadFast(Pin::DEN) == HIGH) ;
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
         doMemoryTransaction<false>(targetAddress);
     }
+    digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
   }
+private:
+  static inline uint16_t _dataLinesDirection = 0xFFFF;
 };
 
 
