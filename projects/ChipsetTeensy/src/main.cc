@@ -572,6 +572,7 @@ struct i960Interface {
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+              //Serial.printf("%d: %x\n", wordOffset, target.shorts[wordOffset]);
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
                   break;
@@ -624,8 +625,8 @@ struct i960Interface {
     readyTriggered = false;
     adsTriggered = false;
     uint32_t targetAddress = getAddress();
-    Serial.print("Target Address: 0x");
-    Serial.println(targetAddress, HEX);
+    //Serial.print("Target Address: 0x");
+    //Serial.println(targetAddress, HEX);
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
@@ -721,6 +722,19 @@ setup() {
         Serial.println("No SDCARD found!");
     } else {
         Serial.println("SDCARD Found");
+        if (!SD.exists("prog.bin")) {
+            Serial.println("prog.bin not found! No boot image will be installed");
+        } else {
+            auto file = SD.open("prog.bin");
+            if (file.size() > MemoryPoolSizeInBytes) {
+                Serial.println("Boot image is too large!");
+            } else {
+                Serial.print("Installing prog.bin...");
+                file.read(memory960, file.size());
+                Serial.println("done");
+            }
+            file.close();
+        }
     }
     attachInterrupt( Pin::ADS, triggerADS, RISING);
     attachInterrupt( Pin::READY_SYNC, triggerReadySync, FALLING);
