@@ -577,7 +577,14 @@ struct i960Interface {
     }
     signalReady();
   }
-
+  template<int signalDelay>
+  [[gnu::always_inline]] static inline
+  void
+  doSignalDelay() noexcept {
+      if constexpr (signalDelay > 0) {
+          delay(signalDelay);
+      }
+  }
   template<bool isReadTransaction, int signalDelay, bool debug>
   static void
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
@@ -589,15 +596,11 @@ struct i960Interface {
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
                   signalReady();
-                  if constexpr (signalDelay > 0) {
-                    delay(signalDelay);
-                  }
+                  doSignalDelay<signalDelay>();
                   break;
               } else {
                   signalReady();
-                  if constexpr (signalDelay > 0) {
-                      delay(signalDelay);
-                  }
+                  doSignalDelay<signalDelay>();
               }
           }
 
@@ -615,15 +618,11 @@ struct i960Interface {
               }
               if (isBurstLast()) {
                   signalReady();
-                  if constexpr (signalDelay > 0) {
-                      delay(signalDelay);
-                  }
+                  doSignalDelay<signalDelay>();
                   break;
               } else {
                   signalReady();
-                  if constexpr (signalDelay > 0) {
-                      delay(signalDelay);
-                  }
+                  doSignalDelay<signalDelay>();
               }
           }
       }
@@ -647,16 +646,14 @@ struct i960Interface {
               break;
       }
   }
-  template<int signalDelay = 10, bool debug = true>
+  template<int signalDelay, bool debug>
   static void
   singleTransaction() noexcept {
     digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
     readyTriggered = false;
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
-    if constexpr (signalDelay > 0) {
-        delay(signalDelay);
-    }
+    doSignalDelay<signalDelay>();
     uint32_t targetAddress = getAddress();
     if constexpr (debug) {
         Serial.print("Target Address: 0x");
@@ -780,10 +777,12 @@ setup() {
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
+constexpr auto EnableDebug = true;
+constexpr auto SignalDelay = 10;
 void 
 loop() {
     if (adsTriggered) {
-        i960Interface::singleTransaction();
+        i960Interface::singleTransaction<SignalDelay, EnableDebug>();
     } 
 }
 
