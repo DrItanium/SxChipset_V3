@@ -563,7 +563,7 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  template<bool isReadTransaction>
+  template<bool isReadTransaction, int signalDelay, bool debug>
   static void
   doNothingTransaction() noexcept {
     if constexpr (isReadTransaction) {
@@ -578,26 +578,34 @@ struct i960Interface {
     signalReady();
   }
 
-  template<bool isReadTransaction>
+  template<bool isReadTransaction, int signalDelay, bool debug>
   static void
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
+              if constexpr (debug) {
+                Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
+              }
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
                   signalReady();
-                  delay(1000);
+                  if constexpr (signalDelay > 0) {
+                    delay(signalDelay);
+                  }
                   break;
               } else {
                   signalReady();
-                  delay(1000);
+                  if constexpr (signalDelay > 0) {
+                      delay(signalDelay);
+                  }
               }
           }
 
       } else {
           for (uint8_t wordOffset = offset; wordOffset < 16; wordOffset += 2) {
-              Serial.printf("W %d: %x, %x\n", wordOffset, target.bytes[wordOffset], target.bytes[wordOffset+1]);
+              if constexpr (debug) {
+                Serial.printf("W %d: %x, %x\n", wordOffset, target.bytes[wordOffset], target.bytes[wordOffset+1]);
+              }
               uint16_t data = readDataLines();
               if (byteEnableLow()) {
                   target.bytes[wordOffset] = static_cast<uint8_t>(data);
@@ -607,18 +615,22 @@ struct i960Interface {
               }
               if (isBurstLast()) {
                   signalReady();
-                  delay(1000);
+                  if constexpr (signalDelay > 0) {
+                      delay(signalDelay);
+                  }
                   break;
               } else {
                   signalReady();
-                  delay(1000);
+                  if constexpr (signalDelay > 0) {
+                      delay(signalDelay);
+                  }
               }
           }
       }
   }
 
 
-  template<bool isReadTransaction>
+  template<bool isReadTransaction, int signalDelay, bool debug>
   static void
   doMemoryTransaction(uint32_t address) noexcept {
       if constexpr (isReadTransaction) {
@@ -628,27 +640,32 @@ struct i960Interface {
       }
       switch (address) {
           case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
-              doPSRAMTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              doPSRAMTransaction<isReadTransaction, signalDelay, debug>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
               break;
           default:
-              doNothingTransaction<isReadTransaction>();
+              doNothingTransaction<isReadTransaction, signalDelay, debug>();
               break;
       }
   }
+  template<int signalDelay = 10, bool debug = true>
   static void
   singleTransaction() noexcept {
     digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
     readyTriggered = false;
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
-    delay(1000);
+    if constexpr (signalDelay > 0) {
+        delay(signalDelay);
+    }
     uint32_t targetAddress = getAddress();
-    Serial.print("Target Address: 0x");
-    Serial.println(targetAddress, HEX);
+    if constexpr (debug) {
+        Serial.print("Target Address: 0x");
+        Serial.println(targetAddress, HEX);
+    }
     if (isReadOperation()) {
-        doMemoryTransaction<true>(targetAddress);
+        doMemoryTransaction<true, signalDelay, debug>(targetAddress);
     } else {
-        doMemoryTransaction<false>(targetAddress);
+        doMemoryTransaction<false, signalDelay, debug>(targetAddress);
     }
     digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
   }
