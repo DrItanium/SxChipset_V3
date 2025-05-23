@@ -525,27 +525,39 @@ struct i960Interface {
     return EBIInterface::read16(dataLines.getDataPortBaseAddress());
   }
   
+  template<uint32_t delayAmount = 100, bool manipulateReadPinOnEachByte = true>
   static uint32_t
   getAddress() noexcept {
-      constexpr uint32_t delayAmount = 100;
       EBIInterface::setDataLinesDirection(INPUT);
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
       uint32_t a = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, HIGH);
+      }
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, LOW);
+      }
       delayNanoseconds(delayAmount);
       uint32_t b = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, HIGH);
+      }
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 2);
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, LOW);
+      }
       delayNanoseconds(delayAmount);
       uint32_t c = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, HIGH);
+      }
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 3);
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      if constexpr(manipulateReadPinOnEachByte) {
+        digitalWriteFast(Pin::EBI_RD, LOW);
+      }
       delayNanoseconds(delayAmount);
       uint32_t d = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_RD, HIGH);
