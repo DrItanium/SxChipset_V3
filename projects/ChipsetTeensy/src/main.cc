@@ -251,24 +251,28 @@ public:
       digitalWrite(a, LOW);
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
-    setAddress<true>(0);
+    setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
   }
-  template<bool setUpperTwoBits = false>
   static inline void
   setAddress(uint8_t address) noexcept {
+#if 0
       // clear then set
       IMXRT_GPIO9.DR_CLEAR = AddressMasks[0xFF]; // make sure that we have
                                                    // the address bits properly
                                                    // cleared in all cases
 
       IMXRT_GPIO9.DR_SET = AddressMasks[address];
-      if constexpr (setUpperTwoBits) {
-          digitalWriteFast(Pin::EBI_A4, address & 0b10000 ? HIGH : LOW);
-          digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
-      }
+#else
+      digitalWriteFast(Pin::EBI_A0, address & 0b000001 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A1, address & 0b000010 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A2, address & 0b000100 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
+#endif
+      digitalWriteFast(Pin::EBI_A4, address & 0b010000 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
   }
   static inline uint8_t
   readDataLines() noexcept {
@@ -281,7 +285,7 @@ public:
     X(Pin::EBI_D3, 0b00001000);
     X(Pin::EBI_D4, 0b00010000);
     X(Pin::EBI_D5, 0b00100000);
-#if 0
+#if 1
     X(Pin::EBI_D6, 0b01000000);
     X(Pin::EBI_D7, 0b10000000);
 #else
@@ -294,13 +298,7 @@ public:
   static inline void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
-      // @todo rearrange the data lines pinout so that they line up with a
-      // single GPIO port
-      IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
-      IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
-      IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
-      IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
-#if 0
+#if 1
       // B1_00
       digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
       // B0_11
@@ -317,6 +315,13 @@ public:
       digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
       // AD_B1_03
       digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+#else
+      // @todo rearrange the data lines pinout so that they line up with a
+      // single GPIO port
+      IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
+      IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
+      IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
+      IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
 #endif
   }
   static inline void
@@ -522,20 +527,26 @@ struct i960Interface {
   
   static uint32_t
   getAddress() noexcept {
+      constexpr uint32_t delayAmount = 100;
       EBIInterface::setDataLinesDirection(INPUT);
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
       digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(50);
+      delayNanoseconds(delayAmount);
       uint32_t a = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(50);
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
       uint32_t b = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_A0, LOW);
-      digitalWriteFast(Pin::EBI_A1, HIGH);
-      delayNanoseconds(50);
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 2);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
       uint32_t c = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(50);
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 3);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
       uint32_t d = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_RD, HIGH);
       return a |  (b << 8) | (c << 16) | (d << 24);
@@ -572,18 +583,21 @@ struct i960Interface {
   doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              //Serial.printf("%d: %x\n", wordOffset, target.shorts[wordOffset]);
+              Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
               writeDataLines(target.shorts[wordOffset]);
               if (isBurstLast()) {
+                  signalReady();
+                  delay(1000);
                   break;
               } else {
                   signalReady();
+                  delay(1000);
               }
           }
-          signalReady();
 
       } else {
           for (uint8_t wordOffset = offset; wordOffset < 16; wordOffset += 2) {
+              Serial.printf("W %d: %x, %x\n", wordOffset, target.bytes[wordOffset], target.bytes[wordOffset+1]);
               uint16_t data = readDataLines();
               if (byteEnableLow()) {
                   target.bytes[wordOffset] = static_cast<uint8_t>(data);
@@ -592,12 +606,14 @@ struct i960Interface {
                   target.bytes[wordOffset + 1] = static_cast<uint8_t>(data >> 8);
               }
               if (isBurstLast()) {
+                  signalReady();
+                  delay(1000);
                   break;
               } else {
                   signalReady();
+                  delay(1000);
               }
           }
-          signalReady();
       }
   }
 
@@ -624,10 +640,11 @@ struct i960Interface {
     digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
     readyTriggered = false;
     adsTriggered = false;
-    uint32_t targetAddress = getAddress();
-    //Serial.print("Target Address: 0x");
-    //Serial.println(targetAddress, HEX);
     while (digitalReadFast(Pin::DEN) == HIGH) ;
+    delay(1000);
+    uint32_t targetAddress = getAddress();
+    Serial.print("Target Address: 0x");
+    Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         doMemoryTransaction<true>(targetAddress);
     } else {
