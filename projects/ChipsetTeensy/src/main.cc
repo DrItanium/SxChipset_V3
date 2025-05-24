@@ -880,6 +880,7 @@ setup() {
     EBIInterface::begin();
     i960Interface::begin();
     setupMemory();
+    Wire.begin();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
