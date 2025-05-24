@@ -306,7 +306,7 @@ constexpr uint32_t DataLineUpperMasks[256] {
 #undef X
 };
 
-template<bool useFastPins = false>
+template<bool useFastPins>
 struct EBIWrapperInterface {
 public:
   EBIWrapperInterface() = delete;
