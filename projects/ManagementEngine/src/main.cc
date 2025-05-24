@@ -10,6 +10,8 @@ constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
 constexpr auto i960_READY_SYNC = PIN_PE2;
 
+volatile uint32_t CLK2Rate = F_CPU / 2;
+volatile uint32_t CLK1Rate = F_CPU / 4;
 
 void
 configurePins() noexcept {
@@ -107,13 +109,17 @@ configureCCLs() {
 
  
 }
+void onReceiveHandler(int count);
+void onRequestHandler();
 void
 setup() {
   setupSystemClocks();
   configurePins();
   configureCCLs();
   Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
-  Wire.begin();
+  Wire.begin(0x08);
+  Wire.onReceive(onReceiveHandler);
+  Wire.onRequest(onRequestHandler);
 }
 
 void
@@ -121,3 +127,51 @@ loop() {
   // put your main code here, to run repeatedly:
 }
 
+enum class WireReceiveOpcode : uint8_t {
+    SetMode,
+};
+enum class WireRequestOpcode : uint8_t {
+    CPUClockConfiguration,
+    CPUClockConfiguration_CLK2,
+    CPUClockConfiguration_CLK1,
+};
+constexpr bool valid(WireRequestOpcode code) noexcept {
+    switch (code) {
+        case WireRequestOpcode::CPUClockConfiguration:
+        case WireRequestOpcode::CPUClockConfiguration_CLK2:
+        case WireRequestOpcode::CPUClockConfiguration_CLK1:
+            return true;
+        default:
+            return false;
+    }
+}
+volatile WireRequestOpcode currentWireMode = WireRequestOpcode::CPUClockConfiguration;
+void
+sinkWire() {
+    if (Wire.available()) {
+        while (1 < Wire.available()) {
+            (void)Wire.read();
+        }
+        (void)Wire.read();
+    }
+}
+
+void
+onReceiveHandler(int howMany) {
+    if (howMany >= 1) {
+        switch (static_cast<WireReceiveOpcode>(Wire.read())) {
+            case WireReceiveOpcode::SetMode: 
+                if (auto currentOpcode = static_cast<WireRequestOpcode>(Wire.read()); valid(currentOpcode)) {
+                    currentWireMode = currentOpcode;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    sinkWire();
+}
+
+void
+onRequestHandler() {
+}
