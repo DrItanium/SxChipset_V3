@@ -4,21 +4,53 @@
 #include <Wire.h>
 #include <SD.h>
 #include <Ethernet.h>
+#include <concepts>
+#include <functional>
 
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
-union MemoryCell {
-  constexpr MemoryCell(uint32_t a = 0, uint32_t b = 0, uint32_t c = 0, uint32_t d = 0) : words{a, b, c, d} { }
+template<typename T>
+struct TreatAs final {
+    using underlying_type = T;
+};
+template<typename T>
+concept MemoryCell = requires(T a) {
+    // only operate on 16-bit words
+    { a.getWord(0) } -> uint16_t;
+    { a.setWord(0, 0) };
+    { a.setWord(0, 0, true, true) };
+};
+
+union MemoryCellBlock {
+  constexpr MemoryCellBlock(uint32_t a = 0, uint32_t b = 0, uint32_t c = 0, uint32_t d = 0) : words{a, b, c, d} { }
+private:
   uint8_t bytes[16];
   uint16_t shorts[8];
   uint32_t words[4];
+public:
   void clear() noexcept {
       for (auto& a : words) {
           a = 0;
       }
   }
+  [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
+  inline void setWord(uint8_t offset, uint16_t value) noexcept { shorts[offset & 0b111] = value; }
+  inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
+    uint8_t baseOffset = (offset << 1) & 0b1111;
+    if (updateLo) {
+        bytes[baseOffset] = static_cast<uint8_t>(value);
+    }
+    if (updateHi) {
+        bytes[baseOffset+1] = static_cast<uint8_t>(value >> 8);
+    }
+  }
 };
-static_assert(sizeof(MemoryCell) == 16, "MemoryCell needs to be 16 bytes in size");
-EXTMEM MemoryCell memory960[MemoryPoolSizeInBytes / sizeof(MemoryCell)];
+static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
+struct SerialMemoryBlock {
+    SerialMemoryBlock(HardwareSerial& device) noexcept : _backingDevice(device) { }
+private:
+    HardwareSerial& _backingDevice;
+};
+EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 enum class Pin : uint8_t {
   RPI_D0 = 0,
   RPI_D1,
@@ -602,9 +634,9 @@ struct i960Interface {
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           if constexpr (debug) {
-              Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
+              Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
           }
-          writeDataLines(target.shorts[wordOffset]);
+          writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
               signalReady();
               doSignalDelay<signalDelay>();
@@ -621,17 +653,11 @@ struct i960Interface {
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
       } else {
-          for (uint8_t wordOffset = offset; wordOffset < 16; wordOffset += 2) {
+          for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
               if constexpr (debug) {
-                Serial.printf("W %d: %x, %x\n", wordOffset, target.bytes[wordOffset], target.bytes[wordOffset+1]);
+                Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
               }
-              uint16_t data = readDataLines();
-              if (byteEnableLow()) {
-                  target.bytes[wordOffset] = static_cast<uint8_t>(data);
-              }
-              if (byteEnableHigh()) {
-                  target.bytes[wordOffset + 1] = static_cast<uint8_t>(data >> 8);
-              }
+              target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
               if (isBurstLast()) {
                   signalReady();
                   doSignalDelay<signalDelay>();
@@ -665,12 +691,12 @@ struct i960Interface {
           //      doNothingTransaction<isReadTransaction, signalDelay, debug>();
           //    }
           //    break;
-          //case 0x0c:
-          //    if constexpr (!isReadTransaction) {
-          //        Serial.flush();
-          //    }
-          //    doNothingTransaction<isReadTransaction, signalDelay, debug>();
-          //    break;
+          case 0x0c:
+              if constexpr (!isReadTransaction) {
+                  Serial.flush();
+              }
+              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
               break;
@@ -736,8 +762,8 @@ struct i960Interface {
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
   // allocate a 2k memory cache like the avr did
-  static inline MemoryCell sramCache[2048 / sizeof(MemoryCell)];
-  static inline MemoryCell CLKValues { 12 * 1000 * 1000, 
+  static inline MemoryCellBlock sramCache[2048 / sizeof(MemoryCellBlock)];
+  static inline MemoryCellBlock CLKValues { 12 * 1000 * 1000, 
                                        6 * 1000 * 1000
   };
 };
