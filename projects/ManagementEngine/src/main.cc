@@ -13,15 +13,27 @@ constexpr auto SensorChannel2 = PIN_PD2;
 constexpr auto CLK2Out = PIN_PD3;
 constexpr auto SensorChannel3 = PIN_PD4;
 constexpr auto SensorChannel4 = PIN_PD5;
-constexpr auto SensorChannel5 = PIN_PD6;
 constexpr auto i960_READY_SYNC = PIN_PD7;
-constexpr auto SensorChannel6 = PIN_PE0;
-constexpr auto SensorChannel7 = PIN_PE1;
+constexpr auto SensorChannel5 = PIN_PE0;
+constexpr auto SensorChannel6 = PIN_PE1;
+constexpr auto SensorChannel7 = PIN_PE2;
 
 // will be updated on startup
 volatile uint32_t CLK2Rate = 0;
 volatile uint32_t CLK1Rate = 0;
 
+constexpr auto NumberOfAnalogChannels = 8;
+decltype(analogRead(SensorChannel0)) CurrentChannelSamples[NumberOfAnalogChannels] { 0 };
+constexpr decltype(SensorChannel0) AnalogChannels[NumberOfAnalogChannels] {
+    SensorChannel0,
+    SensorChannel1,
+    SensorChannel2,
+    SensorChannel3,
+    SensorChannel4,
+    SensorChannel5,
+    SensorChannel6,
+    SensorChannel7,
+};
 void
 configurePins() noexcept {
   pinMode(i960_READY_SYNC, OUTPUT);  
@@ -204,10 +216,17 @@ setup() {
   Wire.onReceive(onReceiveHandler);
   Wire.onRequest(onRequestHandler);
 }
-
+void
+sampleAnalogChannels() noexcept {
+    for (int i = 0; i < NumberOfAnalogChannels; ++i) {
+        CurrentChannelSamples[i] = analogRead(AnalogChannels[i]);
+    }
+}
 void
 loop() {
-  // put your main code here, to run repeatedly:
+    // sample analog channels every second
+    sampleAnalogChannels();
+    delay(1000);
 }
 
 enum class WireReceiveOpcode : uint8_t {
@@ -286,6 +305,19 @@ onRequestHandler() {
         case WireRequestOpcode::CPUClockConfiguration_CLK1:
             Wire.write(CLK1Rate);
             break;
+        case WireRequestOpcode::AnalogSensors:
+            Wire.write(reinterpret_cast<char*>(CurrentChannelSamples), sizeof(CurrentChannelSamples));
+            break;
+#define X(index) case WireRequestOpcode::AnalogSensors_Ch ## index : Wire.write(CurrentChannelSamples [ index ] ); break
+            X(0);
+            X(1);
+            X(2);
+            X(3);
+            X(4);
+            X(5);
+            X(6);
+            X(7);
+#undef X
         default:
             break;
 
