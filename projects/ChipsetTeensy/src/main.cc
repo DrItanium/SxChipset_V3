@@ -12,6 +12,7 @@ template<typename T>
 struct TreatAs final {
     using underlying_type = T;
 };
+// A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
     // only operate on 16-bit words
@@ -35,7 +36,8 @@ public:
   [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
   inline void setWord(uint8_t offset, uint16_t value) noexcept { shorts[offset & 0b111] = value; }
   inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
-    uint8_t baseOffset = (offset << 1) & 0b1111;
+    // convert to an 8-bit setup so we can do conversions as needed
+    uint8_t baseOffset = (offset << 1) & 0b1110;
     if (updateLo) {
         bytes[baseOffset] = static_cast<uint8_t>(value);
     }
@@ -67,6 +69,7 @@ struct USBSerialBlock {
         }
     }
     void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
+        // ignore the hi and lo operations
         setWord(offset, value);
     }
 };
