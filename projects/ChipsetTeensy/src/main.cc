@@ -6,6 +6,7 @@
 #include <Ethernet.h>
 #include <concepts>
 #include <functional>
+#include <Entropy.h>
 
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
@@ -881,6 +882,7 @@ setup() {
     i960Interface::begin();
     setupMemory();
     Wire.begin();
+    Entropy.Initialize();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
@@ -911,6 +913,7 @@ setup() {
             file.close();
         }
     }
+    Entropy.Initialize();
     attachInterrupt( Pin::ADS, triggerADS, RISING);
     attachInterrupt( Pin::READY_SYNC, triggerReadySync, FALLING);
     attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
