@@ -1,12 +1,14 @@
 #include <Arduino.h>
 #include <type_traits>
+#include <concepts>
+#include <functional>
 #include <SPI.h>
 #include <Wire.h>
 #include <SD.h>
 #include <Ethernet.h>
-#include <concepts>
-#include <functional>
 #include <Entropy.h>
+#include <EEPROM.h>
+#include <FastCRC.h>
 
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
