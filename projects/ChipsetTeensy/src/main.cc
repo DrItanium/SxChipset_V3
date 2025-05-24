@@ -818,7 +818,27 @@ private:
 };
 
 
-
+void 
+setupSDCard() noexcept {
+    if (!SD.begin(BUILTIN_SDCARD)) {
+        Serial.println("No SDCARD found!");
+        return;
+    } 
+    Serial.println("SDCARD Found");
+    if (!SD.exists("prog.bin")) {
+        Serial.println("prog.bin not found! No boot image will be installed");
+        return;
+    } 
+    auto file = SD.open("prog.bin");
+    if (file.size() > MemoryPoolSizeInBytes) {
+        Serial.println("Boot image is too large!");
+    } else {
+        Serial.print("Installing prog.bin...");
+        file.read(memory960, file.size());
+        Serial.println("done");
+    }
+    file.close();
+}
 
 
 
@@ -887,6 +907,7 @@ setup() {
     i960Interface::begin();
     setupMemory();
     Wire.begin();
+    setupSDCard();
     Entropy.Initialize();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
@@ -900,24 +921,6 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    if (!SD.begin(BUILTIN_SDCARD)) {
-        Serial.println("No SDCARD found!");
-    } else {
-        Serial.println("SDCARD Found");
-        if (!SD.exists("prog.bin")) {
-            Serial.println("prog.bin not found! No boot image will be installed");
-        } else {
-            auto file = SD.open("prog.bin");
-            if (file.size() > MemoryPoolSizeInBytes) {
-                Serial.println("Boot image is too large!");
-            } else {
-                Serial.print("Installing prog.bin...");
-                file.read(memory960, file.size());
-                Serial.println("done");
-            }
-            file.close();
-        }
-    }
     Entropy.Initialize();
     attachInterrupt( Pin::ADS, triggerADS, RISING);
     attachInterrupt( Pin::READY_SYNC, triggerReadySync, FALLING);
