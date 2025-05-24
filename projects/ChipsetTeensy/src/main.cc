@@ -306,15 +306,15 @@ constexpr uint32_t DataLineUpperMasks[256] {
 #undef X
 };
 
-
-struct EBIInterface {
+template<bool useFastPins = false>
+struct EBIWrapperInterface {
 public:
-  EBIInterface() = delete;
-  ~EBIInterface() = delete;
-  EBIInterface(const EBIInterface&) = delete;
-  EBIInterface(EBIInterface&&) = delete;
-  EBIInterface& operator=(const EBIInterface&) = delete;
-  EBIInterface& operator=(EBIInterface&&) = delete;
+  EBIWrapperInterface() = delete;
+  ~EBIWrapperInterface() = delete;
+  EBIWrapperInterface(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface(EBIWrapperInterface&&) = delete;
+  EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
   static void
   begin() noexcept {
     _currentDirection = OUTPUT;
@@ -347,19 +347,19 @@ public:
   }
   static inline void
   setAddress(uint8_t address) noexcept {
-#if 0
-      // clear then set
-      IMXRT_GPIO9.DR_CLEAR = AddressMasks[0xFF]; // make sure that we have
-                                                   // the address bits properly
-                                                   // cleared in all cases
+      if constexpr (useFastPins) {
+          // clear then set
+          IMXRT_GPIO9.DR_CLEAR = AddressMasks[0xFF]; // make sure that we have
+                                                     // the address bits properly
+                                                     // cleared in all cases
 
-      IMXRT_GPIO9.DR_SET = AddressMasks[address];
-#else
-      digitalWriteFast(Pin::EBI_A0, address & 0b000001 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A1, address & 0b000010 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A2, address & 0b000100 ? HIGH : LOW);
-      digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
-#endif
+          IMXRT_GPIO9.DR_SET = AddressMasks[address];
+      } else  {
+          digitalWriteFast(Pin::EBI_A0, address & 0b000001 ? HIGH : LOW);
+          digitalWriteFast(Pin::EBI_A1, address & 0b000010 ? HIGH : LOW);
+          digitalWriteFast(Pin::EBI_A2, address & 0b000100 ? HIGH : LOW);
+          digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
+      }
       digitalWriteFast(Pin::EBI_A4, address & 0b010000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
   }
@@ -374,44 +374,44 @@ public:
     X(Pin::EBI_D3, 0b00001000);
     X(Pin::EBI_D4, 0b00010000);
     X(Pin::EBI_D5, 0b00100000);
-#if 1
-    X(Pin::EBI_D6, 0b01000000);
-    X(Pin::EBI_D7, 0b10000000);
-#else
-    // direct reads from the fast gpio port
-    value |= (static_cast<uint8_t>((IMXRT_GPIO6.DR) >> 12) & 0b110000);
-#endif
+    if constexpr (!useFastPins) {
+        X(Pin::EBI_D6, 0b01000000);
+        X(Pin::EBI_D7, 0b10000000);
+    } else {
+        // direct reads from the fast gpio port
+        value |= (static_cast<uint8_t>((IMXRT_GPIO6.DR) >> 12) & 0b110000);
+    }
 #undef X
     return value;
   }
   static inline void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
-#if 1
-      // B1_00
-      digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
-      // B0_11
-      digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
-      // B0_00
-      digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
-      // B0_02
-      digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
-      // B0_01
-      digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
-      // B0_03
-      digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
-      // AD_B1_02
-      digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
-      // AD_B1_03
-      digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
-#else
-      // @todo rearrange the data lines pinout so that they line up with a
-      // single GPIO port
-      IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
-      IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
-      IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
-      IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
-#endif
+      if constexpr (!useFastPins) {
+          // B1_00
+          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
+          // B0_11
+          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
+          // B0_00
+          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
+          // B0_02
+          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
+          // B0_01
+          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
+          // B0_03
+          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
+          // AD_B1_02
+          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
+          // AD_B1_03
+          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+      } else {
+          // @todo rearrange the data lines pinout so that they line up with a
+          // single GPIO port
+          IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
+          IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
+          IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
+          IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
+      }
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
@@ -540,6 +540,7 @@ private:
   static inline PinDirection _currentDirection = OUTPUT;
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
+using EBIInterface = EBIWrapperInterface<false>;
 
 struct i960Interface {
   i960Interface() = delete;
