@@ -10,6 +10,7 @@
 #include <EEPROM.h>
 #include <FastCRC.h>
 #include <LittleFS.h>
+#include <Metro.h>
 
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
