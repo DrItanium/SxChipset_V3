@@ -7,10 +7,10 @@
 
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 union MemoryCell {
+  constexpr MemoryCell(uint32_t a = 0, uint32_t b = 0, uint32_t c = 0, uint32_t d = 0) : words{a, b, c, d} { }
   uint8_t bytes[16];
   uint16_t shorts[8];
   uint32_t words[4];
-  uint64_t longs[2];
   void clear() noexcept {
       for (auto& a : words) {
           a = 0;
@@ -597,25 +597,29 @@ struct i960Interface {
           delay(signalDelay);
       }
   }
+  template<int signalDelay, bool debug>
+  static void
+  doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
+      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+          if constexpr (debug) {
+              Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
+          }
+          writeDataLines(target.shorts[wordOffset]);
+          if (isBurstLast()) {
+              signalReady();
+              doSignalDelay<signalDelay>();
+              break;
+          } else {
+              signalReady();
+              doSignalDelay<signalDelay>();
+          }
+      }
+  }
   template<bool isReadTransaction, int signalDelay, bool debug>
   static void
-  doPSRAMTransaction(MemoryCell& target, uint8_t offset) noexcept {
+  doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
-          for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              if constexpr (debug) {
-                Serial.printf("R %d: %x\n", wordOffset, target.shorts[wordOffset]);
-              }
-              writeDataLines(target.shorts[wordOffset]);
-              if (isBurstLast()) {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-                  break;
-              } else {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-              }
-          }
-
+          doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
       } else {
           for (uint8_t wordOffset = offset; wordOffset < 16; wordOffset += 2) {
               if constexpr (debug) {
@@ -639,6 +643,55 @@ struct i960Interface {
           }
       }
   }
+  template<bool isReadTransaction, int signalDelay, bool debug>
+  static void 
+  transmitConstantMemoryCell(const MemoryCell& cell, uint8_t offset) noexcept {
+      if constexpr (isReadTransaction) {
+          doMemoryCellReadTransaction<signalDelay, debug>(cell, offset);
+      } else {
+          doNothingTransaction<isReadTransaction, signalDelay, debug>();
+      }
+  }
+  template<bool isReadTransaction, int signalDelay, bool debug>
+  static void
+  handleBuiltinDevices(uint8_t offset) noexcept {
+      switch (offset) {
+          case 0x00 ... 0x07:
+              transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0b111);
+              break;
+          case 0x08:
+              if constexpr (isReadTransaction) {
+              } else {
+                doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              }
+              break;
+          case 0x0c:
+              if constexpr (!isReadTransaction) {
+                  Serial.flush();
+              }
+              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              break;
+          default:
+              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              break;
+      }
+  }
+  template<bool isReadTransaction, int signalDelay, bool debug>
+  static void
+  doIOTransaction(uint32_t address) noexcept {
+      switch (address & 0xFF'FFFF) {
+          case 0x00'0000 ... 0x00'00FF:
+              handleBuiltinDevices<isReadTransaction, signalDelay, debug>(address & 0xFF);
+              break;
+          case 0x00'0800 ... 0x00'0FFF: 
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+              break;
+          case 0x00'1000 ... 0x00'1FFF:
+          default:
+              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              break;
+      }
+  }
 
 
   template<bool isReadTransaction, int signalDelay, bool debug>
@@ -650,8 +703,11 @@ struct i960Interface {
           configureDataLinesForWrite();
       }
       switch (address) {
-          case 0x0000'0000 ... 0x00FF'FFFF:  // PSRAM
-              doPSRAMTransaction<isReadTransaction, signalDelay, debug>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+          case 0x0000'0000 ... 0x00FF'FFFF: // PSRAM
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              break;
+          case 0xFE00'0000 ... 0xFEFF'FFFF: // IO Space
+              doIOTransaction<isReadTransaction, signalDelay, debug>(address);
               break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
@@ -680,6 +736,11 @@ struct i960Interface {
   }
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
+  // allocate a 2k memory cache like the avr did
+  static inline MemoryCell sramCache[2048 / sizeof(MemoryCell)];
+  static inline MemoryCell CLKValues { 12 * 1000 * 1000, 
+                                       6 * 1000 * 1000
+  };
 };
 
 
@@ -714,7 +775,9 @@ void setupRandomSeed() noexcept {
 }
 void setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
-  memset(memory960, 0, sizeof(memory960));
+  for (auto& a : memory960) {
+      a.clear();
+  }
 }
 void
 triggerADS() noexcept {
