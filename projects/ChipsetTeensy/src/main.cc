@@ -659,18 +659,18 @@ struct i960Interface {
           case 0x00 ... 0x07:
               transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0b111);
               break;
-          case 0x08:
-              if constexpr (isReadTransaction) {
-              } else {
-                doNothingTransaction<isReadTransaction, signalDelay, debug>();
-              }
-              break;
-          case 0x0c:
-              if constexpr (!isReadTransaction) {
-                  Serial.flush();
-              }
-              doNothingTransaction<isReadTransaction, signalDelay, debug>();
-              break;
+          //case 0x08:
+          //    if constexpr (isReadTransaction) {
+          //    } else {
+          //      doNothingTransaction<isReadTransaction, signalDelay, debug>();
+          //    }
+          //    break;
+          //case 0x0c:
+          //    if constexpr (!isReadTransaction) {
+          //        Serial.flush();
+          //    }
+          //    doNothingTransaction<isReadTransaction, signalDelay, debug>();
+          //    break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
               break;
@@ -686,7 +686,6 @@ struct i960Interface {
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
-          case 0x00'1000 ... 0x00'1FFF:
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
               break;
