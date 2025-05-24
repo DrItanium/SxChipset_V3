@@ -13,10 +13,10 @@ constexpr auto SensorChannel2 = PIN_PD2;
 constexpr auto CLK2Out = PIN_PD3;
 constexpr auto SensorChannel3 = PIN_PD4;
 constexpr auto SensorChannel4 = PIN_PD5;
+constexpr auto SensorChannel5 = PIN_PD6;
 constexpr auto i960_READY_SYNC = PIN_PD7;
-constexpr auto SensorChannel5 = PIN_PE0;
-constexpr auto SensorChannel6 = PIN_PE1;
-constexpr auto SensorChannel7 = PIN_PE2;
+constexpr auto SensorChannel6 = PIN_PE0;
+constexpr auto SensorChannel7 = PIN_PE1;
 
 // will be updated on startup
 volatile uint32_t CLK2Rate = 0;
