@@ -45,11 +45,60 @@ public:
   }
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
+struct USBSerialBlock {
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (offset & 0b11) {
+            case 0:
+                return Serial.read();
+            default:
+                return 0;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value) noexcept {
+        switch (offset & 0b11) {
+            case 0:
+                Serial.write(value);
+                break;
+            case 2:
+                Serial.flush();
+                break;
+            default:
+                break;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
+        setWord(offset, value);
+    }
+};
 struct SerialMemoryBlock {
     SerialMemoryBlock(HardwareSerial& device) noexcept : _backingDevice(device) { }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (offset & 0b11) {
+            case 0:
+                return _backingDevice.read();
+            default:
+                return 0;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value) noexcept {
+        switch (offset & 0b11) {
+            case 0:
+                _backingDevice.write(value);
+                break;
+            case 2:
+                _backingDevice.flush();
+                break;
+            default:
+                break;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
+        setWord(offset, value);
+    }
 private:
     HardwareSerial& _backingDevice;
 };
+USBSerialBlock usbSerial;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 enum class Pin : uint8_t {
   RPI_D0 = 0,
@@ -685,17 +734,8 @@ struct i960Interface {
           case 0x00 ... 0x07:
               transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0b111);
               break;
-          //case 0x08:
-          //    if constexpr (isReadTransaction) {
-          //    } else {
-          //      doNothingTransaction<isReadTransaction, signalDelay, debug>();
-          //    }
-          //    break;
-          case 0x0c:
-              if constexpr (!isReadTransaction) {
-                  Serial.flush();
-              }
-              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+          case 0x08 ... 0x0F:
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(usbSerial, offset);
               break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
