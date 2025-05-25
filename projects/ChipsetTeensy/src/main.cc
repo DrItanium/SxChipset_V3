@@ -20,6 +20,7 @@ struct TreatAs final {
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
+    { a.update() };
     // only operate on 16-bit words
     { a.getWord(0) } -> uint16_t;
     { a.setWord(0, 0) };
@@ -33,6 +34,9 @@ private:
   uint16_t shorts[8];
   uint32_t words[4];
 public:
+  void update() noexcept {
+
+  }
   void clear() noexcept {
       for (auto& a : words) {
           a = 0;
@@ -53,60 +57,78 @@ public:
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
+    void update() noexcept {
+
+    }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset & 0b11) {
             case 0:
+            case 4:
                 return Serial.read();
             default:
                 return 0;
         }
     }
     void setWord(uint8_t offset, uint16_t value) noexcept {
-        switch (offset & 0b11) {
+        setWord(offset, value, false, false);
+    }
+    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
+        // ignore the hi and lo operations
+        //Serial.printf("offset: 0x%x: 0x%x\n", offset, value);
+        // 16-bit value offset so
+        // 0 -> Serial.write
+        // 1 -> nil
+        // 2 -> flush
+        // 3 -> nil
+        // 4 -> Serial.write
+        // 5 -> nil
+        // 6 -> flush
+        // 7 -> nil
+        switch (offset) {
             case 0:
-                Serial.write(value);
+            case 4:
+                if (!lo) {
+                    Serial.write(static_cast<uint8_t>(value));
+                }
                 break;
             case 2:
+            case 6:
                 Serial.flush();
                 break;
             default:
                 break;
         }
     }
-    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
-        // ignore the hi and lo operations
-        setWord(offset, value);
-    }
 };
-struct SerialMemoryBlock {
-    SerialMemoryBlock(HardwareSerial& device) noexcept : _backingDevice(device) { }
+struct TimingRelatedThings {
+    void update() noexcept {
+        _currentMillis = millis();
+        _currentMicros = micros();
+    }
     uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset & 0b11) {
-            case 0:
-                return _backingDevice.read();
+        switch (offset) {
+            case 0: // millis
+                return static_cast<uint16_t>(_currentMillis);
+            case 1: // millis upper
+                return static_cast<uint16_t>(_currentMillis >> 16);
+            case 2: // micros
+                return static_cast<uint16_t>(_currentMicros);
+            case 3:
+                return static_cast<uint16_t>(_currentMicros >> 16);
             default:
                 return 0;
         }
     }
-    void setWord(uint8_t offset, uint16_t value) noexcept {
-        switch (offset & 0b11) {
-            case 0:
-                _backingDevice.write(value);
-                break;
-            case 2:
-                _backingDevice.flush();
-                break;
-            default:
-                break;
-        }
-    }
-    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
-        setWord(offset, value);
-    }
+    void setWord(uint8_t, uint16_t) noexcept { }
+    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+
 private:
-    HardwareSerial& _backingDevice;
+    // for temporary snapshot purposes
+    uint32_t _currentMicros = 0;
+    uint32_t _currentMillis = 0;
 };
 USBSerialBlock usbSerial;
+TimingRelatedThings timingInfo;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 enum class Pin : uint8_t {
   RPI_D0 = 0,
@@ -708,6 +730,7 @@ struct i960Interface {
   template<bool isReadTransaction, int signalDelay, bool debug>
   static void
   doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
+      target.update();
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
       } else {
@@ -741,10 +764,13 @@ struct i960Interface {
   handleBuiltinDevices(uint8_t offset) noexcept {
       switch (offset) {
           case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0b111);
+              transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0xF);
               break;
           case 0x08 ... 0x0F:
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(usbSerial, offset);
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(usbSerial, offset & 0xF);
+              break;
+          case 0x10 ... 0x1F:
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(timingInfo, offset & 0xF);
               break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
