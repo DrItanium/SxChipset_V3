@@ -12,6 +12,7 @@
 #include <LittleFS.h>
 #include <Metro.h>
 
+constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
 struct TreatAs final {
@@ -115,6 +116,14 @@ struct TimingRelatedThings {
                 return static_cast<uint16_t>(_currentMicros);
             case 3:
                 return static_cast<uint16_t>(_currentMicros >> 16);
+            case 4: // eeprom
+                return 0;
+            case 5:
+                return 0;
+            case 6:
+                return static_cast<uint16_t>(OnboardSRAMCacheSize);
+            case 7:
+                return static_cast<uint16_t>(OnboardSRAMCacheSize >> 16);
             default:
                 return 0;
         }
@@ -126,6 +135,19 @@ private:
     // for temporary snapshot purposes
     uint32_t _currentMicros = 0;
     uint32_t _currentMillis = 0;
+};
+template<uint32_t V>
+struct ConstantToTransmit {
+    uint16_t getWord(uint8_t offset) const noexcept {
+        if ((offset & 0b1) == 0) {
+            return static_cast<uint16_t>(V);
+        } else {
+            return static_cast<uint16_t>(V >> 16);
+        }
+    }
+    void update() noexcept { }
+    void setWord(uint8_t, uint16_t) noexcept { }
+    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
 };
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
@@ -837,10 +859,8 @@ struct i960Interface {
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
   // allocate a 2k memory cache like the avr did
-  static inline MemoryCellBlock sramCache[2048 / sizeof(MemoryCellBlock)];
-  static inline MemoryCellBlock CLKValues { 12 * 1000 * 1000, 
-                                       6 * 1000 * 1000
-  };
+  static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
+  static inline MemoryCellBlock CLKValues { 12 * 1000 * 1000, 6 * 1000 * 1000 };
 };
 
 
