@@ -932,7 +932,7 @@ setup() {
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
-constexpr auto EnableDebug = true;
+constexpr auto EnableDebug = false;
 constexpr auto SignalDelay = 0;
 void 
 loop() {
