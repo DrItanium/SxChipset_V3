@@ -901,6 +901,7 @@ setup() {
         delay(10);
     }
     //delay(500);
+    Entropy.Initialize();
     setupRandomSeed();
     // put your setup code here, to run once:
     EBIInterface::begin();
@@ -908,7 +909,6 @@ setup() {
     setupMemory();
     Wire.begin();
     setupSDCard();
-    Entropy.Initialize();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
@@ -933,7 +933,7 @@ setup() {
     // okay so we want to handle the initial boot process
 }
 constexpr auto EnableDebug = true;
-constexpr auto SignalDelay = 10;
+constexpr auto SignalDelay = 0;
 void 
 loop() {
     if (adsTriggered) {
