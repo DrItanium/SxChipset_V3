@@ -629,14 +629,14 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
-  template<uint32_t delayAmount = 250>
+  template<uint32_t delayAmount = 200>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
   }
-  template<uint32_t delayAmount = 250>
+  template<uint32_t delayAmount = 200>
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
@@ -672,7 +672,7 @@ struct i960Interface {
     return EBIInterface::read16(dataLines.getDataPortBaseAddress());
   }
   
-  template<uint32_t delayAmount = 100, bool manipulateReadPinOnEachByte = true>
+  template<uint32_t delayAmount, bool manipulateReadPinOnEachByte>
   static uint32_t
   getAddress() noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
@@ -884,7 +884,7 @@ struct i960Interface {
         }
       }
   }
-  template<int signalDelay, bool debug, bool useLoop = true>
+  template<int signalDelay, bool debug, bool useLoop = false>
   static void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
         if constexpr (useLoop) {
