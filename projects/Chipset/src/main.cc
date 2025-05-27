@@ -667,9 +667,21 @@ struct i960Interface {
     delayNanoseconds(delayAmount);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
-  static uint16_t
+  template<uint32_t delayAmount = 25>
+  static inline uint16_t
   readDataLines() noexcept {
-    return EBIInterface::read16(dataLines.getDataPortBaseAddress());
+      EBIInterface::setDataLinesDirection(INPUT);
+      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
+      uint16_t lo = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
+      uint16_t hi = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      return lo | (hi << 8);
   }
   
   template<uint32_t delayAmount, bool manipulateReadPinOnEachByte>
