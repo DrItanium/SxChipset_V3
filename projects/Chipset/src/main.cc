@@ -619,17 +619,30 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<compareWithPrevious>(0);
   }
+  inline static void
+  waitForReadyTrigger() noexcept {
+        while (!readyTriggered) {
+            yield();
+        }
+  }
+  inline static void 
+  triggerReady() noexcept {
+      digitalWriteFast(Pin::READY, LOW);
+  }
+  template<uint32_t delayAmount = 250>
+  inline static void
+  finishReadyTrigger() noexcept {
+      readyTriggered = false;
+      digitalWriteFast(Pin::READY, HIGH);
+      delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
+  }
+  template<uint32_t delayAmount = 250>
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
-      digitalWriteFast(Pin::READY, LOW);
-
-      while (!readyTriggered) {
-          yield();
-      }
-      readyTriggered = false;
-      digitalWriteFast(Pin::READY, HIGH);
-      delayNanoseconds(250);  // wait 200 ns to make sure that all other signals have "caught up"
+      triggerReady();
+      waitForReadyTrigger();
+      finishReadyTrigger<delayAmount>();
   }
   static bool
   isReadOperation() noexcept {
@@ -731,22 +744,144 @@ struct i960Interface {
           delay(signalDelay);
       }
   }
-  template<int signalDelay, bool debug>
+  template<int signalDelay, bool debug, bool useLoop = false>
   static void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-          if constexpr (debug) {
-              Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
+      if constexpr (useLoop) {
+          for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+              if constexpr (debug) {
+                  Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
+              }
+              writeDataLines(target.getWord(wordOffset));
+              if (isBurstLast()) {
+                  signalReady();
+                  doSignalDelay<signalDelay>();
+                  break;
+              } else {
+                  signalReady();
+                  doSignalDelay<signalDelay>();
+              }
           }
-          writeDataLines(target.getWord(wordOffset));
-          if (isBurstLast()) {
-              signalReady();
-              doSignalDelay<signalDelay>();
-              break;
-          } else {
-              signalReady();
-              doSignalDelay<signalDelay>();
-          }
+      } else {
+          // 0
+        uint8_t baseIndex = offset >> 1;
+        writeDataLines(target.getWord(baseIndex));
+        if (isBurstLast()) {
+            signalReady();
+            doSignalDelay<signalDelay>();
+            return;
+        }
+        // 1
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 2
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 3
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 4
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 5
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 6
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+        }
+        // 7
+        {
+            // since we are going to continue start the ready process and move to
+            // the next item
+            triggerReady();
+            ++baseIndex;
+            auto value = target.getWord(baseIndex);
+            waitForReadyTrigger();
+            finishReadyTrigger();
+            writeDataLines(value);
+            // if we get here it is automatically going to be a normal
+            // signalReady so do not check isBurstLast() 
+            signalReady();
+            doSignalDelay<signalDelay>();
+        }
       }
   }
   template<bool isReadTransaction, int signalDelay, bool debug>
