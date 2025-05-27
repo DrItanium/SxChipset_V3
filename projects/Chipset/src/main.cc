@@ -71,7 +71,7 @@ struct USBSerialBlock {
         }
     }
     void setWord(uint8_t offset, uint16_t value) noexcept {
-        setWord(offset, value, false, false);
+        setWord(offset, value, true, true);
     }
     void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
         // ignore the hi and lo operations
@@ -916,6 +916,7 @@ struct i960Interface {
           }
         } else {
             uint8_t wordOffset = offset >> 1;
+            // first word we need to check things
             target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
             if (isBurstLast()) {
                 signalReady();
@@ -931,7 +932,8 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                // no need to check the low bit because we flowed into here
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -944,7 +946,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -957,7 +959,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -970,7 +972,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -983,7 +985,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -996,7 +998,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 if (isBurstLast()) {
                     signalReady();
                     doSignalDelay<signalDelay>();
@@ -1009,7 +1011,7 @@ struct i960Interface {
                 ++wordOffset;
                 waitForReadyTrigger();
                 finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
                 // no need to check burst last and just end the transaction
                 // here 
                 signalReady();
