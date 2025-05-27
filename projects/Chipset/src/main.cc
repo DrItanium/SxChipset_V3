@@ -884,13 +884,10 @@ struct i960Interface {
         }
       }
   }
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<int signalDelay, bool debug, bool useLoop = true>
   static void
-  doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
-      target.update();
-      if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
-      } else {
+  doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
+        if constexpr (useLoop) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
               if constexpr (debug) {
                 Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
@@ -905,6 +902,118 @@ struct i960Interface {
                   doSignalDelay<signalDelay>();
               }
           }
+        } else {
+            uint8_t wordOffset = offset >> 1;
+            target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+            if (isBurstLast()) {
+                signalReady();
+                doSignalDelay<signalDelay>();
+                return;
+            }
+            // otherwise we need to do some actions while we wait for the next
+            // iteration
+            
+            // 1
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 2
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 3
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 4
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 5
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 6
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                if (isBurstLast()) {
+                    signalReady();
+                    doSignalDelay<signalDelay>();
+                    return;
+                }
+            }
+            // 7
+            {
+                triggerReady();
+                ++wordOffset;
+                waitForReadyTrigger();
+                finishReadyTrigger();
+                target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+                // no need to check burst last and just end the transaction
+                // here 
+                signalReady();
+                doSignalDelay<signalDelay>();
+            }
+
+        }
+  }
+  template<bool isReadTransaction, int signalDelay, bool debug>
+  static void
+  doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
+      target.update();
+      if constexpr (isReadTransaction) {
+          doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
+      } else {
+          doMemoryCellWriteTransaction<signalDelay, debug>(target, offset);
       }
   }
   template<bool isReadTransaction, int signalDelay, bool debug>
