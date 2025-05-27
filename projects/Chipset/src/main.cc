@@ -136,6 +136,26 @@ private:
     uint32_t _currentMicros = 0;
     uint32_t _currentMillis = 0;
 };
+struct RandomSourceRelatedThings {
+    void update() noexcept {
+        _currentRandomValue = random();
+    }
+
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (offset) {
+            case 0: // arduino random
+                return static_cast<uint16_t>(_currentRandomValue);
+            case 1: // arduino random upper
+                return static_cast<uint16_t>(_currentRandomValue >> 16);
+            default:
+                return 0;
+        }
+    }
+    void setWord(uint8_t, uint16_t) noexcept { }
+    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+private:
+    uint32_t _currentRandomValue = 0;
+};
 template<uint32_t V>
 struct ConstantToTransmit {
     uint16_t getWord(uint8_t offset) const noexcept {
@@ -151,6 +171,7 @@ struct ConstantToTransmit {
 };
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
+RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 enum class Pin : uint8_t {
   RPI_D0 = 0,
@@ -1052,6 +1073,11 @@ struct i960Interface {
           case 0x10 ... 0x1F:
               doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(timingInfo, offset & 0xF);
               break;
+          // case 0x20 ... 0x2f: // more timing related sources
+          case 0x30 ... 0x3F:
+              // new entropy related stuff
+              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(randomSource, offset & 0xF);
+              break;
           default:
               doNothingTransaction<isReadTransaction, signalDelay, debug>();
               break;
@@ -1145,7 +1171,9 @@ setupSDCard() noexcept {
 
 
 void setupRandomSeed() noexcept {
-  uint32_t newSeed = 0;
+    // allow the entropy source to actually block until we get enough
+    // randomness
+  uint32_t newSeed = Entropy.random();
 #define X(pin) newSeed += analogRead(pin)
   X(A0);
   X(A1);
@@ -1200,7 +1228,6 @@ setup() {
     while (!Serial) {
         delay(10);
     }
-    //delay(500);
     Entropy.Initialize();
     setupRandomSeed();
     // put your setup code here, to run once:
