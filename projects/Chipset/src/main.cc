@@ -639,18 +639,19 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+  template<uint32_t delayAmount = 50>
   static void
   writeDataLines(uint16_t value) noexcept {
     EBIInterface::setDataLinesDirection(OUTPUT);
     EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
     EBIInterface::setDataLines(static_cast<uint8_t>(value));
     digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(50);
+    delayNanoseconds(delayAmount);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     digitalWriteFast(Pin::EBI_A0, HIGH);
     EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
     digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(50);
+    delayNanoseconds(delayAmount);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
   static uint16_t
