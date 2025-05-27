@@ -652,7 +652,7 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<uint32_t delayAmount = 50>
+  template<uint32_t delayAmount = 25>
   static void
   writeDataLines(uint16_t value) noexcept {
     EBIInterface::setDataLinesDirection(OUTPUT);
