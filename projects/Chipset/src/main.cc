@@ -88,7 +88,7 @@ struct USBSerialBlock {
         switch (offset) {
             case 0:
             case 4:
-                if (!lo) {
+                if (lo) {
                     Serial.write(static_cast<uint8_t>(value));
                 }
                 break;
@@ -181,22 +181,22 @@ enum class Pin : uint8_t {
   RPI_D25 = 37,
   RPI_D26 = 40,
   RPI_D27 = 41,
-  EBI_A5 = RPI_D0,
-  EBI_A4 = RPI_D1,
-  EBI_A3 = RPI_D2,
-  EBI_A2 = RPI_D3,
-  EBI_A1 = RPI_D4,
-  EBI_A0 = RPI_D5,
-  EBI_RD = RPI_D6,
-  EBI_WR = RPI_D7,
-  EBI_D0 = RPI_D8,
-  EBI_D1 = RPI_D9,
-  EBI_D2 = RPI_D10,
-  EBI_D3 = RPI_D11,
-  EBI_D4 = RPI_D12,
-  EBI_D5 = RPI_D13,
-  EBI_D6 = RPI_D14,
-  EBI_D7 = RPI_D15,
+  EBI_A5 = RPI_D0, // AD_B0_03
+  EBI_A4 = RPI_D1, // AD_B0_02
+  EBI_A3 = RPI_D2, // EMC_04
+  EBI_A2 = RPI_D3, // EMC_05
+  EBI_A1 = RPI_D4, // EMC_06
+  EBI_A0 = RPI_D5, // EMC_08
+  EBI_RD = RPI_D6, // B0_10
+  EBI_WR = RPI_D7, // B1_01
+  EBI_D0 = RPI_D8, // B1_00
+  EBI_D1 = RPI_D9, // B0_11
+  EBI_D2 = RPI_D10, // B0_00
+  EBI_D3 = RPI_D11, // B0_02
+  EBI_D4 = RPI_D12, // B0_01
+  EBI_D5 = RPI_D13, // B0_03
+  EBI_D6 = RPI_D14, // AD_B1_02
+  EBI_D7 = RPI_D15, // AD_B1_03
   ADS = RPI_D16,
   BLAST = RPI_D17,
   DEN = RPI_D18,
@@ -214,7 +214,6 @@ enum class Pin : uint8_t {
   RESET = 32,
   HLDA = 33,
   FAIL = 34,
-  SCOPE_SIGNAL0 = 35,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -839,12 +838,11 @@ struct i960Interface {
   template<int signalDelay, bool debug>
   static void
   singleTransaction() noexcept {
-    digitalWriteFast(Pin::SCOPE_SIGNAL0, LOW);
     readyTriggered = false;
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
     doSignalDelay<signalDelay>();
-    uint32_t targetAddress = getAddress();
+    uint32_t targetAddress = getAddress<50, false>();
     if constexpr (debug) {
         Serial.print("Target Address: 0x");
         Serial.println(targetAddress, HEX);
@@ -854,7 +852,6 @@ struct i960Interface {
     } else {
         doMemoryTransaction<false, signalDelay, debug>(targetAddress);
     }
-    digitalWriteFast(Pin::SCOPE_SIGNAL0, HIGH);
   }
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
@@ -935,8 +932,6 @@ triggerFAIL() noexcept {
 }
 void 
 setup() {
-    pinMode(Pin::SCOPE_SIGNAL0, OUTPUT);
-    digitalWrite(Pin::SCOPE_SIGNAL0, HIGH);
     pinMode(Pin::ADS, INPUT);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
