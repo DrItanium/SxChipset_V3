@@ -685,7 +685,7 @@ struct i960Interface {
   }
   
   template<uint32_t delayAmount, bool manipulateReadPinOnEachByte>
-  static uint32_t
+  static inline uint32_t
   getAddress() noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
@@ -722,20 +722,20 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_RD, HIGH);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
-  static bool
+  static inline bool
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
   }
-  static bool
+  static inline bool
   byteEnableLow() noexcept {
     return digitalReadFast(Pin::BE0) == LOW;
   }
-  static bool
+  static inline bool
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
   template<bool isReadTransaction, int signalDelay, bool debug>
-  static void
+  static inline void
   doNothingTransaction() noexcept {
     if constexpr (isReadTransaction) {
       writeDataLines(0);
@@ -757,7 +757,7 @@ struct i960Interface {
       }
   }
   template<int signalDelay, bool debug, bool useLoop = false>
-  static void
+  static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
       if constexpr (useLoop) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
@@ -897,7 +897,7 @@ struct i960Interface {
       }
   }
   template<int signalDelay, bool debug, bool useLoop = false>
-  static void
+  static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
         if constexpr (useLoop) {
           for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
