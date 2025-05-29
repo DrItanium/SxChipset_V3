@@ -666,18 +666,18 @@ struct i960Interface {
       delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
   }
   template<uint32_t delayAmount = 200>
-  static void
+  static inline void
   signalReady() noexcept {
       // run and block until we get the completion pulse
       triggerReady();
       waitForReadyTrigger();
       finishReadyTrigger<delayAmount>();
   }
-  static bool
+  static inline bool
   isReadOperation() noexcept {
     return digitalReadFast(Pin::WR) == LOW;
   }
-  static bool
+  static inline bool
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
@@ -733,7 +733,7 @@ struct i960Interface {
     return digitalReadFast(Pin::BE1) == LOW;
   }
   template<bool skipSetup = false, uint32_t delayAmount = 25>
-  static void
+  static inline void
   writeDataLines(uint16_t value) noexcept {
       if constexpr (skipSetup) {
           EBIInterface::setDataLinesDirection(OUTPUT);
@@ -822,7 +822,7 @@ struct i960Interface {
       }
   }
   template<bool isReadTransaction>
-  static void
+  static inline void
   doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
       target.update();
       if constexpr (isReadTransaction) {
@@ -832,7 +832,7 @@ struct i960Interface {
       }
   }
   template<bool isReadTransaction>
-  static void 
+  static inline void 
   transmitConstantMemoryCell(const MemoryCell& cell, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(cell, offset);
@@ -841,7 +841,7 @@ struct i960Interface {
       }
   }
   template<bool isReadTransaction>
-  static void
+  static inline void
   handleBuiltinDevices(uint8_t offset) noexcept {
       switch (offset) {
           case 0x00 ... 0x07:
@@ -864,7 +864,7 @@ struct i960Interface {
       }
   }
   template<bool isReadTransaction>
-  static void
+  static inline void
   doIOTransaction(uint32_t address) noexcept {
       switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
@@ -881,7 +881,7 @@ struct i960Interface {
 
 
   template<bool isReadTransaction>
-  static void
+  static inline void
   doMemoryTransaction(uint32_t address) noexcept {
       if constexpr (isReadTransaction) {
           configureDataLinesForRead();
@@ -899,18 +899,6 @@ struct i960Interface {
               doNothingTransaction<isReadTransaction>();
               break;
       }
-  }
-  static void
-  singleTransaction() noexcept {
-    readyTriggered = false;
-    adsTriggered = false;
-    while (digitalReadFast(Pin::DEN) == HIGH) ;
-    uint32_t targetAddress = getAddress<50, false>();
-    if (isReadOperation()) {
-        doMemoryTransaction<true>(targetAddress);
-    } else {
-        doMemoryTransaction<false>(targetAddress);
-    }
   }
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
@@ -1036,7 +1024,15 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        i960Interface::singleTransaction();
+        readyTriggered = false;
+        adsTriggered = false;
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
+        uint32_t targetAddress = i960Interface::getAddress<50, false>();
+        if (i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
+        }
     } 
 }
 
