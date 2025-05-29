@@ -767,16 +767,18 @@ struct i960Interface {
   static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
       // start the word ahead of time
+      auto currentWord = target.getWord(offset >> 1);
       EBIInterface::setDataLinesDirection(OUTPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-          writeDataLines<true>(target.getWord(wordOffset));
+          writeDataLines<true>(currentWord);
           if (isBurstLast()) {
               signalReady();
               break;
           } else {
               triggerReady();
-              // use the delay wait time to actually do stuff
+              // use the delay wait time to actually grab the next value
+              currentWord = target.getWord(wordOffset + 1);
               // reset the address lines to the base address
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
               waitForReadyTrigger();
