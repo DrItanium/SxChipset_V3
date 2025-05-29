@@ -407,7 +407,7 @@ public:
     setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
-    setDataLines(0);
+    setDataLines<true>(0);
   }
   static inline void
   setAddress(uint8_t address) noexcept {
@@ -448,8 +448,14 @@ public:
 #undef X
     return value;
   }
+  template<bool force = true>
   static inline void
   setDataLines(uint8_t value) noexcept {
+      if constexpr (!force) {
+          if (_currentOutputDataLines == value) {
+            return;
+          }
+      }
       // clear then set the corresponding bits
       if constexpr (!useFastPins) {
           // B1_00
@@ -476,6 +482,7 @@ public:
           IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
           IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
       }
+      _currentOutputDataLines = value;
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
@@ -602,6 +609,7 @@ public:
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
+  static inline uint8_t _currentOutputDataLines = 0;
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 using EBIInterface = EBIWrapperInterface<false>;
@@ -730,8 +738,8 @@ struct i960Interface {
       if constexpr (skipSetup) {
           EBIInterface::setDataLinesDirection(OUTPUT);
           EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-          EBIInterface::setDataLines(static_cast<uint8_t>(value));
       }
+      EBIInterface::setDataLines(static_cast<uint8_t>(value));
       digitalWriteFast(Pin::EBI_WR, LOW);
       delayNanoseconds(delayAmount);
       digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -771,8 +779,6 @@ struct i960Interface {
       auto currentWord = target.getWord(offset >> 1);
       EBIInterface::setDataLinesDirection(OUTPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-      EBIInterface::setDataLines(static_cast<uint8_t>(currentWord)); 
-      // setup the data lines ahead of time
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           if constexpr (debug) {
               Serial.printf("R %d: %x\n", wordOffset, currentWord);
@@ -788,8 +794,6 @@ struct i960Interface {
               currentWord = target.getWord(wordOffset + 1);
               // reset the address lines to the base address
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-              // setup the lower byte but do not actually do anything with it
-              EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
               waitForReadyTrigger();
               finishReadyTrigger();
               doSignalDelay<signalDelay>();
