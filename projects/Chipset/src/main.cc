@@ -673,37 +673,6 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<uint32_t delayAmount = 25>
-  static void
-  writeDataLines(uint16_t value) noexcept {
-    EBIInterface::setDataLinesDirection(OUTPUT);
-    EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-    EBIInterface::setDataLines(static_cast<uint8_t>(value));
-    digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(delayAmount);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
-    digitalWriteFast(Pin::EBI_A0, HIGH);
-    EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
-    digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(delayAmount);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
-  }
-  template<uint32_t delayAmount = 25>
-  static inline uint16_t
-  readDataLines() noexcept {
-      EBIInterface::setDataLinesDirection(INPUT);
-      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(delayAmount);
-      uint16_t lo = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(delayAmount);
-      uint16_t hi = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      return lo | (hi << 8);
-  }
   
   template<uint32_t delayAmount, bool manipulateReadPinOnEachByte>
   static inline uint32_t
@@ -755,6 +724,22 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
+  template<uint32_t delayAmount = 25>
+  static void
+  writeDataLines(uint16_t value) noexcept {
+    EBIInterface::setDataLinesDirection(OUTPUT);
+    EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+    EBIInterface::setDataLines(static_cast<uint8_t>(value));
+    digitalWriteFast(Pin::EBI_WR, LOW);
+    delayNanoseconds(delayAmount);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+    digitalWriteFast(Pin::EBI_A0, HIGH);
+    EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
+    digitalWriteFast(Pin::EBI_WR, LOW);
+    delayNanoseconds(delayAmount);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+  }
+
   template<bool isReadTransaction, int signalDelay, bool debug>
   static inline void
   doNothingTransaction() noexcept {
@@ -780,20 +765,42 @@ struct i960Interface {
   template<int signalDelay, bool debug>
   static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
+      // start the word ahead of time
+      auto currentWord = target.getWord(offset >> 1);
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           if constexpr (debug) {
-              Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
+              Serial.printf("R %d: %x\n", wordOffset, currentWord);
           }
-          writeDataLines(target.getWord(wordOffset));
+          writeDataLines(currentWord);
           if (isBurstLast()) {
               signalReady();
               doSignalDelay<signalDelay>();
               break;
           } else {
-              signalReady();
+              triggerReady();
+              // use the delay wait time to actually grab the next value
+              currentWord = target.getWord(wordOffset + 1);
+              waitForReadyTrigger();
+              finishReadyTrigger();
               doSignalDelay<signalDelay>();
           }
       }
+  }
+  template<uint32_t delayAmount = 25>
+  static inline uint16_t
+  readDataLines() noexcept {
+      EBIInterface::setDataLinesDirection(INPUT);
+      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
+      uint16_t lo = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(delayAmount);
+      uint16_t hi = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      return lo | (hi << 8);
   }
   template<int signalDelay, bool debug>
   static inline void
