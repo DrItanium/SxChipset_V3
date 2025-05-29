@@ -750,7 +750,7 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_WR, HIGH);
   }
 
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
     if constexpr (isReadTransaction) {
@@ -764,15 +764,6 @@ struct i960Interface {
     }
     signalReady();
   }
-  template<int signalDelay>
-  [[gnu::always_inline]] static inline
-  void
-  doSignalDelay() noexcept {
-      if constexpr (signalDelay > 0) {
-          delay(signalDelay);
-      }
-  }
-  template<int signalDelay, bool debug>
   static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
       // start the word ahead of time
@@ -780,13 +771,9 @@ struct i960Interface {
       EBIInterface::setDataLinesDirection(OUTPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-          if constexpr (debug) {
-              Serial.printf("R %d: %x\n", wordOffset, currentWord);
-          }
           writeDataLines<true>(currentWord);
           if (isBurstLast()) {
               signalReady();
-              doSignalDelay<signalDelay>();
               break;
           } else {
               triggerReady();
@@ -796,7 +783,6 @@ struct i960Interface {
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
               waitForReadyTrigger();
               finishReadyTrigger();
-              doSignalDelay<signalDelay>();
           }
       }
   }
@@ -818,89 +804,83 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_RD, HIGH);
       return lo | (hi << 8);
   }
-  template<int signalDelay, bool debug>
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
-          if constexpr (debug) {
-              Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
-          }
           target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               signalReady();
-              doSignalDelay<signalDelay>();
               break;
           } else {
               triggerReady();
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
               waitForReadyTrigger();
               finishReadyTrigger();
-              doSignalDelay<signalDelay>();
           }
       }
   }
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static void
   doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
       target.update();
       if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction<signalDelay, debug>(target, offset);
+          doMemoryCellReadTransaction(target, offset);
       } else {
-          doMemoryCellWriteTransaction<signalDelay, debug>(target, offset);
+          doMemoryCellWriteTransaction(target, offset);
       }
   }
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static void 
   transmitConstantMemoryCell(const MemoryCell& cell, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction<signalDelay, debug>(cell, offset);
+          doMemoryCellReadTransaction(cell, offset);
       } else {
-          doNothingTransaction<isReadTransaction, signalDelay, debug>();
+          doNothingTransaction<isReadTransaction>();
       }
   }
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static void
   handleBuiltinDevices(uint8_t offset) noexcept {
       switch (offset) {
           case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction, signalDelay, debug>(CLKValues, offset & 0xF);
+              transmitConstantMemoryCell<isReadTransaction>(CLKValues, offset & 0xF);
               break;
           case 0x08 ... 0x0F:
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(usbSerial, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(usbSerial, offset & 0xF);
               break;
           case 0x10 ... 0x1F:
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(timingInfo, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(timingInfo, offset & 0xF);
               break;
           // case 0x20 ... 0x2f: // more timing related sources
           case 0x30 ... 0x3F:
               // new entropy related stuff
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(randomSource, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(randomSource, offset & 0xF);
               break;
           default:
-              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static void
   doIOTransaction(uint32_t address) noexcept {
       switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
-              handleBuiltinDevices<isReadTransaction, signalDelay, debug>(address & 0xFF);
+              handleBuiltinDevices<isReadTransaction>(address & 0xFF);
               break;
           case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
           default:
-              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
 
 
-  template<bool isReadTransaction, int signalDelay, bool debug>
+  template<bool isReadTransaction>
   static void
   doMemoryTransaction(uint32_t address) noexcept {
       if constexpr (isReadTransaction) {
@@ -910,32 +890,26 @@ struct i960Interface {
       }
       switch (address) {
           case 0x0000'0000 ... 0x00FF'FFFF: // PSRAM
-              doMemoryCellTransaction<isReadTransaction, signalDelay, debug>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
               break;
           case 0xFE00'0000 ... 0xFEFF'FFFF: // IO Space
-              doIOTransaction<isReadTransaction, signalDelay, debug>(address);
+              doIOTransaction<isReadTransaction>(address);
               break;
           default:
-              doNothingTransaction<isReadTransaction, signalDelay, debug>();
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
-  template<int signalDelay, bool debug>
   static void
   singleTransaction() noexcept {
     readyTriggered = false;
     adsTriggered = false;
     while (digitalReadFast(Pin::DEN) == HIGH) ;
-    doSignalDelay<signalDelay>();
     uint32_t targetAddress = getAddress<50, false>();
-    if constexpr (debug) {
-        Serial.print("Target Address: 0x");
-        Serial.println(targetAddress, HEX);
-    }
     if (isReadOperation()) {
-        doMemoryTransaction<true, signalDelay, debug>(targetAddress);
+        doMemoryTransaction<true>(targetAddress);
     } else {
-        doMemoryTransaction<false, signalDelay, debug>(targetAddress);
+        doMemoryTransaction<false>(targetAddress);
     }
   }
 private:
@@ -1059,12 +1033,10 @@ setup() {
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
-constexpr auto EnableDebug = false;
-constexpr auto SignalDelay = 0;
 void 
 loop() {
     if (adsTriggered) {
-        i960Interface::singleTransaction<SignalDelay, EnableDebug>();
+        i960Interface::singleTransaction();
     } 
 }
 
