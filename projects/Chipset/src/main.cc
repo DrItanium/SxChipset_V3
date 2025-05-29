@@ -724,20 +724,22 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  template<uint32_t delayAmount = 25>
+  template<bool skipSetup = false, uint32_t delayAmount = 25>
   static void
   writeDataLines(uint16_t value) noexcept {
-    EBIInterface::setDataLinesDirection(OUTPUT);
-    EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
-    EBIInterface::setDataLines(static_cast<uint8_t>(value));
-    digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(delayAmount);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
-    digitalWriteFast(Pin::EBI_A0, HIGH);
-    EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
-    digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(delayAmount);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
+      if constexpr (skipSetup) {
+          EBIInterface::setDataLinesDirection(OUTPUT);
+          EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      }
+      EBIInterface::setDataLines(static_cast<uint8_t>(value));
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::EBI_WR, HIGH);
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::EBI_WR, HIGH);
   }
 
   template<bool isReadTransaction, int signalDelay, bool debug>
@@ -767,11 +769,13 @@ struct i960Interface {
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
       // start the word ahead of time
       auto currentWord = target.getWord(offset >> 1);
+      EBIInterface::setDataLinesDirection(OUTPUT);
+      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           if constexpr (debug) {
               Serial.printf("R %d: %x\n", wordOffset, currentWord);
           }
-          writeDataLines(currentWord);
+          writeDataLines<true>(currentWord);
           if (isBurstLast()) {
               signalReady();
               doSignalDelay<signalDelay>();
@@ -780,6 +784,8 @@ struct i960Interface {
               triggerReady();
               // use the delay wait time to actually grab the next value
               currentWord = target.getWord(wordOffset + 1);
+              // reset the address lines to the base address
+              EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
               waitForReadyTrigger();
               finishReadyTrigger();
               doSignalDelay<signalDelay>();
