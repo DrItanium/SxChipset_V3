@@ -800,11 +800,13 @@ struct i960Interface {
           }
       }
   }
-  template<uint32_t delayAmount = 25>
+  template<bool skipSetup = false, uint32_t delayAmount = 25>
   static inline uint16_t
   readDataLines() noexcept {
-      EBIInterface::setDataLinesDirection(INPUT);
-      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      if constexpr (!skipSetup) {
+          EBIInterface::setDataLinesDirection(INPUT);
+          EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      }
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
       uint16_t lo = EBIInterface::readDataLines();
@@ -819,17 +821,22 @@ struct i960Interface {
   template<int signalDelay, bool debug>
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
+      EBIInterface::setDataLinesDirection(INPUT);
+      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
           if constexpr (debug) {
               Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
           }
-          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               signalReady();
               doSignalDelay<signalDelay>();
               break;
           } else {
-              signalReady();
+              triggerReady();
+              EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+              waitForReadyTrigger();
+              finishReadyTrigger();
               doSignalDelay<signalDelay>();
           }
       }
