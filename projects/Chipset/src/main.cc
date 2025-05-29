@@ -448,16 +448,16 @@ public:
 #undef X
     return value;
   }
-  template<bool force = true>
+  template<bool force = false>
   static inline void
   setDataLines(uint8_t value) noexcept {
-      if constexpr (!force) {
-          if (_currentOutputDataLines == value) {
-            return;
-          }
-      }
       // clear then set the corresponding bits
       if constexpr (!useFastPins) {
+          if constexpr (!force) {
+              if (_currentOutputDataLines == value) {
+                  return;
+              }
+          }
           // B1_00
           digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
           // B0_11
@@ -474,6 +474,7 @@ public:
           digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
           // AD_B1_03
           digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+          _currentOutputDataLines = value;
       } else {
           // @todo rearrange the data lines pinout so that they line up with a
           // single GPIO port
@@ -482,7 +483,6 @@ public:
           IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
           IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
       }
-      _currentOutputDataLines = value;
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
