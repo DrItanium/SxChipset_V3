@@ -996,7 +996,7 @@ triggerFAIL() noexcept {
 }
 void 
 setup() {
-    pinMode(Pin::ADS, INPUT);
+    inputPin(Pin::ADS);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
     outputPin(Pin::HOLD, LOW);
