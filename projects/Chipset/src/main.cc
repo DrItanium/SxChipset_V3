@@ -156,34 +156,6 @@ struct RandomSourceRelatedThings {
 private:
     uint32_t _currentRandomValue = 0;
 };
-template<uint32_t v0, uint32_t v1 = 0, uint32_t v2 = 0, uint32_t v3 = 0>
-struct ConstantBlock{
-    uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset) {
-            case 0:
-                return static_cast<uint16_t>(v0);
-            case 1:
-                return static_cast<uint16_t>(v0 >> 16);
-            case 2:
-                return static_cast<uint16_t>(v1);
-            case 3:
-                return static_cast<uint16_t>(v1 >> 16);
-            case 4:
-                return static_cast<uint16_t>(v2);
-            case 5:
-                return static_cast<uint16_t>(v2 >> 16);
-            case 6:
-                return static_cast<uint16_t>(v3);
-            case 7:
-                return static_cast<uint16_t>(v3 >> 16);
-            default:
-                return 0;
-        }
-    }
-    void update() noexcept { }
-    void setWord(uint8_t, uint16_t) noexcept { }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
-};
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
@@ -919,7 +891,7 @@ private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
   // allocate a 2k memory cache like the avr did
   static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-  static inline ConstantBlock<12 * 1000 * 1000, 6 * 1000 * 1000> CLKValues;
+  static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
 };
 
 
