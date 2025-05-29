@@ -117,7 +117,7 @@ struct TimingRelatedThings {
             case 3:
                 return static_cast<uint16_t>(_currentMicros >> 16);
             case 4: // eeprom
-                return 0;
+                return static_cast<uint16_t>(4096);
             case 5:
                 return 0;
             case 6:
@@ -777,269 +777,41 @@ struct i960Interface {
           delay(signalDelay);
       }
   }
-  template<int signalDelay, bool debug, bool useLoop = false>
+  template<int signalDelay, bool debug>
   static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
-      if constexpr (useLoop) {
-          for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
-              if constexpr (debug) {
-                  Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
-              }
-              writeDataLines(target.getWord(wordOffset));
-              if (isBurstLast()) {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-                  break;
-              } else {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-              }
+      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+          if constexpr (debug) {
+              Serial.printf("R %d: %x\n", wordOffset, target.getWord(wordOffset));
           }
-      } else {
-          // 0
-        uint8_t baseIndex = offset >> 1;
-        writeDataLines(target.getWord(baseIndex));
-        if (isBurstLast()) {
-            signalReady();
-            doSignalDelay<signalDelay>();
-            return;
-        }
-        // 1
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 2
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 3
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 4
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 5
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 6
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-        }
-        // 7
-        {
-            // since we are going to continue start the ready process and move to
-            // the next item
-            triggerReady();
-            ++baseIndex;
-            auto value = target.getWord(baseIndex);
-            waitForReadyTrigger();
-            finishReadyTrigger();
-            writeDataLines(value);
-            // if we get here it is automatically going to be a normal
-            // signalReady so do not check isBurstLast() 
-            signalReady();
-            doSignalDelay<signalDelay>();
-        }
+          writeDataLines(target.getWord(wordOffset));
+          if (isBurstLast()) {
+              signalReady();
+              doSignalDelay<signalDelay>();
+              break;
+          } else {
+              signalReady();
+              doSignalDelay<signalDelay>();
+          }
       }
   }
-  template<int signalDelay, bool debug, bool useLoop = false>
+  template<int signalDelay, bool debug>
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
-        if constexpr (useLoop) {
-          for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
-              if constexpr (debug) {
-                Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
-              }
-              target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
-              if (isBurstLast()) {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-                  break;
-              } else {
-                  signalReady();
-                  doSignalDelay<signalDelay>();
-              }
+      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
+          if constexpr (debug) {
+              Serial.printf("W %d: 0x%x\n", wordOffset, target.getWord(wordOffset));
           }
-        } else {
-            uint8_t wordOffset = offset >> 1;
-            // first word we need to check things
-            target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
-            if (isBurstLast()) {
-                signalReady();
-                doSignalDelay<signalDelay>();
-                return;
-            }
-            // otherwise we need to do some actions while we wait for the next
-            // iteration
-            
-            // 1
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                // no need to check the low bit because we flowed into here
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 2
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 3
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 4
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 5
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 6
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                if (isBurstLast()) {
-                    signalReady();
-                    doSignalDelay<signalDelay>();
-                    return;
-                }
-            }
-            // 7
-            {
-                triggerReady();
-                ++wordOffset;
-                waitForReadyTrigger();
-                finishReadyTrigger();
-                target.setWord(wordOffset, readDataLines(), true, byteEnableHigh());
-                // no need to check burst last and just end the transaction
-                // here 
-                signalReady();
-                doSignalDelay<signalDelay>();
-            }
-
-        }
+          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          if (isBurstLast()) {
+              signalReady();
+              doSignalDelay<signalDelay>();
+              break;
+          } else {
+              signalReady();
+              doSignalDelay<signalDelay>();
+          }
+      }
   }
   template<bool isReadTransaction, int signalDelay, bool debug>
   static void
