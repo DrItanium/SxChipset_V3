@@ -730,8 +730,8 @@ struct i960Interface {
       if constexpr (skipSetup) {
           EBIInterface::setDataLinesDirection(OUTPUT);
           EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+          EBIInterface::setDataLines(static_cast<uint8_t>(value));
       }
-      EBIInterface::setDataLines(static_cast<uint8_t>(value));
       digitalWriteFast(Pin::EBI_WR, LOW);
       delayNanoseconds(delayAmount);
       digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -771,6 +771,8 @@ struct i960Interface {
       auto currentWord = target.getWord(offset >> 1);
       EBIInterface::setDataLinesDirection(OUTPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      EBIInterface::setDataLines(static_cast<uint8_t>(currentWord)); 
+      // setup the data lines ahead of time
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           if constexpr (debug) {
               Serial.printf("R %d: %x\n", wordOffset, currentWord);
@@ -786,6 +788,8 @@ struct i960Interface {
               currentWord = target.getWord(wordOffset + 1);
               // reset the address lines to the base address
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+              // setup the lower byte but do not actually do anything with it
+              EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
               waitForReadyTrigger();
               finishReadyTrigger();
               doSignalDelay<signalDelay>();
