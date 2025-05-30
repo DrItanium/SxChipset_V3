@@ -645,14 +645,15 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
-  template<uint32_t delayAmount = 200>
+  static constexpr uint32_t DefaultReadyTriggerWaitAmount = 100;
+  template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
   }
-  template<uint32_t delayAmount = 200>
+  template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   static inline void
   signalReady() noexcept {
       // run and block until we get the completion pulse
@@ -999,7 +1000,7 @@ setup() {
     inputPin(Pin::READY_SYNC);
     Entropy.Initialize();
     attachInterrupt( Pin::ADS, triggerADS, RISING);
-    attachInterrupt( Pin::READY_SYNC, triggerReadySync, FALLING);
+    attachInterrupt( Pin::READY_SYNC, triggerReadySync, RISING);
     attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
     delay(1000);  // make sure that the i960 has enough time to setup
     digitalWriteFast(Pin::RESET, HIGH);
