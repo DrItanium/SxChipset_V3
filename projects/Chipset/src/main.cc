@@ -593,7 +593,7 @@ struct i960Interface {
     return digitalReadFast(Pin::WR) == HIGH;
   }
   
-  template<uint32_t delayAmount, bool manipulateReadPinOnEachByte>
+  template<uint32_t delayAmount>
   static inline uint32_t
   getAddress() noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
@@ -601,31 +601,17 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
       uint32_t a = EBIInterface::readDataLines();
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, HIGH);
-      }
-      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, LOW);
-      }
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
       delayNanoseconds(delayAmount);
       uint32_t b = EBIInterface::readDataLines();
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, HIGH);
-      }
-      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 2);
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, LOW);
-      }
+      digitalWriteFast(Pin::EBI_A1, HIGH);
+      digitalWriteFast(Pin::EBI_A0, LOW);
+      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 2);
       delayNanoseconds(delayAmount);
       uint32_t c = EBIInterface::readDataLines();
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, HIGH);
-      }
-      EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 3);
-      if constexpr(manipulateReadPinOnEachByte) {
-        digitalWriteFast(Pin::EBI_RD, LOW);
-      }
+      digitalWriteFast(Pin::EBI_A0, HIGH);
+      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 3);
       delayNanoseconds(delayAmount);
       uint32_t d = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_RD, HIGH);
@@ -941,7 +927,7 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress<25, false>();
+        uint32_t targetAddress = i960Interface::getAddress<25>();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
