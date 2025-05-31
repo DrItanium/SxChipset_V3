@@ -222,6 +222,8 @@ enum class Pin : uint8_t {
   RESET = 32,
   HLDA = 33,
   FAIL = 34,
+  SCOPE_SIG0 = 35,
+  SCOPE_SIG1 = 29,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -643,6 +645,7 @@ struct i960Interface {
   }
   inline static void 
   triggerReady() noexcept {
+      digitalWriteFast(Pin::SCOPE_SIG1, LOW);
       digitalWriteFast(Pin::READY, LOW);
   }
   static constexpr uint32_t DefaultReadyTriggerWaitAmount = 100;
@@ -652,6 +655,7 @@ struct i960Interface {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
+      digitalWriteFast(Pin::SCOPE_SIG1, HIGH);
   }
   template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   static inline void
@@ -677,7 +681,9 @@ struct i960Interface {
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t a = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -686,7 +692,9 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t b = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -695,7 +703,9 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t c = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -704,7 +714,9 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
+      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t d = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       digitalWriteFast(Pin::EBI_RD, HIGH);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
@@ -969,6 +981,8 @@ triggerFAIL() noexcept {
 }
 void 
 setup() {
+    outputPin(Pin::SCOPE_SIG0, HIGH);
+    outputPin(Pin::SCOPE_SIG1, HIGH);
     inputPin(Pin::ADS);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
@@ -1015,7 +1029,7 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress<50, false>();
+        uint32_t targetAddress = i960Interface::getAddress<25, false>();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
