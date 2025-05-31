@@ -343,13 +343,16 @@ public:
       digitalWriteFast(Pin::EBI_A4, address & 0b010000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
   }
+  template<bool checkD0 = true>
   static inline uint8_t
   readDataLines() noexcept {
     digitalWriteFast(Pin::SCOPE_SIG0, LOW);
     uint8_t value = 0;
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
     //@todo accelerate using direct GPIO port reads
-    X(Pin::EBI_D0, 0b00000001);
+    if constexpr (checkD0) {
+        X(Pin::EBI_D0, 0b00000001);
+    }
     X(Pin::EBI_D1, 0b00000010);
     X(Pin::EBI_D2, 0b00000100);
     X(Pin::EBI_D3, 0b00001000);
@@ -600,7 +603,7 @@ struct i960Interface {
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
-      uint32_t a = EBIInterface::readDataLines();
+      uint32_t a = EBIInterface::readDataLines<false>(); // A0 is always 0
       digitalWriteFast(Pin::EBI_A0, HIGH);
       //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
       delayNanoseconds(delayAmount);
