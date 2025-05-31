@@ -674,8 +674,6 @@ struct i960Interface {
               triggerReady();
               // reset for the start of the next transaction
               EBIInterface::setDataLinesDirection(INPUT);
-              // configure the address ahead of time as well
-              EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
@@ -720,8 +718,6 @@ struct i960Interface {
               triggerReady();
               // reset for the start of the next transaction
               EBIInterface::setDataLinesDirection(INPUT);
-              // configure the address ahead of time as well
-              EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
