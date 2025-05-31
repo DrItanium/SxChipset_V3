@@ -635,8 +635,8 @@ struct i960Interface {
       if constexpr (skipSetup) {
           EBIInterface::setDataLinesDirection(OUTPUT);
           EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+          EBIInterface::setDataLines(static_cast<uint8_t>(value));
       }
-      EBIInterface::setDataLines(static_cast<uint8_t>(value));
       digitalWriteFast(Pin::EBI_WR, LOW);
       delayNanoseconds(delayAmount);
       digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -667,10 +667,17 @@ struct i960Interface {
       auto currentWord = target.getWord(offset >> 1);
       EBIInterface::setDataLinesDirection(OUTPUT);
       EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           writeDataLines<true>(currentWord);
           if (isBurstLast()) {
-              signalReady();
+              triggerReady();
+              // reset for the start of the next transaction
+              EBIInterface::setDataLinesDirection(INPUT);
+              // configure the address ahead of time as well
+              EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
+              waitForReadyTrigger();
+              finishReadyTrigger();
               break;
           } else {
               triggerReady();
@@ -678,6 +685,8 @@ struct i960Interface {
               currentWord = target.getWord(wordOffset + 1);
               // reset the address lines to the base address
               EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+              // prepare for the next cycle
+              EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
               waitForReadyTrigger();
               finishReadyTrigger();
           }
@@ -708,7 +717,13 @@ struct i960Interface {
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
-              signalReady();
+              triggerReady();
+              // reset for the start of the next transaction
+              EBIInterface::setDataLinesDirection(INPUT);
+              // configure the address ahead of time as well
+              EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
+              waitForReadyTrigger();
+              finishReadyTrigger();
               break;
           } else {
               triggerReady();
