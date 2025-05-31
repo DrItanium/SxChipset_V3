@@ -224,6 +224,7 @@ enum class Pin : uint8_t {
   FAIL = 34,
   SCOPE_SIG0 = 35,
   SCOPE_SIG1 = 29,
+  SCOPE_SIG2 = 28,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -359,7 +360,6 @@ constexpr uint32_t DataLineUpperMasks[256] {
 #undef X
 };
 
-template<bool useFastPins>
 struct EBIWrapperInterface {
 public:
   EBIWrapperInterface() = delete;
@@ -400,24 +400,16 @@ public:
   }
   static inline void
   setAddress(uint8_t address) noexcept {
-      if constexpr (useFastPins) {
-          // clear then set
-          IMXRT_GPIO9.DR_CLEAR = AddressMasks[0xFF]; // make sure that we have
-                                                     // the address bits properly
-                                                     // cleared in all cases
-
-          IMXRT_GPIO9.DR_SET = AddressMasks[address];
-      } else  {
-          digitalWriteFast(Pin::EBI_A0, address & 0b000001 ? HIGH : LOW);
-          digitalWriteFast(Pin::EBI_A1, address & 0b000010 ? HIGH : LOW);
-          digitalWriteFast(Pin::EBI_A2, address & 0b000100 ? HIGH : LOW);
-          digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
-      }
+      digitalWriteFast(Pin::EBI_A0, address & 0b000001 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A1, address & 0b000010 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A2, address & 0b000100 ? HIGH : LOW);
+      digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A4, address & 0b010000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
   }
   static inline uint8_t
   readDataLines() noexcept {
+    digitalWriteFast(Pin::SCOPE_SIG0, LOW);
     uint8_t value = 0;
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
     //@todo accelerate using direct GPIO port reads
@@ -427,51 +419,42 @@ public:
     X(Pin::EBI_D3, 0b00001000);
     X(Pin::EBI_D4, 0b00010000);
     X(Pin::EBI_D5, 0b00100000);
-    if constexpr (!useFastPins) {
-        X(Pin::EBI_D6, 0b01000000);
-        X(Pin::EBI_D7, 0b10000000);
-    } else {
-        // direct reads from the fast gpio port
-        value |= (static_cast<uint8_t>((IMXRT_GPIO6.DR) >> 12) & 0b110000);
-    }
+    X(Pin::EBI_D6, 0b01000000);
+    X(Pin::EBI_D7, 0b10000000);
 #undef X
+    digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
     return value;
   }
   template<bool force = false>
   static inline void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
-      if constexpr (!useFastPins) {
-          if constexpr (!force) {
-              if (_currentOutputDataLines == value) {
-                  return;
-              }
+      digitalWriteFast(Pin::SCOPE_SIG2, LOW);
+      if constexpr (!force) {
+          if (_currentOutputDataLines == value) {
+              digitalWriteFast(Pin::SCOPE_SIG2, HIGH);
+              return;
           }
-          // B1_00
-          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
-          // B0_11
-          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
-          // B0_00
-          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
-          // B0_02
-          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
-          // B0_01
-          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
-          // B0_03
-          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
-          // AD_B1_02
-          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
-          // AD_B1_03
-          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
-          _currentOutputDataLines = value;
-      } else {
-          // @todo rearrange the data lines pinout so that they line up with a
-          // single GPIO port
-          IMXRT_GPIO7.DR_CLEAR = DataLineMiddleMasks[0xFF];
-          IMXRT_GPIO6.DR_CLEAR = DataLineUpperMasks[0xFF];
-          IMXRT_GPIO7.DR_SET = DataLineMiddleMasks[value];
-          IMXRT_GPIO6.DR_SET = DataLineUpperMasks[value];
       }
+
+      // B1_00
+      digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
+      // B0_11
+      digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
+      // B0_00
+      digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
+      // B0_02
+      digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
+      // B0_01
+      digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
+      // B0_03
+      digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
+      // AD_B1_02
+      digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
+      // AD_B1_03
+      digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+      _currentOutputDataLines = value;
+      digitalWriteFast(Pin::SCOPE_SIG2, HIGH);
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
@@ -601,7 +584,7 @@ private:
   static inline uint8_t _currentOutputDataLines = 0;
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
-using EBIInterface = EBIWrapperInterface<false>;
+using EBIInterface = EBIWrapperInterface;
 
 struct i960Interface {
   i960Interface() = delete;
@@ -681,9 +664,7 @@ struct i960Interface {
       EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
-      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t a = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -692,9 +673,7 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
-      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t b = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -703,9 +682,7 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
-      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t c = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       if constexpr(manipulateReadPinOnEachByte) {
         digitalWriteFast(Pin::EBI_RD, HIGH);
       }
@@ -714,9 +691,7 @@ struct i960Interface {
         digitalWriteFast(Pin::EBI_RD, LOW);
       }
       delayNanoseconds(delayAmount);
-      digitalWriteFast(Pin::SCOPE_SIG0, LOW);
       uint32_t d = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
       digitalWriteFast(Pin::EBI_RD, HIGH);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
@@ -983,6 +958,7 @@ void
 setup() {
     outputPin(Pin::SCOPE_SIG0, HIGH);
     outputPin(Pin::SCOPE_SIG1, HIGH);
+    outputPin(Pin::SCOPE_SIG2, HIGH);
     inputPin(Pin::ADS);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
