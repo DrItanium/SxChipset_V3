@@ -570,13 +570,13 @@ struct i960Interface {
       digitalWriteFast(Pin::SCOPE_SIG1, LOW);
       digitalWriteFast(Pin::READY, LOW);
   }
-  static constexpr uint32_t DefaultReadyTriggerWaitAmount = 100;
+  static constexpr uint32_t DefaultReadyTriggerWaitAmount = 25;
   template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
-      delayNanoseconds(delayAmount);  // wait 200 ns to make sure that all other signals have "caught up"
+      delayNanoseconds(delayAmount);  // wait some amount of time
       digitalWriteFast(Pin::SCOPE_SIG1, HIGH);
   }
   template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
@@ -754,20 +754,21 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   handleBuiltinDevices(uint8_t offset) noexcept {
+      auto lineOffset = offset & 0xF;
       switch (offset) {
           case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction>(CLKValues, offset & 0xF);
+              transmitConstantMemoryCell<isReadTransaction>(CLKValues, lineOffset);
               break;
           case 0x08 ... 0x0F:
-              doMemoryCellTransaction<isReadTransaction>(usbSerial, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
               break;
           case 0x10 ... 0x1F:
-              doMemoryCellTransaction<isReadTransaction>(timingInfo, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
               break;
           // case 0x20 ... 0x2f: // more timing related sources
           case 0x30 ... 0x3F:
               // new entropy related stuff
-              doMemoryCellTransaction<isReadTransaction>(randomSource, offset & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
