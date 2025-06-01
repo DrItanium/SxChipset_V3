@@ -12,6 +12,7 @@
 #include <LittleFS.h>
 #include <Metro.h>
 
+constexpr auto DefaultWaitAmount = 50; // ns
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
@@ -222,6 +223,9 @@ enum class Pin : uint8_t {
   RESET = 32,
   HLDA = 33,
   FAIL = 34,
+  SCOPE_SIG0 = 35,
+  SCOPE_SIG1 = 29,
+  SCOPE_SIG2 = 28,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -343,21 +347,23 @@ public:
   template<bool checkD0 = true>
   static inline uint8_t
   readDataLines() noexcept {
-    uint8_t value = 0;
+      uint8_t value = 0;
+      delayNanoseconds(10);
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
-    //@todo accelerate using direct GPIO port reads
-    if constexpr (checkD0) {
-        X(Pin::EBI_D0, 0b00000001);
-    }
-    X(Pin::EBI_D1, 0b00000010);
-    X(Pin::EBI_D2, 0b00000100);
-    X(Pin::EBI_D3, 0b00001000);
-    X(Pin::EBI_D4, 0b00010000);
-    X(Pin::EBI_D5, 0b00100000);
-    X(Pin::EBI_D6, 0b01000000);
-    X(Pin::EBI_D7, 0b10000000);
+      //@todo accelerate using direct GPIO port reads
+      if constexpr (checkD0) {
+          X(Pin::EBI_D0, 0b00000001);
+      }
+      X(Pin::EBI_D1, 0b00000010);
+      X(Pin::EBI_D2, 0b00000100);
+      X(Pin::EBI_D3, 0b00001000);
+      X(Pin::EBI_D4, 0b00010000);
+      X(Pin::EBI_D5, 0b00100000);
+      X(Pin::EBI_D6, 0b01000000);
+      X(Pin::EBI_D7, 0b10000000);
 #undef X
-    return value;
+      delayNanoseconds(10);
+      return value;
   }
   template<bool force = false>
   static inline void
@@ -403,7 +409,7 @@ public:
       _currentDirection = direction;
     }
   }
-  template<uint32_t delay = 50>
+  template<uint32_t delay = DefaultWaitAmount>
   static inline void
   write8(uint8_t address, uint8_t value) noexcept {
     setDataLinesDirection(OUTPUT);
@@ -413,7 +419,7 @@ public:
     delayNanoseconds(delay);
     digitalWriteFast(Pin::EBI_WR, HIGH);
   }
-  template<uint32_t delay = 50>
+  template<uint32_t delay = DefaultWaitAmount>
   static inline void
   write16(uint8_t baseAddress, uint16_t value) noexcept {
       if ((baseAddress & 0b1) == 0) {
@@ -438,7 +444,7 @@ public:
       } 
 
   }
-  template<uint32_t delay = 50>
+  template<uint32_t delay = DefaultWaitAmount>
   static inline void
   write32(uint8_t baseAddress, uint32_t value) noexcept {
       if ((baseAddress & 0b11) == 0) {
@@ -475,7 +481,7 @@ public:
         write16<delay>(baseAddress + 2, static_cast<uint16_t>(value >> 16));
       }
   }
-  template<uint32_t delay = 50>
+  template<uint32_t delay = DefaultWaitAmount>
   static inline uint8_t
   read8(uint8_t address) noexcept {
     setDataLinesDirection(INPUT);
@@ -561,7 +567,7 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
-  static constexpr uint32_t DefaultReadyTriggerWaitAmount = 25;
+  static constexpr uint32_t DefaultReadyTriggerWaitAmount = DefaultWaitAmount;
   template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   inline static void
   finishReadyTrigger() noexcept {
@@ -586,7 +592,7 @@ struct i960Interface {
     return digitalReadFast(Pin::WR) == HIGH;
   }
   
-  template<uint32_t delayAmount>
+  template<uint32_t delayAmount = DefaultWaitAmount>
   static inline uint32_t
   getAddress() noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
@@ -622,7 +628,7 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  template<bool skipSetup = false, uint32_t delayAmount = 25>
+  template<bool skipSetup = false, uint32_t delayAmount = DefaultWaitAmount >
   static inline void
   writeDataLines(uint16_t value) noexcept {
       if constexpr (skipSetup) {
@@ -683,7 +689,7 @@ struct i960Interface {
           }
       }
   }
-  template<bool skipSetup = false, uint32_t delayAmount = 25>
+  template<bool skipSetup = false, uint32_t delayAmount = DefaultWaitAmount>
   static inline uint16_t
   readDataLines() noexcept {
       if constexpr (!skipSetup) {
@@ -929,7 +935,7 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress<25>();
+        uint32_t targetAddress = i960Interface::getAddress<50>();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
