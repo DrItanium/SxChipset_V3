@@ -12,7 +12,7 @@
 #include <LittleFS.h>
 #include <Metro.h>
 
-constexpr auto DefaultWaitAmount = 40; // ns
+constexpr auto DefaultWaitAmount = 50; // ns
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
