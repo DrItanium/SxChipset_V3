@@ -12,7 +12,7 @@
 #include <LittleFS.h>
 #include <Metro.h>
 
-constexpr auto DefaultWaitAmount = 50; // ns
+constexpr auto DefaultWaitAmount = 40; // ns
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
@@ -348,7 +348,6 @@ public:
   static inline uint8_t
   readDataLines() noexcept {
       uint8_t value = 0;
-      delayNanoseconds(10);
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
       //@todo accelerate using direct GPIO port reads
       if constexpr (checkD0) {
@@ -362,7 +361,6 @@ public:
       X(Pin::EBI_D6, 0b01000000);
       X(Pin::EBI_D7, 0b10000000);
 #undef X
-      delayNanoseconds(10);
       return value;
   }
   template<bool force = false>
