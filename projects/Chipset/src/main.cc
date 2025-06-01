@@ -222,9 +222,6 @@ enum class Pin : uint8_t {
   RESET = 32,
   HLDA = 33,
   FAIL = 34,
-  SCOPE_SIG0 = 35,
-  SCOPE_SIG1 = 29,
-  SCOPE_SIG2 = 28,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -346,7 +343,6 @@ public:
   template<bool checkD0 = true>
   static inline uint8_t
   readDataLines() noexcept {
-    digitalWriteFast(Pin::SCOPE_SIG0, LOW);
     uint8_t value = 0;
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
     //@todo accelerate using direct GPIO port reads
@@ -361,17 +357,14 @@ public:
     X(Pin::EBI_D6, 0b01000000);
     X(Pin::EBI_D7, 0b10000000);
 #undef X
-    digitalWriteFast(Pin::SCOPE_SIG0, HIGH);
     return value;
   }
   template<bool force = false>
   static inline void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
-      digitalWriteFast(Pin::SCOPE_SIG2, LOW);
       if constexpr (!force) {
           if (_currentOutputDataLines == value) {
-              digitalWriteFast(Pin::SCOPE_SIG2, HIGH);
               return;
           }
       }
@@ -393,7 +386,6 @@ public:
       // AD_B1_03
       digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
       _currentOutputDataLines = value;
-      digitalWriteFast(Pin::SCOPE_SIG2, HIGH);
   }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
@@ -567,7 +559,6 @@ struct i960Interface {
   }
   inline static void 
   triggerReady() noexcept {
-      digitalWriteFast(Pin::SCOPE_SIG1, LOW);
       digitalWriteFast(Pin::READY, LOW);
   }
   static constexpr uint32_t DefaultReadyTriggerWaitAmount = 25;
@@ -577,7 +568,6 @@ struct i960Interface {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(delayAmount);  // wait some amount of time
-      digitalWriteFast(Pin::SCOPE_SIG1, HIGH);
   }
   template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   static inline void
@@ -893,9 +883,6 @@ triggerFAIL() noexcept {
 }
 void 
 setup() {
-    outputPin(Pin::SCOPE_SIG0, HIGH);
-    outputPin(Pin::SCOPE_SIG1, HIGH);
-    outputPin(Pin::SCOPE_SIG2, HIGH);
     inputPin(Pin::ADS);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
