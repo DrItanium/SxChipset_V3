@@ -375,7 +375,15 @@ public:
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
-          updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
+          //updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
+          {
+              GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+              (void)GPIO6_PSR;
+          }
+          {
+              GPIO6_DR_SET = EBIAddressTable[address];
+              (void)GPIO6_PSR;
+          }
       } else {
           digitalWriteFast(Pin::EBI_A0, address & 0b000001);
           digitalWriteFast(Pin::EBI_A1, address & 0b000010);
@@ -389,7 +397,15 @@ public:
   static inline void
   setAddress() noexcept {
     if constexpr (directPortManipulation) {
-        updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
+        {
+            GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+            (void)GPIO6_PSR;
+        }
+        {
+            GPIO6_DR_SET = EBIAddressTable[address];
+            (void)GPIO6_PSR;
+        }
+        //updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
     } else {
 #define X(pin, mask) \
       if constexpr ((address & mask) != 0) { \
@@ -439,7 +455,14 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-          updateGPIO6_EBI(EBIOutputTransformation[0xFF], EBIOutputTransformation[value]);
+          {
+              GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+              (void)GPIO6_PSR;
+          }
+          {
+              GPIO6_DR_SET = EBIOutputTransformation[value];
+              (void)GPIO6_PSR;
+          }
       } else {
 
           digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
@@ -462,7 +485,14 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-          updateGPIO6_EBI(EBIOutputTransformation[0xFF], EBIOutputTransformation[value]);
+          {
+              GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+              (void)GPIO6_PSR;
+          }
+          {
+              GPIO6_DR_SET = EBIOutputTransformation[value];
+              (void)GPIO6_PSR;
+          }
       } else {
 #define X(pin, mask) \
       if constexpr ((value & mask) != 0) { \
@@ -731,7 +761,7 @@ struct i960Interface {
   template<uint32_t delayAmount = DefaultWaitAmount>
   static inline uint32_t
   getAddress() noexcept {
-      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
       EBIInterface::setAddress<addressLines.getDataPortBaseAddress()>();
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
