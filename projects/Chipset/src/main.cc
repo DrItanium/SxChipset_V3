@@ -359,20 +359,17 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
+  [[gnu::always_inline]]
   static inline void 
   updateGPIO6_EBI(uint32_t clear, uint32_t set) noexcept {
-          // r0 and r1 are used to make sure there are enough of a delay by
-          // reading PSR
-    static uint32_t r0 = 0, r1 = 0;
-
-    {
-        GPIO6_DR_CLEAR = clear;
-        r0 = GPIO6_PSR;
-    }
-    {
-        GPIO6_DR_SET = set;
-        r1 = GPIO6_PSR;
-    }
+      {
+          GPIO6_DR_CLEAR = clear;
+          (void)GPIO6_PSR;
+      }
+      {
+          GPIO6_DR_SET = set;
+          (void)GPIO6_PSR;
+      }
   }
   template<bool directPortManipulation = true>
   static inline void
@@ -456,7 +453,7 @@ public:
       }
       _currentOutputDataLines = value;
   }
-  template<uint8_t value, bool force = false, bool directPortManipulation = false>
+  template<uint8_t value, bool force = false, bool directPortManipulation = true>
   static inline void
   setDataLines() noexcept {
       if constexpr (!force) {
