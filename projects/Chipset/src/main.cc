@@ -733,6 +733,7 @@ struct i960Interface {
   template<uint32_t delayAmount = DefaultWaitAmount>
   static inline uint32_t
   getAddress() noexcept {
+      // the CH351 has some very strict requirements
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress<addressLines.getDataPortBaseAddress()>();
 
