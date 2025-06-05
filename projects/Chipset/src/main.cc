@@ -364,24 +364,29 @@ public:
       X(Pin::EBI_A5, 0b100000);
 #undef X
   }
-  template<bool checkD0 = true>
+  template<bool checkD0 = true, bool useDirectPortRead = true>
   static inline uint8_t
   readDataLines() noexcept {
-      uint8_t value = 0;
+
+      if constexpr (useDirectPortRead) {
+          return static_cast<uint8_t>((GPIO6_PSR) >> 24);
+      } else {
+          uint8_t value = 0;
 #define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
-      //@todo accelerate using direct GPIO port reads
-      if constexpr (checkD0) {
-          X(Pin::EBI_D0, 0b00000001);
-      }
-      X(Pin::EBI_D1, 0b00000010);
-      X(Pin::EBI_D2, 0b00000100);
-      X(Pin::EBI_D3, 0b00001000);
-      X(Pin::EBI_D4, 0b00010000);
-      X(Pin::EBI_D5, 0b00100000);
-      X(Pin::EBI_D6, 0b01000000);
-      X(Pin::EBI_D7, 0b10000000);
+          //@todo accelerate using direct GPIO port reads
+          if constexpr (checkD0) {
+              X(Pin::EBI_D0, 0b00000001);
+          }
+          X(Pin::EBI_D1, 0b00000010);
+          X(Pin::EBI_D2, 0b00000100);
+          X(Pin::EBI_D3, 0b00001000);
+          X(Pin::EBI_D4, 0b00010000);
+          X(Pin::EBI_D5, 0b00100000);
+          X(Pin::EBI_D6, 0b01000000);
+          X(Pin::EBI_D7, 0b10000000);
 #undef X
-      return value;
+          return value;
+      }
   }
   template<bool force = false>
   static inline void
