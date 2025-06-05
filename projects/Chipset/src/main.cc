@@ -388,6 +388,31 @@ public:
       digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
       _currentOutputDataLines = value;
   }
+  template<uint8_t value, bool force = false>
+  static inline void
+  setDataLines() noexcept {
+      if constexpr (!force) {
+          if (_currentOutputDataLines == value) {
+              return;
+          }
+      }
+#define X(pin, mask) \
+      if constexpr ((value & mask) != 0) { \
+          digitalWriteFast(pin, HIGH); \
+      } else { \
+          digitalWriteFast(pin, LOW); \
+      }
+      X(Pin::EBI_D0, 0b0000'0001);
+      X(Pin::EBI_D1, 0b0000'0010);
+      X(Pin::EBI_D2, 0b0000'0100);
+      X(Pin::EBI_D3, 0b0000'1000);
+      X(Pin::EBI_D4, 0b0001'0000);
+      X(Pin::EBI_D5, 0b0010'0000);
+      X(Pin::EBI_D6, 0b0100'0000);
+      X(Pin::EBI_D7, 0b1000'0000);
+#undef X
+      _currentOutputDataLines = value;
+  }
   static inline void
   setDataLinesDirection(PinDirection direction) noexcept {
     if (_currentDirection != direction) {
@@ -429,6 +454,36 @@ public:
                                           // boundaries we can safely bump it
                                           // forward by one
           setDataLines(static_cast<uint8_t>(value >> 8));
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+      } else {
+          write8<delay>(baseAddress, static_cast<uint8_t>(value));
+          write8<delay>(baseAddress + 1, static_cast<uint8_t>(value >> 8));
+
+      } 
+
+  }
+
+  template<uint16_t value, uint32_t delay = DefaultWaitAmount>
+  static inline void
+  write16(uint8_t baseAddress) noexcept {
+      if ((baseAddress & 0b1) == 0) {
+          // it is aligned so we don't need to worry
+          setDataLinesDirection(OUTPUT);
+          setAddress(baseAddress);
+          setDataLines<static_cast<uint8_t>(value)>();
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(delay);
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          digitalToggleFast(Pin::EBI_A0); // since it is aligned to 16-bit
+                                          // boundaries we can safely bump it
+                                          // forward by one
+          if constexpr (static_cast<uint8_t>(value >> 8) != static_cast<uint8_t>(value)) {
+              // if the upper and lower halves are already equal then don't
+              // waste any time
+              setDataLines<static_cast<uint8_t>(value >> 8)>();
+          }
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -531,26 +586,26 @@ struct i960Interface {
     configureDataLinesForRead<false>();
     EBIInterface::setDataLines(0);
   }
-  template<bool compareWithPrevious = true>
+  template<uint16_t pattern, bool compareWithPrevious = true>
   static inline void
-  configureDataLinesDirection(uint16_t pattern) noexcept {
+  configureDataLinesDirection() noexcept {
       if constexpr (compareWithPrevious) {
-        if (_dataLinesDirection == pattern) {
-            return;
-        }
+          if (_dataLinesDirection == pattern) {
+              return;
+          }
       }
-    EBIInterface::write16(dataLines.getConfigPortBaseAddress(), pattern);
-    _dataLinesDirection = pattern;
+      EBIInterface::write16<pattern>(dataLines.getConfigPortBaseAddress());
+      _dataLinesDirection = pattern;
   }
   template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForRead() noexcept {
-    configureDataLinesDirection<compareWithPrevious>(0xFFFF);
+    configureDataLinesDirection<0xFFFF, compareWithPrevious>();
   }
   template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForWrite() noexcept {
-    configureDataLinesDirection<compareWithPrevious>(0);
+    configureDataLinesDirection<0, compareWithPrevious>();
   }
   inline static void
   waitForReadyTrigger() noexcept {
