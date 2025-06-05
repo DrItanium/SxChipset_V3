@@ -674,16 +674,35 @@ struct i960Interface {
     configureDataLinesForRead<false>();
     EBIInterface::setDataLines(0);
   }
-  template<uint16_t pattern, bool compareWithPrevious = true>
+  template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
       if constexpr (compareWithPrevious) {
-          if (_dataLinesDirection == pattern) {
+          if (_dataLinesDirection == value) {
               return;
           }
       }
-      EBIInterface::write16<pattern>(dataLines.getConfigPortBaseAddress());
-      _dataLinesDirection = pattern;
+      {
+          EBIInterface::setDataLinesDirection<OUTPUT>();
+          EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
+          EBIInterface::setDataLines<static_cast<uint8_t>(value)>();
+          delayNanoseconds(30); // setup time (tDS)
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(100); // tWL hold for at least 80ns
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          delayNanoseconds(20); // data hold after WR
+          delayNanoseconds(50); // tWH 
+          digitalToggleFast(Pin::EBI_A0);
+          EBIInterface::setDataLines<static_cast<uint8_t>(value >> 8)>();
+          delayNanoseconds(30); // setup time for next byte
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          delayNanoseconds(100); // tWL hold for at least 80ns
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          delayNanoseconds(20); // data hold after WR
+          delayNanoseconds(50); // tWH
+      }
+                            
+      _dataLinesDirection = value;
   }
   template<bool compareWithPrevious = true>
   static inline void
@@ -741,7 +760,7 @@ struct i960Interface {
       delayNanoseconds(100); // wait for things to get selected properly
       uint32_t a = EBIInterface::readDataLines<true>(); // A0 is always 0
       digitalWriteFast(Pin::EBI_RD, HIGH);
-
+      
       digitalWriteFast(Pin::EBI_A0, HIGH);
       delayNanoseconds(50); 
                             
@@ -798,6 +817,7 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_WR, LOW);
       delayNanoseconds(delayAmount);
       digitalWriteFast(Pin::EBI_WR, HIGH);
+      
   }
 
   template<bool isReadTransaction>
