@@ -363,7 +363,7 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  template<bool directPortManipulation = false>
+  template<bool directPortManipulation = true>
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
@@ -378,7 +378,7 @@ public:
           digitalWriteFast(Pin::EBI_A5, address & 0b100000);
       }
   }
-  template<uint8_t address, bool directPortManipulation = false>
+  template<uint8_t address, bool directPortManipulation = true>
   static inline void
   setAddress() noexcept {
     if constexpr (directPortManipulation) {
@@ -400,7 +400,7 @@ public:
 #undef X
     }
   }
-  template<bool checkD0 = true, bool useDirectPortRead = false>
+  template<bool checkD0 = true, bool useDirectPortRead = true>
   static inline uint8_t
   readDataLines() noexcept {
       if constexpr (useDirectPortRead) {
