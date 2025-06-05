@@ -314,6 +314,12 @@ constexpr uint32_t EBIAddressTable[256] {
 #undef X
 };
 
+constexpr uint32_t EBIOutputTransformation[256] {
+#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
+#include "Entry255.def"
+#undef X
+};
+
 
 struct EBIWrapperInterface {
 public:
@@ -353,22 +359,26 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
+  static inline void 
+  updateGPIO6_EBI(uint32_t clear, uint32_t set) noexcept {
+          // r0 and r1 are used to make sure there are enough of a delay by
+          // reading PSR
+    static uint32_t r0 = 0, r1 = 0;
+
+    {
+        GPIO6_DR_CLEAR = clear;
+        r0 = GPIO6_PSR;
+    }
+    {
+        GPIO6_DR_SET = set;
+        r1 = GPIO6_PSR;
+    }
+  }
   template<bool directPortManipulation = true>
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
-          // r0 and r1 are used to make sure there are enough of a delay by
-          // reading PSR
-          static uint32_t r0 = 0, r1 = 0;
-          {
-              GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-              r0 = GPIO6_PSR;
-          }
-          {
-              GPIO6_DR_SET = EBIAddressTable[address];
-              r1 = GPIO6_PSR;
-          }
-
+          updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
       } else {
           digitalWriteFast(Pin::EBI_A0, address & 0b000001);
           digitalWriteFast(Pin::EBI_A1, address & 0b000010);
@@ -382,18 +392,7 @@ public:
   static inline void
   setAddress() noexcept {
     if constexpr (directPortManipulation) {
-        // r0 and r1 are used to make sure there are enough of a delay by
-        // reading PSR
-        static uint32_t r0 = 0, r1 = 0;
-        {
-            GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-            r0 = GPIO6_PSR;
-        }
-        {
-            GPIO6_DR_SET = EBIAddressTable[address];
-            r1 = GPIO6_PSR;
-        }
-
+        updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
     } else {
 #define X(pin, mask) \
       if constexpr ((address & mask) != 0) { \
@@ -413,7 +412,6 @@ public:
   template<bool checkD0 = true, bool useDirectPortRead = true>
   static inline uint8_t
   readDataLines() noexcept {
-
       if constexpr (useDirectPortRead) {
           return static_cast<uint8_t>((GPIO6_PSR) >> 24);
       } else {
@@ -434,7 +432,7 @@ public:
           return value;
       }
   }
-  template<bool force = false, bool directPortManipulation = true>
+  template<bool force = false, bool directPortManipulation = false>
   static inline void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
@@ -444,33 +442,21 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-        static uint32_t temp0 = 0, temp1 = 0;
-        GPIO6_DR_CLEAR = 0xFF00'0000;
-        temp0 = GPIO6_PSR; // these force synchronization
-        GPIO6_DR_SET = (static_cast<uint32_t>(value) << 24) & 0xFF00'0000;
-        temp1 = GPIO6_PSR; // force synchronization
+          updateGPIO6_EBI(EBIOutputTransformation[0xFF], EBIOutputTransformation[value]);
       } else {
 
-          // B1_00
-          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001) != 0 ? HIGH : LOW);
-          // B0_11
-          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010) != 0 ? HIGH : LOW);
-          // B0_00
-          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100) != 0 ? HIGH : LOW);
-          // B0_02
-          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000) != 0 ? HIGH : LOW);
-          // B0_01
-          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000) != 0 ? HIGH : LOW);
-          // B0_03
-          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000) != 0 ? HIGH : LOW);
-          // AD_B1_02
-          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000) != 0 ? HIGH : LOW);
-          // AD_B1_03
-          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000) != 0 ? HIGH : LOW);
+          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
+          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010));
+          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100));
+          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000));
+          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000));
+          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000));
+          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000));
+          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000));
       }
       _currentOutputDataLines = value;
   }
-  template<uint8_t value, bool force = false, bool directPortManipulation = true>
+  template<uint8_t value, bool force = false, bool directPortManipulation = false>
   static inline void
   setDataLines() noexcept {
       if constexpr (!force) {
@@ -479,12 +465,7 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-          // used for synchronization purposes
-          static uint32_t temp0 = 0, temp1 = 0;
-          GPIO6_DR_CLEAR = 0xFF00'0000;
-          temp0 = GPIO6_PSR; // these force synchronization
-          GPIO6_DR_SET = ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000);
-          temp1 = GPIO6_PSR; // these force synchronization
+          updateGPIO6_EBI(EBIOutputTransformation[0xFF], EBIOutputTransformation[value]);
       } else {
 #define X(pin, mask) \
       if constexpr ((value & mask) != 0) { \
