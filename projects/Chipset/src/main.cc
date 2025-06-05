@@ -580,25 +580,21 @@ struct i960Interface {
               return;
           }
       }
-      {
-          EBIInterface::setDataLinesDirection<OUTPUT>();
-          EBIInterface::setAddress<dataLines.getConfigPortBaseAddress()>();
-          EBIInterface::setDataLines<static_cast<uint8_t>(value)>();
-          delayNanoseconds(30); // setup time (tDS)
-          digitalWriteFast(Pin::EBI_WR, LOW);
-          delayNanoseconds(100); // tWL hold for at least 80ns
-          digitalWriteFast(Pin::EBI_WR, HIGH);
-          delayNanoseconds(20); // data hold after WR
-          delayNanoseconds(50); // tWH 
-          digitalToggleFast(Pin::EBI_A0);
-          EBIInterface::setDataLines<static_cast<uint8_t>(value >> 8)>();
-          delayNanoseconds(30); // setup time for next byte
-          digitalWriteFast(Pin::EBI_WR, LOW);
-          delayNanoseconds(100); // tWL hold for at least 80ns
-          digitalWriteFast(Pin::EBI_WR, HIGH);
-          delayNanoseconds(20); // data hold after WR
-          delayNanoseconds(50); // tWH
-      }
+      EBIInterface::setDataLinesDirection<OUTPUT>();
+      EBIInterface::setAddress<dataLines.getConfigPortBaseAddress()>();
+      EBIInterface::setDataLines<static_cast<uint8_t>(value)>();
+      delayNanoseconds(50); // setup time (tDS)
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      delayNanoseconds(100); // tWL hold for at least 80ns
+      digitalWriteFast(Pin::EBI_WR, HIGH);
+      delayNanoseconds(100); // data hold after WR + tWH
+      digitalToggleFast(Pin::EBI_A0);
+      EBIInterface::setDataLines<static_cast<uint8_t>(value >> 8)>();
+      delayNanoseconds(50); // setup time for next byte
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      delayNanoseconds(100); // tWL hold for at least 80ns
+      digitalWriteFast(Pin::EBI_WR, HIGH);
+      delayNanoseconds(100); // data hold after WR + tWH
                             
       _dataLinesDirection = value;
   }
