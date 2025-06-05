@@ -532,7 +532,7 @@ struct i960Interface {
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
     EBIInterface::setDataLines(value);
-    delayNanoseconds(50); // setup time (tDS), normally 30
+    delayNanoseconds(30); // setup time (tDS), normally 30
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(100); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -541,9 +541,13 @@ struct i960Interface {
   static void
   begin() noexcept {
       write8(addressLines.getConfigPortBaseAddress(), 0);
+      delayNanoseconds(50); // breathe for 50ns
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
+      delayNanoseconds(50); // breathe for 50ns
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
+      delayNanoseconds(50); // breathe for 50ns
       write8(addressLines.getConfigPortBaseAddress() + 3, 0);
+      delayNanoseconds(50); // breathe for 50ns
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
   }
@@ -556,7 +560,9 @@ struct i960Interface {
           }
       }
       write8(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
+      delayNanoseconds(50); // breathe
       write8(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
+      delayNanoseconds(50); // breathe
       _dataLinesDirection = value;
   }
   template<bool compareWithPrevious = true>
@@ -615,9 +621,13 @@ struct i960Interface {
   static inline uint32_t
   getAddress() noexcept {
       uint32_t a = read8(addressLines.getDataPortBaseAddress());
+      delayNanoseconds(50); // breathe
       uint32_t b = read8(addressLines.getDataPortBaseAddress() + 1);
+      delayNanoseconds(50); // breathe
       uint32_t c = read8(addressLines.getDataPortBaseAddress() + 2);
+      delayNanoseconds(50); // breathe
       uint32_t d = read8(addressLines.getDataPortBaseAddress() + 3);
+      delayNanoseconds(50); // breathe
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
@@ -635,7 +645,9 @@ struct i960Interface {
   static inline void
   writeDataLines(uint16_t value) noexcept {
       write8(dataLines.getDataPortBaseAddress(), static_cast<uint8_t>(value));
+      delayNanoseconds(50); // breathe
       write8(dataLines.getDataPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
+      delayNanoseconds(50); // breathe
   }
 
   template<bool isReadTransaction>
@@ -667,7 +679,9 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       uint16_t a = read8(dataLines.getDataPortBaseAddress());
+      delayNanoseconds(50); // breathe
       uint16_t b = read8(dataLines.getDataPortBaseAddress()+1);
+      delayNanoseconds(50); // breathe
       return a| (b<< 8);
   }
   static inline void
