@@ -684,7 +684,7 @@ struct i960Interface {
       }
       {
           EBIInterface::setDataLinesDirection<OUTPUT>();
-          EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
+          EBIInterface::setAddress<dataLines.getConfigPortBaseAddress()>();
           EBIInterface::setDataLines<static_cast<uint8_t>(value)>();
           delayNanoseconds(30); // setup time (tDS)
           digitalWriteFast(Pin::EBI_WR, LOW);
