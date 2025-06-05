@@ -327,7 +327,7 @@ public:
       digitalWrite(a, LOW);
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
-    setAddress(0);
+    setAddress<0>();
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
@@ -340,6 +340,23 @@ public:
       digitalWriteFast(Pin::EBI_A3, address & 0b001000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A4, address & 0b010000 ? HIGH : LOW);
       digitalWriteFast(Pin::EBI_A5, address & 0b100000 ? HIGH : LOW);
+  }
+  template<uint8_t address>
+  static inline void
+  setAddress() noexcept {
+#define X(pin, mask) \
+      if constexpr ((address & mask) != 0) { \
+          digitalWriteFast(pin, HIGH); \
+      } else { \
+          digitalWriteFast(pin, LOW); \
+      }
+      X(Pin::EBI_A0, 0b000001);
+      X(Pin::EBI_A1, 0b000010);
+      X(Pin::EBI_A2, 0b000100);
+      X(Pin::EBI_A3, 0b001000);
+      X(Pin::EBI_A4, 0b010000);
+      X(Pin::EBI_A5, 0b100000);
+#undef X
   }
   template<bool checkD0 = true>
   static inline uint8_t
@@ -646,21 +663,18 @@ struct i960Interface {
   static inline uint32_t
   getAddress() noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
-      EBIInterface::setAddress(addressLines.getDataPortBaseAddress());
+      EBIInterface::setAddress<addressLines.getDataPortBaseAddress()>();
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
       uint32_t a = EBIInterface::readDataLines<false>(); // A0 is always 0
       digitalWriteFast(Pin::EBI_A0, HIGH);
-      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 1);
       delayNanoseconds(delayAmount);
       uint32_t b = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_A1, HIGH);
       digitalWriteFast(Pin::EBI_A0, LOW);
-      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 2);
       delayNanoseconds(delayAmount);
       uint32_t c = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_A0, HIGH);
-      //EBIInterface::setAddress(addressLines.getDataPortBaseAddress() + 3);
       delayNanoseconds(delayAmount);
       uint32_t d = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_RD, HIGH);
@@ -683,7 +697,7 @@ struct i960Interface {
   writeDataLines(uint16_t value) noexcept {
       if constexpr (skipSetup) {
           EBIInterface::setDataLinesDirection(OUTPUT);
-          EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+          EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
           EBIInterface::setDataLines(static_cast<uint8_t>(value));
       }
       digitalWriteFast(Pin::EBI_WR, LOW);
@@ -715,7 +729,7 @@ struct i960Interface {
       // start the word ahead of time
       auto currentWord = target.getWord(offset >> 1);
       EBIInterface::setDataLinesDirection(OUTPUT);
-      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
           writeDataLines<true>(currentWord);
@@ -731,7 +745,7 @@ struct i960Interface {
               // use the delay wait time to actually grab the next value
               currentWord = target.getWord(wordOffset + 1);
               // reset the address lines to the base address
-              EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+              EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
               // prepare for the next cycle
               EBIInterface::setDataLines(static_cast<uint8_t>(currentWord));
               waitForReadyTrigger();
@@ -744,7 +758,7 @@ struct i960Interface {
   readDataLines() noexcept {
       if constexpr (!skipSetup) {
           EBIInterface::setDataLinesDirection(INPUT);
-          EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+          EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       }
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(delayAmount);
@@ -760,7 +774,7 @@ struct i960Interface {
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
       EBIInterface::setDataLinesDirection(INPUT);
-      EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+      EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
@@ -772,7 +786,7 @@ struct i960Interface {
               break;
           } else {
               triggerReady();
-              EBIInterface::setAddress(dataLines.getDataPortBaseAddress());
+              EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
               waitForReadyTrigger();
               finishReadyTrigger();
           }
