@@ -11,8 +11,12 @@
 #include <FastCRC.h>
 #include <LittleFS.h>
 #include <Metro.h>
-
-constexpr auto DefaultWaitAmount = 50; // ns
+// Thanks to an interactive session with copilot I am realizing that while the
+// CH351 has some real limitations when it comes to write operations. There are
+// minimum hold times in between writes. Which is around 50 ns
+//
+//
+constexpr auto DefaultWaitAmount = 100; // ns
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
@@ -359,31 +363,12 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  [[gnu::always_inline]]
-  static inline void 
-  updateGPIO6_EBI(uint32_t clear, uint32_t set) noexcept {
-      {
-          GPIO6_DR_CLEAR = clear;
-          (void)GPIO6_PSR;
-      }
-      {
-          GPIO6_DR_SET = set;
-          (void)GPIO6_PSR;
-      }
-  }
-  template<bool directPortManipulation = true>
+  template<bool directPortManipulation = false>
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
-          //updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
-          {
-              GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-              (void)GPIO6_PSR;
-          }
-          {
-              GPIO6_DR_SET = EBIAddressTable[address];
-              (void)GPIO6_PSR;
-          }
+          GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+          GPIO6_DR_SET = EBIAddressTable[address];
       } else {
           digitalWriteFast(Pin::EBI_A0, address & 0b000001);
           digitalWriteFast(Pin::EBI_A1, address & 0b000010);
@@ -393,19 +378,12 @@ public:
           digitalWriteFast(Pin::EBI_A5, address & 0b100000);
       }
   }
-  template<uint8_t address, bool directPortManipulation = true>
+  template<uint8_t address, bool directPortManipulation = false>
   static inline void
   setAddress() noexcept {
     if constexpr (directPortManipulation) {
-        {
-            GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-            (void)GPIO6_PSR;
-        }
-        {
-            GPIO6_DR_SET = EBIAddressTable[address];
-            (void)GPIO6_PSR;
-        }
-        //updateGPIO6_EBI(EBIAddressTable[0xFF], EBIAddressTable[address]);
+        GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+        GPIO6_DR_SET = EBIAddressTable[address];
     } else {
 #define X(pin, mask) \
       if constexpr ((address & mask) != 0) { \
@@ -455,14 +433,8 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-          {
-              GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
-              (void)GPIO6_PSR;
-          }
-          {
-              GPIO6_DR_SET = EBIOutputTransformation[value];
-              (void)GPIO6_PSR;
-          }
+          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+          GPIO6_DR_SET = EBIOutputTransformation[value];
       } else {
 
           digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
@@ -485,14 +457,8 @@ public:
           }
       }
       if constexpr (directPortManipulation) {
-          {
-              GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
-              (void)GPIO6_PSR;
-          }
-          {
-              GPIO6_DR_SET = EBIOutputTransformation[value];
-              (void)GPIO6_PSR;
-          }
+          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+          GPIO6_DR_SET = EBIOutputTransformation[value];
       } else {
 #define X(pin, mask) \
       if constexpr ((value & mask) != 0) { \
@@ -554,6 +520,7 @@ public:
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(delay);
     digitalWriteFast(Pin::EBI_WR, HIGH);
+    delayNanoseconds(50); // to satisfy minimum writes to the CH351
   }
   template<uint32_t delay = DefaultWaitAmount>
   static inline void
@@ -570,6 +537,7 @@ public:
                                           // boundaries we can safely bump it
                                           // forward by one
           setDataLines(static_cast<uint8_t>(value >> 8));
+          delayNanoseconds(50); // to satisfy minimum writes to the CH351
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -600,6 +568,7 @@ public:
               // waste any time
               setDataLines<static_cast<uint8_t>(value >> 8)>();
           }
+          delayNanoseconds(50); // to satisfy minimum writes to the CH351
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -625,6 +594,7 @@ public:
                                           // boundaries we can safely bump it
                                           // forward by one
           setDataLines(static_cast<uint8_t>(value >> 8));
+          delayNanoseconds(50); // to satisfy minimum writes to the CH351
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -632,12 +602,14 @@ public:
           digitalWriteFast(Pin::EBI_A0, LOW);
           digitalWriteFast(Pin::EBI_A1, HIGH);
           setDataLines(static_cast<uint8_t>(value >> 16));
+          delayNanoseconds(50); // to satisfy minimum writes to the CH351
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
 
           digitalWriteFast(Pin::EBI_A0, HIGH);
           setDataLines(static_cast<uint8_t>(value >> 24));
+          delayNanoseconds(50); // to satisfy minimum writes to the CH351
           digitalWriteFast(Pin::EBI_WR, LOW);
           delayNanoseconds(delay);
           digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -650,7 +622,7 @@ public:
   template<uint32_t delay = DefaultWaitAmount>
   static inline uint8_t
   read8(uint8_t address) noexcept {
-    setDataLinesDirection<INPUT_PULLUP>();
+    setDataLinesDirection<INPUT>();
     setAddress(address);
     digitalWriteFast(Pin::EBI_RD, LOW);
     delayNanoseconds(delay);
@@ -761,22 +733,39 @@ struct i960Interface {
   template<uint32_t delayAmount = DefaultWaitAmount>
   static inline uint32_t
   getAddress() noexcept {
-      EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
+      EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress<addressLines.getDataPortBaseAddress()>();
+
       digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(delayAmount);
-      uint32_t a = EBIInterface::readDataLines<false>(); // A0 is always 0
+      delayNanoseconds(100); // wait for things to get selected properly
+      uint32_t a = EBIInterface::readDataLines<true>(); // A0 is always 0
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+
       digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(delayAmount);
+      delayNanoseconds(50); 
+                            
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(100);
       uint32_t b = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+
       digitalWriteFast(Pin::EBI_A1, HIGH);
       digitalWriteFast(Pin::EBI_A0, LOW);
-      delayNanoseconds(delayAmount);
+      delayNanoseconds(50);
+
+
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(100);
       uint32_t c = EBIInterface::readDataLines();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+
       digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(delayAmount);
+      delayNanoseconds(50);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(100);
       uint32_t d = EBIInterface::readDataLines();
       digitalWriteFast(Pin::EBI_RD, HIGH);
+      delayNanoseconds(50);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
@@ -804,6 +793,7 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_WR, HIGH);
       digitalWriteFast(Pin::EBI_A0, HIGH);
       EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
+      delayNanoseconds(50); // to satisfy minimum writes to the CH351
       digitalWriteFast(Pin::EBI_WR, LOW);
       delayNanoseconds(delayAmount);
       digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -835,7 +825,7 @@ struct i960Interface {
           if (isBurstLast()) {
               triggerReady();
               // reset for the start of the next transaction
-              EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
+              EBIInterface::setDataLinesDirection<INPUT>();
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
@@ -856,7 +846,7 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       if constexpr (!skipSetup) {
-          EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
+          EBIInterface::setDataLinesDirection<INPUT>();
           EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       }
       digitalWriteFast(Pin::EBI_RD, LOW);
@@ -872,14 +862,14 @@ struct i960Interface {
   }
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
-      EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
+      EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               triggerReady();
               // reset for the start of the next transaction
-              EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
+              EBIInterface::setDataLinesDirection<INPUT>();
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
@@ -1098,7 +1088,8 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress<50>();
+        uint32_t targetAddress = i960Interface::getAddress<100>();
+        //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
