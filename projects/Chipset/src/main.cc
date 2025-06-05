@@ -476,7 +476,7 @@ public:
       }
       _currentOutputDataLines = value;
   }
-  template<uint8_t value, bool force = false, bool directPortManipulation = true>
+  template<uint8_t value, bool force = false, bool directPortManipulation = false>
   static inline void
   setDataLines() noexcept {
       if constexpr (!force) {
@@ -650,7 +650,7 @@ public:
   template<uint32_t delay = DefaultWaitAmount>
   static inline uint8_t
   read8(uint8_t address) noexcept {
-    setDataLinesDirection<INPUT>();
+    setDataLinesDirection<INPUT_PULLUP>();
     setAddress(address);
     digitalWriteFast(Pin::EBI_RD, LOW);
     delayNanoseconds(delay);
@@ -835,7 +835,7 @@ struct i960Interface {
           if (isBurstLast()) {
               triggerReady();
               // reset for the start of the next transaction
-              EBIInterface::setDataLinesDirection<INPUT>();
+              EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
@@ -856,7 +856,7 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       if constexpr (!skipSetup) {
-          EBIInterface::setDataLinesDirection<INPUT>();
+          EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
           EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       }
       digitalWriteFast(Pin::EBI_RD, LOW);
@@ -872,14 +872,14 @@ struct i960Interface {
   }
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
-      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
       EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
       for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines<true>(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               triggerReady();
               // reset for the start of the next transaction
-              EBIInterface::setDataLinesDirection<INPUT>();
+              EBIInterface::setDataLinesDirection<INPUT_PULLUP>();
               waitForReadyTrigger();
               finishReadyTrigger();
               break;
