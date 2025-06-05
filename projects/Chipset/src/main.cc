@@ -363,7 +363,7 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  template<bool directPortManipulation = true>
+  template<bool directPortManipulation = false>
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
@@ -378,7 +378,7 @@ public:
           digitalWriteFast(Pin::EBI_A5, address & 0b100000);
       }
   }
-  template<uint8_t address, bool directPortManipulation = true>
+  template<uint8_t address, bool directPortManipulation = false>
   static inline void
   setAddress() noexcept {
     if constexpr (directPortManipulation) {
@@ -400,7 +400,7 @@ public:
 #undef X
     }
   }
-  template<bool checkD0 = true, bool useDirectPortRead = true>
+  template<bool checkD0 = true, bool useDirectPortRead = false>
   static inline uint8_t
   readDataLines() noexcept {
       if constexpr (useDirectPortRead) {
@@ -528,47 +528,22 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
+  static inline void write8(uint8_t address, uint8_t value) noexcept {
+    EBIInterface::setDataLinesDirection<OUTPUT>();
+    EBIInterface::setAddress(address);
+    EBIInterface::setDataLines(value);
+    delayNanoseconds(50); // setup time (tDS), normally 30
+    digitalWriteFast(Pin::EBI_WR, LOW);
+    delayNanoseconds(100); // tWL hold for at least 80ns
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+    delayNanoseconds(100); // data hold after WR + tWH
+  }
   static void
   begin() noexcept {
-      EBIInterface::setDataLinesDirection<OUTPUT>();
-      EBIInterface::setAddress<addressLines.getConfigPortBaseAddress()>();
-      EBIInterface::setDataLines<0>();
-      delayNanoseconds(30); // setup time (tDS)
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(20); // data hold after WR
-      delayNanoseconds(50); // tWH 
-                            
-      EBIInterface::setAddress<addressLines.getConfigPortBaseAddress()+1>();
-      EBIInterface::setDataLines<0>();
-      digitalToggleFast(Pin::EBI_A0);
-      delayNanoseconds(30); // setup time for next byte
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(20); // data hold after WR
-      delayNanoseconds(50); // tWH
-
-      EBIInterface::setAddress<addressLines.getConfigPortBaseAddress()+2>();
-      EBIInterface::setDataLines<0>();
-      digitalToggleFast(Pin::EBI_A0);
-      delayNanoseconds(30); // setup time for next byte
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(20); // data hold after WR
-      delayNanoseconds(50); // tWH
-                            
-      EBIInterface::setAddress<addressLines.getConfigPortBaseAddress()+3>();
-      EBIInterface::setDataLines<0>();
-      digitalToggleFast(Pin::EBI_A0);
-      delayNanoseconds(30); // setup time for next byte
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(20); // data hold after WR
-      delayNanoseconds(50); // tWH
+      write8(addressLines.getConfigPortBaseAddress(), 0);
+      write8(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8(addressLines.getConfigPortBaseAddress() + 3, 0);
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
   }
@@ -580,22 +555,8 @@ struct i960Interface {
               return;
           }
       }
-      EBIInterface::setDataLinesDirection<OUTPUT>();
-      EBIInterface::setAddress<dataLines.getConfigPortBaseAddress()>();
-      EBIInterface::setDataLines<static_cast<uint8_t>(value)>();
-      delayNanoseconds(50); // setup time (tDS)
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(100); // data hold after WR + tWH
-      digitalToggleFast(Pin::EBI_A0);
-      EBIInterface::setDataLines<static_cast<uint8_t>(value >> 8)>();
-      delayNanoseconds(50); // setup time for next byte
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(100); // data hold after WR + tWH
-                            
+      write8(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
+      write8(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
       _dataLinesDirection = value;
   }
   template<bool compareWithPrevious = true>
@@ -618,21 +579,18 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
-  static constexpr uint32_t DefaultReadyTriggerWaitAmount = DefaultWaitAmount;
-  template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
-      delayNanoseconds(delayAmount);  // wait some amount of time
+      delayNanoseconds(200);  // wait some amount of time
   }
-  template<uint32_t delayAmount = DefaultReadyTriggerWaitAmount>
   static inline void
   signalReady() noexcept {
       // run and block until we get the completion pulse
       triggerReady();
       waitForReadyTrigger();
-      finishReadyTrigger<delayAmount>();
+      finishReadyTrigger();
   }
   static inline bool
   isReadOperation() noexcept {
@@ -642,44 +600,24 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  
-  template<uint32_t delayAmount = DefaultWaitAmount>
-  static inline uint32_t
-  getAddress() noexcept {
+  static inline uint8_t
+  read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
       EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress<addressLines.getDataPortBaseAddress()>();
-
+      EBIInterface::setAddress(address);
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(100); // wait for things to get selected properly
-      uint32_t a = EBIInterface::readDataLines<true>(); // A0 is always 0
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(50); 
-                            
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100);
-      uint32_t b = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-
-      digitalWriteFast(Pin::EBI_A1, HIGH);
-      digitalWriteFast(Pin::EBI_A0, LOW);
-      delayNanoseconds(50);
-
-
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100);
-      uint32_t c = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      delayNanoseconds(50);
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100);
-      uint32_t d = EBIInterface::readDataLines();
+      uint8_t value = EBIInterface::readDataLines(); // A0 is always 0
       digitalWriteFast(Pin::EBI_RD, HIGH);
       delayNanoseconds(50);
+      return value;
+  }
+  static inline uint32_t
+  getAddress() noexcept {
+      uint32_t a = read8(addressLines.getDataPortBaseAddress());
+      uint32_t b = read8(addressLines.getDataPortBaseAddress() + 1);
+      uint32_t c = read8(addressLines.getDataPortBaseAddress() + 2);
+      uint32_t d = read8(addressLines.getDataPortBaseAddress() + 3);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
@@ -696,21 +634,8 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      EBIInterface::setDataLinesDirection<OUTPUT>();
-      EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
-      EBIInterface::setDataLines(static_cast<uint8_t>(value));
-      delayNanoseconds(50); // setup time (tDS)
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(100); // data hold after WR + tWH
-      digitalToggleFast(Pin::EBI_A0);
-      EBIInterface::setDataLines(static_cast<uint8_t>(value >> 8));
-      delayNanoseconds(50); // setup time for next byte
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(100); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      delayNanoseconds(100); // data hold after WR + tWH
+      write8(dataLines.getDataPortBaseAddress(), static_cast<uint8_t>(value));
+      write8(dataLines.getDataPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
   }
 
   template<bool isReadTransaction>
@@ -741,20 +666,8 @@ struct i960Interface {
   }
   static inline uint16_t
   readDataLines() noexcept {
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress<dataLines.getDataPortBaseAddress()>();
-      delayNanoseconds(50);
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100); // wait for things to get selected properly
-      uint16_t a = EBIInterface::readDataLines(); // A0 is always 0
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(50); 
-      digitalWriteFast(Pin::EBI_A0, HIGH);
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100);
-      uint16_t b = EBIInterface::readDataLines();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(50);
+      uint16_t a = read8(dataLines.getDataPortBaseAddress());
+      uint16_t b = read8(dataLines.getDataPortBaseAddress()+1);
       return a| (b<< 8);
   }
   static inline void
@@ -976,12 +889,13 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress<100>();
-        //Serial.printf("Target Address: 0x%x\n", targetAddress);
-        if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
-        } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
+        uint32_t targetAddress = i960Interface::getAddress();
+        {
+            if (i960Interface::isReadOperation()) {
+                i960Interface::doMemoryTransaction<true>(targetAddress);
+            } else {
+                i960Interface::doMemoryTransaction<false>(targetAddress);
+            }
         }
     } 
 }
