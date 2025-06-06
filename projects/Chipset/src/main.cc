@@ -358,12 +358,12 @@ public:
       digitalWrite(a, LOW);
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
-    setAddress<0>();
+    setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  template<bool directPortManipulation = true>
+  template<bool directPortManipulation = false>
   static inline void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
@@ -378,30 +378,8 @@ public:
           digitalWriteFast(Pin::EBI_A5, address & 0b100000);
       }
   }
-  template<uint8_t address, bool directPortManipulation = true>
-  static inline void
-  setAddress() noexcept {
-    if constexpr (directPortManipulation) {
-        GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-        GPIO6_DR_SET = EBIAddressTable[address];
-    } else {
-#define X(pin, mask) \
-      if constexpr ((address & mask) != 0) { \
-          digitalWriteFast(pin, HIGH); \
-      } else { \
-          digitalWriteFast(pin, LOW); \
-      }
-      X(Pin::EBI_A0, 0b000001);
-      X(Pin::EBI_A1, 0b000010);
-      X(Pin::EBI_A2, 0b000100);
-      X(Pin::EBI_A3, 0b001000);
-      X(Pin::EBI_A4, 0b010000);
-      X(Pin::EBI_A5, 0b100000);
-#undef X
-    }
-  }
   template<bool checkD0 = true, bool useDirectPortRead = true>
-  static inline uint8_t
+  static uint8_t
   readDataLines() noexcept {
       if constexpr (useDirectPortRead) {
           return static_cast<uint8_t>((GPIO6_PSR) >> 24);
@@ -528,6 +506,7 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
+
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
@@ -611,23 +590,21 @@ struct i960Interface {
       // the CH351 has some very strict requirements
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
+      delayNanoseconds(50);
       digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(100); // wait for things to get selected properly
-      uint8_t value = EBIInterface::readDataLines(); // A0 is always 0
+      delayNanoseconds(80); // wait for things to get selected properly
+      uint8_t output = EBIInterface::readDataLines();
+      delayNanoseconds(20);
       digitalWriteFast(Pin::EBI_RD, HIGH);
       delayNanoseconds(50);
-      return value;
+      return output;
   }
   static inline uint32_t
   getAddress() noexcept {
       uint32_t a = read8(addressLines.getDataPortBaseAddress());
-      delayNanoseconds(50); // breathe
       uint32_t b = read8(addressLines.getDataPortBaseAddress() + 1);
-      delayNanoseconds(50); // breathe
       uint32_t c = read8(addressLines.getDataPortBaseAddress() + 2);
-      delayNanoseconds(50); // breathe
       uint32_t d = read8(addressLines.getDataPortBaseAddress() + 3);
-      delayNanoseconds(50); // breathe
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
@@ -679,9 +656,7 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       uint16_t a = read8(dataLines.getDataPortBaseAddress());
-      delayNanoseconds(50); // breathe
       uint16_t b = read8(dataLines.getDataPortBaseAddress()+1);
-      delayNanoseconds(50); // breathe
       return a| (b<< 8);
   }
   static inline void
@@ -887,13 +862,14 @@ setup() {
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     Entropy.Initialize();
-    attachInterrupt( Pin::ADS, triggerADS, RISING);
-    attachInterrupt( Pin::READY_SYNC, triggerReadySync, RISING);
+    noInterrupts();
+    attachInterrupt(Pin::ADS, triggerADS, RISING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
-    delay(1000);  // make sure that the i960 has enough time to setup
+    interrupts();
     digitalWriteFast(Pin::RESET, HIGH);
+    delay(1000);
     // so attaching the interrupt seems to not be functioning fully
-    delayNanoseconds(100);
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
@@ -903,14 +879,12 @@ loop() {
         readyTriggered = false;
         adsTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        uint32_t targetAddress = i960Interface::getAddress();
-        {
-            if (i960Interface::isReadOperation()) {
-                i960Interface::doMemoryTransaction<true>(targetAddress);
-            } else {
-                i960Interface::doMemoryTransaction<false>(targetAddress);
-            }
+        auto targetAddress = i960Interface::getAddress();
+        if (i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-    } 
+    }
 }
 
