@@ -696,6 +696,12 @@ struct i960Interface {
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
+
+#if 0
+          case 0x00'1000 ... 0x00'1FFF:
+              // EEPROM
+              break;
+#endif
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -814,6 +820,7 @@ setup() {
         delay(10);
     }
     Entropy.Initialize();
+    EEPROM.begin();
     setupRandomSeed();
     // put your setup code here, to run once:
     EBIInterface::begin();
