@@ -172,32 +172,23 @@ configureCCLs() {
   Event0.set_user(user::ccl3_event_a);
   // we redirect the output from the CCL2 to CCL4 and CCL5
   Event1.set_generator(gen::ccl2_out); // 12/10MHz
-  Event1.set_user(user::ccl4_event_a);
-  Event1.set_user(user::ccl5_event_a);
-  // event 2 and event 3 are used for the ready signal detector
-  Event2.set_generator(gen::ccl4_out); // 6/5MHz
-  Event2.set_user(user::ccl1_event_a); // we want to use this as the source of
-                                       // our clock signal for the signal
-                                       // detector
-
+  Event1.set_user(user::ccl1_event_a); // 12/10MHz clk1
+  updateClockFrequency(F_CPU);
   // redirect the output to PD7 for the purpose of sending it off
   // Right now, it is a duplication of PC6's output since the AVR128DB64 is
   // actually running completely at 3.3v. However, I have the flexibility to
   // move the AVR128DB64 into the i960's 5V domain and not need extra
   // conversion chips. 
-  Event3.set_generator(gen::ccl1_out);
-  Event3.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
+  Event2.set_generator(gen::ccl1_out);
+  Event2.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
 
 
   configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
-  configureDivideByTwoCCL<true>(Logic4, Logic5); // divide by four
-  updateClockFrequency(F_CPU / 2);
   configureReadySynchronizer();
 
   Event0.start();
   Event1.start();
   Event2.start();
-  Event3.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
