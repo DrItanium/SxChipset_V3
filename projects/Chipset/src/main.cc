@@ -16,7 +16,6 @@
 // minimum hold times in between writes. Which is around 50 ns
 //
 //
-constexpr auto DefaultWaitAmount = 100; // ns
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 template<typename T>
