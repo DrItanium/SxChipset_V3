@@ -363,8 +363,8 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  template<bool directPortManipulation = false>
-  static inline void
+  template<bool directPortManipulation = true>
+  static void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
           GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
@@ -402,7 +402,7 @@ public:
       }
   }
   template<bool force = false, bool directPortManipulation = false>
-  static inline void
+  static void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
       if constexpr (!force) {
@@ -426,37 +426,7 @@ public:
       }
       _currentOutputDataLines = value;
   }
-  template<uint8_t value, bool force = false, bool directPortManipulation = false>
-  static inline void
-  setDataLines() noexcept {
-      if constexpr (!force) {
-          if (_currentOutputDataLines == value) {
-              return;
-          }
-      }
-      if constexpr (directPortManipulation) {
-          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
-          GPIO6_DR_SET = EBIOutputTransformation[value];
-      } else {
-#define X(pin, mask) \
-      if constexpr ((value & mask) != 0) { \
-          digitalWriteFast(pin, HIGH); \
-      } else { \
-          digitalWriteFast(pin, LOW); \
-      }
-      X(Pin::EBI_D0, 0b0000'0001);
-      X(Pin::EBI_D1, 0b0000'0010);
-      X(Pin::EBI_D2, 0b0000'0100);
-      X(Pin::EBI_D3, 0b0000'1000);
-      X(Pin::EBI_D4, 0b0001'0000);
-      X(Pin::EBI_D5, 0b0010'0000);
-      X(Pin::EBI_D6, 0b0100'0000);
-      X(Pin::EBI_D7, 0b1000'0000);
-#undef X
-      }
-      _currentOutputDataLines = value;
-  }
-  static inline void
+  static void
   setDataLinesDirection(PinDirection direction) noexcept {
     if (_currentDirection != direction) {
 #define X(p) pinMode(p, direction)
@@ -473,7 +443,7 @@ public:
     }
   }
   template<PinDirection direction>
-  static inline void
+  static void
   setDataLinesDirection() noexcept {
     if (_currentDirection != direction) {
 #define X(p) pinMode(p, direction)
@@ -489,8 +459,6 @@ public:
       _currentDirection = direction;
     }
   }
-
-  
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
@@ -511,7 +479,7 @@ struct i960Interface {
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
     EBIInterface::setDataLines(value);
-    delayNanoseconds(30); // setup time (tDS), normally 30
+    delayNanoseconds(100); // setup time (tDS), normally 30
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(100); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -590,7 +558,7 @@ struct i960Interface {
       // the CH351 has some very strict requirements
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
-      delayNanoseconds(50);
+      delayNanoseconds(100);
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(80); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
