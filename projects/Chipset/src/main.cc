@@ -60,6 +60,30 @@ public:
     }
   }
 };
+struct EEPROMWrapper {
+    constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
+    void updateBaseAddress(uint16_t base) noexcept {
+        _baseOffset = base & 0x0FF0;
+    }
+    void update() noexcept { }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        uint16_t value = 0;
+        return EEPROM.get<uint16_t>(_baseOffset + ((offset << 1) & 0b1110), value);
+    }
+    void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
+        auto computedOffset = ((offset << 1)) & 0b1110;
+        if (updateLo) {
+            EEPROM.put(_baseOffset + computedOffset, static_cast<uint8_t>(value));
+        }
+        if (updateHi) {
+            EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
+        }
+    }
+        
+
+    private:
+        uint16_t _baseOffset = 0;
+};
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
     void update() noexcept {
@@ -164,6 +188,7 @@ USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
+EEPROMWrapper eeprom{0};
 enum class Pin : uint8_t {
   RPI_D0 = 19,
   RPI_D1 = 18,
@@ -697,11 +722,10 @@ struct i960Interface {
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
 
-#if 0
-          case 0x00'1000 ... 0x00'1FFF:
-              // EEPROM
+          case 0x00'1000 ... 0x00'1FFF: // EEPROM
+              eeprom.updateBaseAddress(address);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
               break;
-#endif
           default:
               doNothingTransaction<isReadTransaction>();
               break;
