@@ -401,7 +401,7 @@ public:
           return value;
       }
   }
-  template<bool force = false, bool directPortManipulation = false>
+  template<bool force = false, bool directPortManipulation = true>
   static void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
@@ -478,8 +478,9 @@ struct i960Interface {
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
+    delayNanoseconds(50);
     EBIInterface::setDataLines(value);
-    delayNanoseconds(100); // setup time (tDS), normally 30
+    delayNanoseconds(30); // setup time (tDS), normally 30
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(100); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -570,9 +571,13 @@ struct i960Interface {
   static inline uint32_t
   getAddress() noexcept {
       uint32_t a = read8(addressLines.getDataPortBaseAddress());
+      delayNanoseconds(50);
       uint32_t b = read8(addressLines.getDataPortBaseAddress() + 1);
+      delayNanoseconds(50);
       uint32_t c = read8(addressLines.getDataPortBaseAddress() + 2);
+      delayNanoseconds(50);
       uint32_t d = read8(addressLines.getDataPortBaseAddress() + 3);
+      delayNanoseconds(50);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
