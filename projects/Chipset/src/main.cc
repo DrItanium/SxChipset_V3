@@ -12,11 +12,15 @@
 #include <LittleFS.h>
 #include <Metro.h>
 #include <RTClib.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
 //
 //
+constexpr auto OLEDScreenWidth = 128;
+constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 RTC_DS3231 rtc;
@@ -310,7 +314,9 @@ enum class Pin : uint8_t {
   HLDA = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
-  FAIL = RPI_D32,
+  EYESPI_TCS = 10,
+  EYESPI_RST = 1,
+  EYESPI_DC = 0,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
@@ -815,7 +821,31 @@ private:
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
 };
 
-
+Adafruit_SSD1351 tft(OLEDScreenWidth, 
+        OLEDScreenHeight, 
+        &SPI,
+        pinIndexConvert(Pin::EYESPI_TCS),
+        pinIndexConvert(Pin::EYESPI_DC),
+        pinIndexConvert(Pin::EYESPI_RST));
+constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
+    // taken from the color565 routine in Adafruit GFX
+    return (static_cast<uint16_t>(r & 0xF8) << 8) |
+           (static_cast<uint16_t>(g & 0xFC) << 3) |
+           (static_cast<uint16_t>(b >> 3));
+}
+constexpr uint16_t Color_Black = color565(0, 0, 0);
+constexpr uint16_t Color_Blue = color565(0, 0, 255);
+constexpr uint16_t Color_Red = color565(255, 0, 0);
+constexpr uint16_t Color_Green = color565(0, 255, 0);
+constexpr uint16_t Color_Purple = color565(255, 0, 255);
+constexpr uint16_t Color_White = color565(255, 255, 255);
+void
+setupTFTDisplay() noexcept {
+    tft.begin();
+    tft.setFont();
+    tft.fillScreen(Color_Black);
+    tft.setTextColor(Color_White, Color_Black);
+}
 void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
@@ -864,8 +894,6 @@ void setupRandomSeed() noexcept {
   X(A17);
 #undef X
   randomSeed(newSeed);
-  Serial.print("Random Seed: ");
-  Serial.println(newSeed);
 }
 void setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
@@ -881,11 +909,6 @@ void
 triggerReadySync() noexcept {
     readyTriggered = true;
     //digitalWriteFast(Pin::READY, HIGH);
-}
-volatile uint32_t failCount = 0;
-void
-triggerFAIL() noexcept {
-    ++failCount;
 }
 void
 setupRTC() noexcept {
@@ -919,12 +942,12 @@ setup() {
     Wire2.begin();
     setupRTC();
     setupSDCard();
+    setupTFTDisplay();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
     outputPin(Pin::INT960_3, HIGH);
     inputPin(Pin::LOCK);
-    inputPin(Pin::FAIL);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::WR);
@@ -935,7 +958,6 @@ setup() {
     noInterrupts();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
-    attachInterrupt(Pin::FAIL, triggerFAIL, FALLING);
     interrupts();
     digitalWriteFast(Pin::RESET, HIGH);
     delay(1000);
@@ -955,6 +977,9 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
+    } else {
+        auto xyrgb = random();
+        tft.drawPixel(static_cast<uint8_t>(xyrgb) & 0x7F, static_cast<uint8_t>(xyrgb >> 8) & 0x7F, static_cast<uint16_t>(xyrgb >> 16));
     }
 }
 
