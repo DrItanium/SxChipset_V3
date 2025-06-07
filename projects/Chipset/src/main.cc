@@ -45,11 +45,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
 //
-//
 constexpr auto OLEDScreenWidth = 128;
 constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
+constexpr auto EEPROM_I2C_Address = 0x50; // default address
+Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
@@ -70,6 +71,14 @@ constexpr uint16_t Color_Red = color565(255, 0, 0);
 constexpr uint16_t Color_Green = color565(0, 255, 0);
 constexpr uint16_t Color_Purple = color565(255, 0, 255);
 constexpr uint16_t Color_White = color565(255, 255, 255);
+void
+setupEEPROM2() noexcept {
+    if (eeprom2.begin(EEPROM_I2C_Address, &Wire2)) {
+        Serial.println("Found I2C EEPROM!");
+    } else {
+        Serial.println("No I2C EEPROM Found!");
+    }
+}
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
@@ -851,6 +860,7 @@ setup() {
     setupSDCard();
     setupTFTDisplay();
     setupRandomSeed();
+    setupEEPROM2();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
@@ -880,10 +890,10 @@ template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
 void 
 fizzleFadeOne() noexcept {
     if (rndval == 1) {
-        auto rval = Entropy.random() + random();
+        auto rval = random();
         currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
     } 
-    // FizzleFade code courtesy of Fabien Sanglard
+    // core FizzleFade code courtesy of Fabien Sanglard
     uint16_t x = rndval & 0x000FF; // Y = low 8 bits
     uint16_t y = (rndval & 0x1FF00) >> 8; // X = High 9 bits
     uint32_t lsb  = rndval & 1; // get the output bit
