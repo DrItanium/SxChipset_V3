@@ -827,6 +827,7 @@ Adafruit_SSD1351 tft(OLEDScreenWidth,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
+Metro screenUpdate{1};
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
     return (static_cast<uint16_t>(r & 0xF8) << 8) |
@@ -921,6 +922,7 @@ setupRTC() noexcept {
         Serial.printf("unixtime: %d\n", now.unixtime());
     }
 }
+volatile bool systemBooted = false;
 void 
 setup() {
     inputPin(Pin::ADS);
@@ -964,9 +966,30 @@ setup() {
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
+    systemBooted = true;
 }
 uint32_t rndval = 1;
 uint16_t currentColor = 0;
+template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
+void 
+fizzleFadeOne() noexcept {
+    if (rndval == 1) {
+        auto rval = random();
+        currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
+    } 
+    // FizzleFade code courtesy of Fabien Sanglard
+    uint16_t x = rndval & 0x000FF; // Y = low 8 bits
+    uint16_t y = (rndval & 0x1FF00) >> 8; // X = High 9 bits
+    uint32_t lsb  = rndval & 1; // get the output bit
+    rndval >>= 1; // shift register
+    if (lsb) {
+        // if output is 0, the xor can be skipped
+        rndval ^= 0x00012000; 
+    }
+    if (x < width&& y < height) {
+        tft.drawPixel(x, y, currentColor);
+    }
+}
 void 
 loop() {
     if (adsTriggered) {
@@ -980,21 +1003,8 @@ loop() {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
     } else {
-        if (rndval == 1) {
-            auto rval = random();
-            currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
-        } 
-        // FizzleFade code courtesy of Fabien Sanglard
-        uint16_t x = rndval & 0x000FF; // Y = low 8 bits
-        uint16_t y = (rndval & 0x1FF00) >> 8; // X = High 9 bits
-        uint32_t lsb  = rndval & 1; // get the output bit
-        rndval >>= 1; // shift register
-        if (lsb) {
-            // if output is 0, the xor can be skipped
-            rndval ^= 0x00012000; 
-        }
-        if (x < OLEDScreenWidth && y < OLEDScreenHeight) {
-            tft.drawPixel(x, y, currentColor);
+        if (screenUpdate.check()) {
+            fizzleFadeOne();
         }
     }
 }
