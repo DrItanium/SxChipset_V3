@@ -9,16 +9,8 @@ constexpr auto CLK1Out = PIN_PB3;
 constexpr auto SystemUp = PIN_PB6;
 constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
-constexpr auto SensorChannel0 = PIN_PD0;
-constexpr auto SensorChannel1 = PIN_PD1;
-constexpr auto SensorChannel2 = PIN_PD2;
 constexpr auto CLK2Out = PIN_PD3;
-constexpr auto SensorChannel3 = PIN_PD4;
-constexpr auto SensorChannel4 = PIN_PD5;
-constexpr auto SensorChannel5 = PIN_PD6;
 constexpr auto i960_READY_SYNC = PIN_PD7;
-constexpr auto SensorChannel6 = PIN_PE0;
-constexpr auto SensorChannel7 = PIN_PE1;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
