@@ -890,7 +890,7 @@ template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
 void 
 fizzleFadeOne() noexcept {
     if (rndval == 1) {
-        auto rval = random();
+        auto rval = Entropy.random();
         currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
     } 
     // core FizzleFade code courtesy of Fabien Sanglard
@@ -902,7 +902,7 @@ fizzleFadeOne() noexcept {
         // if output is 0, the xor can be skipped
         rndval ^= 0x00012000; 
     }
-    if (x < width&& y < height) {
+    if (x < width && y < height) {
         tft.drawPixel(x, y, currentColor);
     }
 }
