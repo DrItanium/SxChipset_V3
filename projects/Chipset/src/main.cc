@@ -14,6 +14,7 @@
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
+#include <SerLCD.h>
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -847,6 +848,16 @@ setupTFTDisplay() noexcept {
     tft.fillScreen(Color_Black);
     tft.setTextColor(Color_White, Color_Black);
 }
+SerLCD lcd;
+void 
+setupSerLCD() noexcept {
+    lcd.begin(Wire2);
+    lcd.setBacklight(64, 64, 64);
+    lcd.setContrast(5);
+
+    lcd.clear();
+    lcd.print("i960");
+}
 void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
@@ -894,7 +905,9 @@ void setupRandomSeed() noexcept {
   X(A16);
   X(A17);
 #undef X
+  newSeed += rtc.now().unixtime();
   randomSeed(newSeed);
+  Serial.printf("Random Seed: 0x%x\n", newSeed);
 }
 void setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
@@ -936,7 +949,6 @@ setup() {
     }
     Entropy.Initialize();
     EEPROM.begin();
-    setupRandomSeed();
     // put your setup code here, to run once:
     EBIInterface::begin();
     i960Interface::begin();
@@ -945,6 +957,8 @@ setup() {
     setupRTC();
     setupSDCard();
     setupTFTDisplay();
+    setupSerLCD();
+    setupRandomSeed();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
@@ -974,7 +988,7 @@ template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
 void 
 fizzleFadeOne() noexcept {
     if (rndval == 1) {
-        auto rval = random();
+        auto rval = Entropy.random() + random();
         currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
     } 
     // FizzleFade code courtesy of Fabien Sanglard
