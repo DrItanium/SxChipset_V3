@@ -11,6 +11,7 @@
 #include <FastCRC.h>
 #include <LittleFS.h>
 #include <Metro.h>
+#include <RTClib.h>
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -18,6 +19,7 @@
 //
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
+RTC_DS3231 rtc;
 template<typename T>
 struct TreatAs final {
     using underlying_type = T;
@@ -184,11 +186,63 @@ struct RandomSourceRelatedThings {
 private:
     uint32_t _currentRandomValue = 0;
 };
+struct RTCMemoryBlock {
+    public:
+        void update() noexcept {
+            _now = rtc.now();
+            _inputTemperature = rtc.getTemperature();
+            _32kOutEn = rtc.isEnabled32K(); 
+        }
+        uint16_t getWord(uint8_t offset) const noexcept {
+            switch (offset) {
+                case 0: // unixtime lower
+                    return static_cast<uint16_t>(_now.unixtime());
+                case 1: // unixtime upper
+                    return static_cast<uint16_t>(_now.unixtime() >> 16);
+                case 2: // secondstime lower
+                    return static_cast<uint16_t>(_now.secondstime());
+                case 3: // secondstime upper
+                    return static_cast<uint16_t>(_now.secondstime() >> 16);
+                case 4: // temperature
+                    return static_cast<uint16_t>(_outputTemperature);
+                case 5: // temperature upper
+                    return static_cast<uint16_t>(_outputTemperature >> 16);
+                case 6: 
+                case 7:
+                    return _32kOutEn ? 0xFFFF : 0x0000;
+                default:
+                    return 0;
+            }
+        }
+        void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
+            switch (offset) {
+                case 6:
+                    if (enableLo || enableHi) {
+                        if (value != 0) {
+                            rtc.enable32K();
+                        } else {
+                            rtc.disable32K();
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    private:
+        DateTime _now;
+        union {
+            float _inputTemperature;
+            uint32_t _outputTemperature;
+        };
+        bool _32kOutEn = false;
+};
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
+RTCMemoryBlock rtcInterface;
 enum class Pin : uint8_t {
   RPI_D0 = 19,
   RPI_D1 = 18,
@@ -701,7 +755,9 @@ struct i960Interface {
           case 0x10 ... 0x1F:
               doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
               break;
-          // case 0x20 ... 0x2f: // more timing related sources
+          case 0x20 ... 0x2F:
+              doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
+              break;
           case 0x30 ... 0x3F:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
@@ -721,7 +777,6 @@ struct i960Interface {
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
-
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(address);
               doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
@@ -832,6 +887,17 @@ void
 triggerFAIL() noexcept {
     ++failCount;
 }
+void
+setupRTC() noexcept {
+    if (rtc.begin(&Wire2)) {
+        if (rtc.lostPower()) {
+            rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        }
+        Serial.println("Found RTC!");
+        auto now = rtc.now();
+        Serial.printf("unixtime: %d\n", now.unixtime());
+    }
+}
 void 
 setup() {
     inputPin(Pin::ADS);
@@ -850,7 +916,8 @@ setup() {
     EBIInterface::begin();
     i960Interface::begin();
     setupMemory();
-    Wire.begin();
+    Wire2.begin();
+    setupRTC();
     setupSDCard();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
