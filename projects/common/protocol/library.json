@@ -1,0 +1,6 @@
+{
+	"name": "protocol",
+	"version" : "1",
+	"description" : "Management Engine TWI Protocol Constants",
+	"keywords" : "protocol"
+}

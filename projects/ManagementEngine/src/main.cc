@@ -2,9 +2,8 @@
 #include <Event.h>
 #include <Logic.h>
 #include <Wire.h>
+#include "ManagementEngineProtocol.h"
 
-constexpr auto InTWITransaction0 = PIN_PA4;
-constexpr auto InTWITransaction1 = PIN_PA5;
 constexpr auto CLKOUT = PIN_PA7;
 constexpr auto CLK1Out = PIN_PB3;
 constexpr auto SystemUp = PIN_PB6;
@@ -26,24 +25,8 @@ uint32_t CLKSpeeds [] {
     0, 0,
 };
 
-constexpr auto NumberOfAnalogChannels = 8;
-decltype(analogRead(SensorChannel0)) CurrentChannelSamples[NumberOfAnalogChannels] { 0 };
-constexpr decltype(SensorChannel0) AnalogChannels[NumberOfAnalogChannels] {
-    SensorChannel0,
-    SensorChannel1,
-    SensorChannel2,
-    SensorChannel3,
-    SensorChannel4,
-    SensorChannel5,
-    SensorChannel6,
-    SensorChannel7,
-};
 void
 configurePins() noexcept {
-    pinMode(InTWITransaction0, OUTPUT);
-    digitalWrite(InTWITransaction0, HIGH);
-    pinMode(InTWITransaction1, OUTPUT);
-    digitalWrite(InTWITransaction1, HIGH);
     pinMode(i960_READY_SYNC, OUTPUT);  
     pinMode(CLKOUT, OUTPUT);
     pinMode(CLK1Out, OUTPUT);
@@ -228,55 +211,10 @@ setup() {
     digitalWrite(SystemUp, HIGH);
 }
 void
-sampleAnalogChannels() noexcept {
-    for (int i = 0; i < NumberOfAnalogChannels; ++i) {
-        CurrentChannelSamples[i] = analogRead(AnalogChannels[i]);
-    }
-}
-void
 loop() {
-    // sample analog channels every second
-    sampleAnalogChannels();
-    delay(100);
 }
 
-enum class WireReceiveOpcode : uint8_t {
-    SetMode,
-};
-enum class WireRequestOpcode : uint8_t {
-    CPUClockConfiguration,
-    CPUClockConfiguration_CLK2,
-    CPUClockConfiguration_CLK1,
-    AnalogSensors,
-    AnalogSensors_Ch0,
-    AnalogSensors_Ch1,
-    AnalogSensors_Ch2,
-    AnalogSensors_Ch3,
-    AnalogSensors_Ch4,
-    AnalogSensors_Ch5,
-    AnalogSensors_Ch6,
-    AnalogSensors_Ch7,
-};
-constexpr bool valid(WireRequestOpcode code) noexcept {
-    switch (code) {
-        case WireRequestOpcode::CPUClockConfiguration:
-        case WireRequestOpcode::CPUClockConfiguration_CLK2:
-        case WireRequestOpcode::CPUClockConfiguration_CLK1:
-        case WireRequestOpcode::AnalogSensors:
-        case WireRequestOpcode::AnalogSensors_Ch0:
-        case WireRequestOpcode::AnalogSensors_Ch1:
-        case WireRequestOpcode::AnalogSensors_Ch2:
-        case WireRequestOpcode::AnalogSensors_Ch3:
-        case WireRequestOpcode::AnalogSensors_Ch4:
-        case WireRequestOpcode::AnalogSensors_Ch5:
-        case WireRequestOpcode::AnalogSensors_Ch6:
-        case WireRequestOpcode::AnalogSensors_Ch7:
-            return true;
-        default:
-            return false;
-    }
-}
-volatile WireRequestOpcode currentWireMode = WireRequestOpcode::CPUClockConfiguration;
+volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
 void
 sinkWire() {
     if (Wire.available()) {
@@ -289,12 +227,11 @@ sinkWire() {
 
 void
 onReceiveHandler(int howMany) {
-    digitalWrite(InTWITransaction0, LOW);
     if (howMany >= 1) {
-        switch (static_cast<WireReceiveOpcode>(Wire.read())) {
-            case WireReceiveOpcode::SetMode: 
-                if (auto currentOpcode = static_cast<WireRequestOpcode>(Wire.read()); valid(currentOpcode)) {
-                    currentWireMode = currentOpcode;
+        switch (static_cast<ManagementEngineReceiveOpcode>(Wire.read())) {
+            case ManagementEngineReceiveOpcode::SetMode: 
+                if (auto currentOpcode = static_cast<ManagementEngineRequestOpcode>(Wire.read()); valid(currentOpcode)) {
+                    currentMode = currentOpcode;
                 }
                 break;
             default:
@@ -302,38 +239,16 @@ onReceiveHandler(int howMany) {
         }
     }
     sinkWire();
-    digitalWrite(InTWITransaction0, HIGH);
 }
 
 void
 onRequestHandler() {
-    digitalWrite(InTWITransaction1, LOW);
-    switch (currentWireMode) {
-        case WireRequestOpcode::CPUClockConfiguration:
+    switch (currentMode) {
+        case ManagementEngineRequestOpcode::CPUClockConfiguration:
             Wire.write(reinterpret_cast<char*>(CLKSpeeds), sizeof(CLKSpeeds));
             break;
-        case WireRequestOpcode::CPUClockConfiguration_CLK2:
-            Wire.write(reinterpret_cast<char*>(CLKSpeeds[0]), sizeof(uint32_t));
-            break;
-        case WireRequestOpcode::CPUClockConfiguration_CLK1:
-            Wire.write(reinterpret_cast<char*>(CLKSpeeds[1]), sizeof(uint32_t));
-            break;
-        case WireRequestOpcode::AnalogSensors:
-            Wire.write(reinterpret_cast<char*>(CurrentChannelSamples), sizeof(CurrentChannelSamples));
-            break;
-#define X(index) case WireRequestOpcode::AnalogSensors_Ch ## index : Wire.write(reinterpret_cast<uint8_t*>(CurrentChannelSamples [ index ]), sizeof(CurrentChannelSamples[index]) ); break
-            X(0);
-            X(1);
-            X(2);
-            X(3);
-            X(4);
-            X(5);
-            X(6);
-            X(7);
-#undef X
         default:
             break;
 
     }
-    digitalWrite(InTWITransaction1, HIGH);
 }
