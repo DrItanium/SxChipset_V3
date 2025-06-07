@@ -1005,7 +1005,7 @@ loop() {
     } else {
         if (screenUpdate.check()) {
             fizzleFadeOne();
-        }
+        } 
     }
 }
 
