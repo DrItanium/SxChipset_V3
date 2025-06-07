@@ -24,10 +24,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifndef CHIPSET_CORE_H__
 #define CHIPSET_CORE_H__
-
+#include <stdint.h>
 template<typename T>
 struct TreatAs final {
     using underlying_type = T;
+};
+union SplitWord32 {
+    uint8_t bytes[4];
+    uint16_t shorts[2];
+    uint32_t value;
+};
+union SplitWord64 {
+    uint8_t bytes[sizeof(uint64_t) / sizeof(uint8_t)];
+    uint16_t shorts[sizeof(uint64_t) / sizeof(uint16_t)];
+    uint32_t words[sizeof(uint64_t) / sizeof(uint32_t)];
+    uint64_t value;
 };
 
 

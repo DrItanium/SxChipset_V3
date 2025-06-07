@@ -3,8 +3,11 @@
 #include <Logic.h>
 #include <Wire.h>
 
+constexpr auto InTWITransaction0 = PIN_PA4;
+constexpr auto InTWITransaction1 = PIN_PA5;
 constexpr auto CLKOUT = PIN_PA7;
 constexpr auto CLK1Out = PIN_PB3;
+constexpr auto SystemUp = PIN_PB6;
 constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
 constexpr auto SensorChannel0 = PIN_PD0;
@@ -19,8 +22,9 @@ constexpr auto SensorChannel6 = PIN_PE0;
 constexpr auto SensorChannel7 = PIN_PE1;
 
 // will be updated on startup
-volatile uint32_t CLK2Rate = 0;
-volatile uint32_t CLK1Rate = 0;
+uint32_t CLKSpeeds [] {
+    0, 0,
+};
 
 constexpr auto NumberOfAnalogChannels = 8;
 decltype(analogRead(SensorChannel0)) CurrentChannelSamples[NumberOfAnalogChannels] { 0 };
@@ -36,13 +40,17 @@ constexpr decltype(SensorChannel0) AnalogChannels[NumberOfAnalogChannels] {
 };
 void
 configurePins() noexcept {
-  pinMode(i960_READY_SYNC, OUTPUT);  
-  pinMode(CLKOUT, OUTPUT);
-  pinMode(CLK1Out, OUTPUT);
-  pinMode(CLK2Out, OUTPUT);
-  pinMode(RP2350_READY_IN, INPUT);
-  pinMode(RP2350_READY_SYNC, OUTPUT);
-  digitalWrite(i960_READY_SYNC, HIGH);
+    pinMode(InTWITransaction0, OUTPUT);
+    digitalWrite(InTWITransaction0, HIGH);
+    pinMode(InTWITransaction1, OUTPUT);
+    digitalWrite(InTWITransaction1, HIGH);
+    pinMode(i960_READY_SYNC, OUTPUT);  
+    pinMode(CLKOUT, OUTPUT);
+    pinMode(CLK1Out, OUTPUT);
+    pinMode(CLK2Out, OUTPUT);
+    pinMode(RP2350_READY_IN, INPUT);
+    pinMode(RP2350_READY_SYNC, OUTPUT);
+    digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
 setupSystemClocks() noexcept {
@@ -144,8 +152,8 @@ configureReadySynchronizer() noexcept {
 }
 void
 updateClockFrequency(uint32_t frequency) noexcept {
-    CLK2Rate = frequency;
-    CLK1Rate = CLK2Rate / 2;
+    CLKSpeeds[0] = frequency;
+    CLKSpeeds[1] = frequency / 2;
 }
 void 
 configureCCLs() {
@@ -208,13 +216,16 @@ void onReceiveHandler(int count);
 void onRequestHandler();
 void
 setup() {
-  setupSystemClocks();
-  configurePins();
-  configureCCLs();
-  Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
-  Wire.begin(0x08);
-  Wire.onReceive(onReceiveHandler);
-  Wire.onRequest(onRequestHandler);
+    pinMode(SystemUp, OUTPUT);
+    digitalWrite(SystemUp, LOW);
+    setupSystemClocks();
+    configurePins();
+    configureCCLs();
+    Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
+    Wire.begin(0x08);
+    Wire.onReceive(onReceiveHandler);
+    Wire.onRequest(onRequestHandler);
+    digitalWrite(SystemUp, HIGH);
 }
 void
 sampleAnalogChannels() noexcept {
@@ -226,7 +237,7 @@ void
 loop() {
     // sample analog channels every second
     sampleAnalogChannels();
-    delay(1000);
+    delay(100);
 }
 
 enum class WireReceiveOpcode : uint8_t {
@@ -278,6 +289,7 @@ sinkWire() {
 
 void
 onReceiveHandler(int howMany) {
+    digitalWrite(InTWITransaction0, LOW);
     if (howMany >= 1) {
         switch (static_cast<WireReceiveOpcode>(Wire.read())) {
             case WireReceiveOpcode::SetMode: 
@@ -290,25 +302,26 @@ onReceiveHandler(int howMany) {
         }
     }
     sinkWire();
+    digitalWrite(InTWITransaction0, HIGH);
 }
 
 void
 onRequestHandler() {
+    digitalWrite(InTWITransaction1, LOW);
     switch (currentWireMode) {
         case WireRequestOpcode::CPUClockConfiguration:
-            Wire.write(CLK2Rate);
-            Wire.write(CLK1Rate);
+            Wire.write(reinterpret_cast<char*>(CLKSpeeds), sizeof(CLKSpeeds));
             break;
         case WireRequestOpcode::CPUClockConfiguration_CLK2:
-            Wire.write(CLK2Rate);
+            Wire.write(reinterpret_cast<char*>(CLKSpeeds[0]), sizeof(uint32_t));
             break;
         case WireRequestOpcode::CPUClockConfiguration_CLK1:
-            Wire.write(CLK1Rate);
+            Wire.write(reinterpret_cast<char*>(CLKSpeeds[1]), sizeof(uint32_t));
             break;
         case WireRequestOpcode::AnalogSensors:
             Wire.write(reinterpret_cast<char*>(CurrentChannelSamples), sizeof(CurrentChannelSamples));
             break;
-#define X(index) case WireRequestOpcode::AnalogSensors_Ch ## index : Wire.write(CurrentChannelSamples [ index ] ); break
+#define X(index) case WireRequestOpcode::AnalogSensors_Ch ## index : Wire.write(reinterpret_cast<uint8_t*>(CurrentChannelSamples [ index ]), sizeof(CurrentChannelSamples[index]) ); break
             X(0);
             X(1);
             X(2);
@@ -322,4 +335,5 @@ onRequestHandler() {
             break;
 
     }
+    digitalWrite(InTWITransaction1, HIGH);
 }

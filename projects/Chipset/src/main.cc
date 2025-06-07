@@ -116,6 +116,9 @@ public:
         bytes[baseOffset+1] = static_cast<uint8_t>(value >> 8);
     }
   }
+  inline void setWord32(uint8_t offset, uint32_t value) noexcept {
+      words[offset & 0b11] = value;
+  }
 };
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -746,6 +749,11 @@ struct i960Interface {
               break;
       }
   }
+  static void 
+  setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
+      CLKValues.setWord32(0, clk2);
+      CLKValues.setWord32(1, clk1);
+  }
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
   // allocate a 2k memory cache like the avr did
@@ -837,14 +845,39 @@ setupRTC() noexcept {
         Serial.printf("unixtime: %d\n", now.unixtime());
     }
 }
+void
+sinkWire() noexcept {
+    while (Wire2.available()) {
+        (void)Wire2.read();
+    }
+}
+const uint8_t setCPUClockMode_CLKAll [] { 0, 0 };
+
+void
+displayClockSpeedInformation() noexcept {
+    SplitWord64 clk3;
+    Wire2.beginTransmission(0x08);
+    Wire2.write(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll));
+    Wire2.endTransmission();
+    auto count = Wire2.requestFrom(0x08, sizeof(clk3));
+
+    for (int i = 0; i < count;) {
+        if (Wire2.available()) {
+            clk3.bytes[i] = Wire2.read();
+            ++i;
+        }
+    }
+    Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
+    i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
+}
 volatile bool systemBooted = false;
 void 
 setup() {
+    inputPin(Pin::AVR_UP);
     inputPin(Pin::ADS);
     outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
     outputPin(Pin::HOLD, LOW);
-    inputPin(Pin::HLDA);
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
@@ -878,6 +911,10 @@ setup() {
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     interrupts();
+    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
+        delay(10);
+    }
+    displayClockSpeedInformation();
     digitalWriteFast(Pin::RESET, HIGH);
     delay(1000);
     // so attaching the interrupt seems to not be functioning fully
