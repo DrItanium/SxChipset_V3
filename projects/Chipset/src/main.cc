@@ -965,6 +965,8 @@ setup() {
     Serial.println("Booted i960");
     // okay so we want to handle the initial boot process
 }
+uint32_t rndval = 1;
+uint16_t currentColor = 0;
 void 
 loop() {
     if (adsTriggered) {
@@ -978,8 +980,22 @@ loop() {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
     } else {
-        auto xyrgb = random();
-        tft.drawPixel(static_cast<uint8_t>(xyrgb) & 0x7F, static_cast<uint8_t>(xyrgb >> 8) & 0x7F, static_cast<uint16_t>(xyrgb >> 16));
+        if (rndval == 1) {
+            auto rval = random();
+            currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
+        } 
+        // FizzleFade code courtesy of Fabien Sanglard
+        uint16_t x = rndval & 0x000FF; // Y = low 8 bits
+        uint16_t y = (rndval & 0x1FF00) >> 8; // X = High 9 bits
+        uint32_t lsb  = rndval & 1; // get the output bit
+        rndval >>= 1; // shift register
+        if (lsb) {
+            // if output is 0, the xor can be skipped
+            rndval ^= 0x00012000; 
+        }
+        if (x < OLEDScreenWidth && y < OLEDScreenHeight) {
+            tft.drawPixel(x, y, currentColor);
+        }
     }
 }
 
