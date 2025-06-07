@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_EEPROM_I2C.h>
 #include "Pinout.h"
 #include "Core.h"
+#include "ManagementEngineProtocol.h"
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -871,11 +872,27 @@ displayClockSpeedInformation() noexcept {
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
 volatile bool systemBooted = false;
+void
+putCPUInReset() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PutInReset));
+    Wire2.endTransmission();
+}
+void
+pullCPUOutOfReset() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
+    Wire2.endTransmission();
+}
 void 
 setup() {
+    Wire2.begin();
     inputPin(Pin::AVR_UP);
+    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
+        delay(10);
+    }
+    putCPUInReset();
     inputPin(Pin::ADS);
-    outputPin(Pin::RESET, LOW);
     inputPin(Pin::DEN);
     outputPin(Pin::HOLD, LOW);
     outputPin(Pin::INT960_0, HIGH);
@@ -900,7 +917,6 @@ setup() {
     EBIInterface::begin();
     i960Interface::begin();
     setupMemory();
-    Wire2.begin();
     setupRTC();
     setupSDCard();
     setupTFTDisplay();
@@ -911,11 +927,9 @@ setup() {
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     interrupts();
-    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
-        delay(10);
-    }
     displayClockSpeedInformation();
-    digitalWriteFast(Pin::RESET, HIGH);
+    pullCPUOutOfReset();
+    
     delay(1000);
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");

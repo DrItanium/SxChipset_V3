@@ -89,7 +89,7 @@ enum class Pin : uint8_t {
   INT960_2 = RPI_D25,
   INT960_1 = RPI_D26,
   INT960_0 = RPI_D27,  
-  RESET = RPI_D28,
+  //RESET = RPI_D28,
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
