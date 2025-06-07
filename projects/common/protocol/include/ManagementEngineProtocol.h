@@ -4,6 +4,8 @@
 
 enum class ManagementEngineReceiveOpcode : uint8_t {
     SetMode,
+    PutInReset,
+    PullOutOfReset,
 };
 enum class ManagementEngineRequestOpcode : uint8_t {
     CPUClockConfiguration,
@@ -11,6 +13,8 @@ enum class ManagementEngineRequestOpcode : uint8_t {
 constexpr bool valid(ManagementEngineReceiveOpcode code) noexcept {
     switch (code) {
         case ManagementEngineReceiveOpcode::SetMode:
+        case ManagementEngineReceiveOpcode::PutInReset:
+        case ManagementEngineReceiveOpcode::PullOutOfReset:
             return true;
         default:
             return false;

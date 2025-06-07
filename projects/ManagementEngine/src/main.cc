@@ -3,7 +3,7 @@
 #include <Logic.h>
 #include <Wire.h>
 #include "ManagementEngineProtocol.h"
-
+constexpr auto RESET960 = PIN_PA4;
 constexpr auto CLKOUT = PIN_PA7;
 constexpr auto CLK1Out = PIN_PB3;
 constexpr auto SystemUp = PIN_PB6;
@@ -19,6 +19,8 @@ uint32_t CLKSpeeds [] {
 
 void
 configurePins() noexcept {
+    pinMode(RESET960, OUTPUT);
+    digitalWrite(RESET960, LOW);
     pinMode(i960_READY_SYNC, OUTPUT);  
     pinMode(CLKOUT, OUTPUT);
     pinMode(CLK1Out, OUTPUT);
@@ -59,9 +61,10 @@ setupSystemClocks() noexcept {
     CLKCTRL.OSCHFCTRLA = 0b1'0'1001'0'0; 
     asm volatile("nop");
 
-    // at some point, I want to use the internal 32k oscillator (OSC32K) to
-    // help with timer related interrupts.
-    /// @todo put code to configure the PLL if needed here
+    // configure the 32khz oscillator to run in standby
+    CCP = 0xD8;
+    CLKCTRL.OSC32KCTRLA = 0b1'0000000;
+    asm volatile("nop");
 }
 template<bool useOutputPin = false>
 void
@@ -225,6 +228,12 @@ onReceiveHandler(int howMany) {
                 if (auto currentOpcode = static_cast<ManagementEngineRequestOpcode>(Wire.read()); valid(currentOpcode)) {
                     currentMode = currentOpcode;
                 }
+                break;
+            case ManagementEngineReceiveOpcode::PutInReset: 
+                digitalWrite(RESET960, LOW); 
+                break;
+            case ManagementEngineReceiveOpcode::PullOutOfReset: 
+                digitalWrite(RESET960, HIGH); 
                 break;
             default:
                 break;
