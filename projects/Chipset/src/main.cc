@@ -845,6 +845,18 @@ setup() {
     inputPin(Pin::DEN);
     outputPin(Pin::HOLD, LOW);
     inputPin(Pin::HLDA);
+    outputPin(Pin::INT960_0, HIGH);
+    outputPin(Pin::INT960_1, LOW);
+    outputPin(Pin::INT960_2, LOW);
+    outputPin(Pin::INT960_3, HIGH);
+    inputPin(Pin::LOCK);
+    inputPin(Pin::BE0);
+    inputPin(Pin::BE1);
+    inputPin(Pin::WR);
+    outputPin(Pin::READY, HIGH);
+    inputPin(Pin::BLAST);
+    inputPin(Pin::READY_SYNC);
+
     Serial.begin(9600);
     while (!Serial) {
         delay(10);
@@ -861,17 +873,6 @@ setup() {
     setupTFTDisplay();
     setupRandomSeed();
     setupEEPROM2();
-    outputPin(Pin::INT960_0, HIGH);
-    outputPin(Pin::INT960_1, LOW);
-    outputPin(Pin::INT960_2, LOW);
-    outputPin(Pin::INT960_3, HIGH);
-    inputPin(Pin::LOCK);
-    inputPin(Pin::BE0);
-    inputPin(Pin::BE1);
-    inputPin(Pin::WR);
-    outputPin(Pin::READY, HIGH);
-    inputPin(Pin::BLAST);
-    inputPin(Pin::READY_SYNC);
     Entropy.Initialize();
     noInterrupts();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
