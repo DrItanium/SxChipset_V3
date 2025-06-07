@@ -39,7 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
-#include <Pinout.h>
+#include "Pinout.h"
+#include "Core.h"
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -69,10 +70,6 @@ constexpr uint16_t Color_Red = color565(255, 0, 0);
 constexpr uint16_t Color_Green = color565(0, 255, 0);
 constexpr uint16_t Color_Purple = color565(255, 0, 255);
 constexpr uint16_t Color_White = color565(255, 255, 255);
-template<typename T>
-struct TreatAs final {
-    using underlying_type = T;
-};
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
