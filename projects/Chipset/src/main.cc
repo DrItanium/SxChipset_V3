@@ -14,7 +14,6 @@
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
-#include <SerLCD.h>
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -848,16 +847,6 @@ setupTFTDisplay() noexcept {
     tft.fillScreen(Color_Black);
     tft.setTextColor(Color_White, Color_Black);
 }
-SerLCD lcd;
-void 
-setupSerLCD() noexcept {
-    lcd.begin(Wire2);
-    lcd.setBacklight(64, 64, 64);
-    lcd.setContrast(5);
-
-    lcd.clear();
-    lcd.print("i960");
-}
 void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
@@ -957,7 +946,6 @@ setup() {
     setupRTC();
     setupSDCard();
     setupTFTDisplay();
-    setupSerLCD();
     setupRandomSeed();
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
