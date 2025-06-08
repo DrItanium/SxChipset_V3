@@ -494,6 +494,9 @@ enum class OLEDInterfaceOpcodes : uint16_t {
     Nothing,
     DrawPixel,
     FillScreen,
+    DrawLine,
+    DrawFastHLine,
+    DrawFastVLine,
 };
 // we want to make it as easy as possible to do display updates without having
 // to override everything, only the parts you need to do
@@ -518,6 +521,28 @@ struct OLEDInterface final {
                     break;
                 case OLEDInterfaceOpcodes::FillScreen:
                     tft.fillScreen(_backingStore.getWord(2));
+                    break;
+                case OLEDInterfaceOpcodes::DrawLine:
+                    tft.drawLine(
+                            _backingStore.getWord(2),
+                            _backingStore.getWord(3),
+                            _backingStore.getWord(4),
+                            _backingStore.getWord(5),
+                            _backingStore.getWord(6));
+                    break;
+                case OLEDInterfaceOpcodes::DrawFastHLine:
+                    tft.drawFastHLine(
+                            _backingStore.getWord(2),
+                            _backingStore.getWord(3),
+                            _backingStore.getWord(4),
+                            _backingStore.getWord(5));
+                    break;
+                case OLEDInterfaceOpcodes::DrawFastVLine:
+                    tft.drawFastVLine(
+                            _backingStore.getWord(2),
+                            _backingStore.getWord(3),
+                            _backingStore.getWord(4),
+                            _backingStore.getWord(5));
                     break;
                 default:
                     break;
