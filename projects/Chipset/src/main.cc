@@ -88,6 +88,7 @@ concept MemoryCell = requires(T a) {
     { a.getWord(0) } -> uint16_t;
     { a.setWord(0, 0) };
     { a.setWord(0, 0, true, true) };
+    { a.onFinish() };
 };
 
 union MemoryCellBlock {
@@ -120,6 +121,7 @@ public:
   inline void setWord32(uint8_t offset, uint32_t value) noexcept {
       words[offset & 0b11] = value;
   }
+  void onFinish() noexcept { }
 };
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -140,16 +142,15 @@ struct EEPROMWrapper {
             EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
         }
     }
-        
+    void onFinish() noexcept { }
 
     private:
         uint16_t _baseOffset = 0;
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
-    void update() noexcept {
-
-    }
+    void update() noexcept { }
+    void onFinish() noexcept { }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset & 0b11) {
             case 0:
@@ -219,6 +220,7 @@ struct TimingRelatedThings {
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+    void onFinish() noexcept { }
 
 private:
     // for temporary snapshot purposes
@@ -229,6 +231,7 @@ struct RandomSourceRelatedThings {
     void update() noexcept {
         _currentRandomValue = random();
     }
+    void onFinish() noexcept { }
 
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset) {
@@ -252,6 +255,7 @@ struct RTCMemoryBlock {
             _inputTemperature = rtc.getTemperature();
             _32kOutEn = rtc.isEnabled32K(); 
         }
+        void onFinish() noexcept { }
         uint16_t getWord(uint8_t offset) const noexcept {
             switch (offset) {
                 case 0: // unixtime lower
