@@ -3,14 +3,21 @@
 #include <Logic.h>
 #include <Wire.h>
 #include "ManagementEngineProtocol.h"
-constexpr auto RESET960 = PIN_PA4;
 constexpr auto CLKOUT = PIN_PA7;
+
 constexpr auto CLK1Out = PIN_PB3;
 constexpr auto SystemUp = PIN_PB6;
+
 constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
+
 constexpr auto CLK2Out = PIN_PD3;
 constexpr auto i960_READY_SYNC = PIN_PD7;
+
+constexpr auto RESET960 = PIN_PG4;
+constexpr auto HOLD960 = PIN_PG5;
+constexpr auto LOCK960 = PIN_PG6;
+constexpr auto HLDA960 = PIN_PG7;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -19,6 +26,10 @@ uint32_t CLKSpeeds [] {
 
 void
 configurePins() noexcept {
+    pinMode(HLDA960, INPUT);
+    pinMode(HOLD960, OUTPUT);
+    digitalWrite(HOLD960, LOW);
+    pinMode(LOCK960, INPUT); // this is open drain
     pinMode(RESET960, OUTPUT);
     digitalWrite(RESET960, LOW);
     pinMode(i960_READY_SYNC, OUTPUT);  
