@@ -5,8 +5,8 @@
 #include "ManagementEngineProtocol.h"
 constexpr auto CLKOUT = PIN_PA7;
 
+constexpr auto SystemUp = PIN_PB0;
 constexpr auto CLK1Out = PIN_PB3;
-constexpr auto SystemUp = PIN_PB6;
 
 constexpr auto RP2350_READY_IN = PIN_PC0;
 constexpr auto RP2350_READY_SYNC = PIN_PC6;
