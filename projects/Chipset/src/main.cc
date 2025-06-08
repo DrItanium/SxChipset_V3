@@ -649,6 +649,7 @@ struct i960Interface {
               signalReady();
           }
       }
+      // nothing to do on target end
   }
   static inline uint16_t
   readDataLines() noexcept {
@@ -677,6 +678,7 @@ struct i960Interface {
       } else {
           doMemoryCellWriteTransaction(target, offset);
       }
+      target.onFinish();
   }
   template<bool isReadTransaction>
   static inline void 
