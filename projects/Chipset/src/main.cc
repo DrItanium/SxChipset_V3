@@ -752,8 +752,8 @@ struct i960Interface {
   }
   static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
-      CLKValues.setWord32(0, clk2);
-      CLKValues.setWord32(1, clk1);
+      CLKValues.setWord32(0, clk1);
+      CLKValues.setWord32(1, clk2);
   }
 private:
   static inline uint16_t _dataLinesDirection = 0xFFFF;
