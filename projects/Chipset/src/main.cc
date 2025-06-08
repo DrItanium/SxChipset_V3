@@ -59,7 +59,7 @@ Adafruit_SSD1351 tft(OLEDScreenWidth,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
-Metro screenUpdate{1};
+//Metro screenUpdate{1};
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
     return (static_cast<uint16_t>(r & 0xF8) << 8) |
@@ -490,6 +490,45 @@ private:
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 using EBIInterface = EBIWrapperInterface;
+enum class OLEDInterfaceOpcodes : uint16_t {
+    Nothing,
+    DrawPixel,
+    FillScreen,
+};
+// we want to make it as easy as possible to do display updates without having
+// to override everything, only the parts you need to do
+struct OLEDInterface final {
+    void update() noexcept {
+        // the lower 16 bits are the "enable" bits
+        // each time we access this information we make sure that it can't
+        // accidentally execute
+        _backingStore.setWord(0, 0); // clear the enable word
+    }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        return _backingStore.getWord(offset);
+    }
+    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
+        _backingStore.setWord(offset, value, enableLo, enableHi);
+    }
+    void onFinish() noexcept { 
+        if (_backingStore.getWord(0)) {
+            switch (static_cast<OLEDInterfaceOpcodes>(_backingStore.getWord(1))) {
+                case OLEDInterfaceOpcodes::DrawPixel:
+                    tft.drawPixel(_backingStore.getWord(2), _backingStore.getWord(3), _backingStore.getWord(4));
+                    break;
+                case OLEDInterfaceOpcodes::FillScreen:
+                    tft.fillScreen(_backingStore.getWord(2));
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    private:
+        MemoryCellBlock _backingStore;
+};
+
+OLEDInterface oledDisplay;
 
 struct i960Interface {
   i960Interface() = delete;
@@ -709,6 +748,9 @@ struct i960Interface {
           case 0x30 ... 0x3F:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
+              break;
+          case 0x40 ... 0x4F:
+              doMemoryCellTransaction<isReadTransaction>(oledDisplay, lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -942,6 +984,7 @@ setup() {
     // okay so we want to handle the initial boot process
     systemBooted = true;
 }
+#if 0
 uint32_t rndval = 1;
 uint16_t currentColor = 0;
 template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
@@ -964,6 +1007,7 @@ fizzleFadeOne() noexcept {
         tft.drawPixel(x, y, currentColor);
     }
 }
+#endif
 void 
 loop() {
     if (adsTriggered) {
@@ -976,10 +1020,6 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-    } else {
-        if (screenUpdate.check()) {
-            fizzleFadeOne();
-        } 
-    }
+    } 
 }
 
