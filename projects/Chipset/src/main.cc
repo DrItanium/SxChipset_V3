@@ -490,70 +490,37 @@ private:
 };
 constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 using EBIInterface = EBIWrapperInterface;
-enum class OLEDInterfaceOpcodes : uint16_t {
-    Nothing,
-    DrawPixel,
-    FillScreen,
-    DrawLine,
-    DrawFastHLine,
-    DrawFastVLine,
-};
 // we want to make it as easy as possible to do display updates without having
 // to override everything, only the parts you need to do
 struct OLEDInterface final {
-    void update() noexcept {
-        // the lower 16 bits are the "enable" bits
-        // each time we access this information we make sure that it can't
-        // accidentally execute
-        _backingStore.setWord(0, 0); // clear the enable word
-    }
-    uint16_t getWord(uint8_t offset) const noexcept {
-        return _backingStore.getWord(offset);
-    }
-    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
-        _backingStore.setWord(offset, value, enableLo, enableHi);
-    }
-    void onFinish() noexcept { 
-        if (_backingStore.getWord(0)) {
-            switch (static_cast<OLEDInterfaceOpcodes>(_backingStore.getWord(1))) {
-                case OLEDInterfaceOpcodes::DrawPixel:
-                    tft.drawPixel(_backingStore.getWord(2), _backingStore.getWord(3), _backingStore.getWord(4));
-                    break;
-                case OLEDInterfaceOpcodes::FillScreen:
-                    tft.fillScreen(_backingStore.getWord(2));
-                    break;
-                case OLEDInterfaceOpcodes::DrawLine:
-                    tft.drawLine(
-                            _backingStore.getWord(2),
-                            _backingStore.getWord(3),
-                            _backingStore.getWord(4),
-                            _backingStore.getWord(5),
-                            _backingStore.getWord(6));
-                    break;
-                case OLEDInterfaceOpcodes::DrawFastHLine:
-                    tft.drawFastHLine(
-                            _backingStore.getWord(2),
-                            _backingStore.getWord(3),
-                            _backingStore.getWord(4),
-                            _backingStore.getWord(5));
-                    break;
-                case OLEDInterfaceOpcodes::DrawFastVLine:
-                    tft.drawFastVLine(
-                            _backingStore.getWord(2),
-                            _backingStore.getWord(3),
-                            _backingStore.getWord(4),
-                            _backingStore.getWord(5));
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-    private:
-        MemoryCellBlock _backingStore;
-};
-struct OLEDControlInterface final {
+    enum class ExecCodes : uint16_t {
+        Nothing,
+        DrawPixel,
+        FillScreen,
+        DrawLine,
+        DrawFastHLine,
+        DrawFastVLine,
+    };
     enum class Fields : uint8_t {
+        Execute,
+        Opcode,
+        Argument0,
+        Argument1,
+        Argument2,
+        Argument3,
+        Argument4,
+        Argument5,
+        Argument6,
+        Argument7,
+        Argument8,
+        Argument9,
+        Argument10,
+        Argument11,
+        Argument12,
+        Argument13,
+        Argument14,
+        Argument15,
+        // then we start with the other fields
         Rotation,
 
         Width,
@@ -562,18 +529,35 @@ struct OLEDControlInterface final {
         CursorX,
         CursorY,
     };
-    void update() noexcept { 
-        _cursorX = tft.getCursorX();
-        _cursorY = tft.getCursorY();
+    // this "MemoryBlock" reserves a 256 byte section of the 32-bit IO space
+    void update() noexcept {
+        // the lower 16 bits are the "enable" bits
+        // each time we access this information we make sure that it can't
+        // accidentally execute
+        clearExecStatus();
     }
-    
-    void onFinish() noexcept { 
-        tft.setCursor(_cursorX, _cursorY);
-    }
-
     uint16_t getWord(uint8_t offset) const noexcept {
-        switch (static_cast<Fields>(offset & 0b111)) {
-            case Fields::Rotation: 
+        switch (static_cast<Fields>(offset)) {
+            case Fields::Execute:
+            case Fields::Opcode:
+            case Fields::Argument0:
+            case Fields::Argument1:
+            case Fields::Argument2:
+            case Fields::Argument3:
+            case Fields::Argument4:
+            case Fields::Argument5:
+            case Fields::Argument6:
+            case Fields::Argument7:
+            case Fields::Argument8:
+            case Fields::Argument9:
+            case Fields::Argument10:
+            case Fields::Argument11:
+            case Fields::Argument12:
+            case Fields::Argument13:
+            case Fields::Argument14:
+            case Fields::Argument15:
+                return _argumentStorage[offset];
+            case Fields::Rotation:
                 return tft.getRotation();
             case Fields::Width:
                 return tft.width();
@@ -587,28 +571,95 @@ struct OLEDControlInterface final {
                 return 0;
         }
     }
-    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
-        switch (static_cast<Fields>(offset & 0b111)) {
+    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
+        switch (static_cast<Fields>(offset)) {
+            case Fields::Execute:
+            case Fields::Opcode:
+            case Fields::Argument0:
+            case Fields::Argument1:
+            case Fields::Argument2:
+            case Fields::Argument3:
+            case Fields::Argument4:
+            case Fields::Argument5:
+            case Fields::Argument6:
+            case Fields::Argument7:
+            case Fields::Argument8:
+            case Fields::Argument9:
+            case Fields::Argument10:
+            case Fields::Argument11:
+            case Fields::Argument12:
+            case Fields::Argument13:
+            case Fields::Argument14:
+            case Fields::Argument15:
+                _argumentStorage[offset] = value; 
+                break;
             case Fields::Rotation:
                 tft.setRotation(value);
                 break;
             case Fields::CursorX:
-                _cursorX = value;
+                tft.setCursor(value, tft.getCursorY());
                 break;
             case Fields::CursorY:
-                _cursorY = value;
+                tft.setCursor(tft.getCursorX(), value);
                 break;
             default:
                 break;
         }
     }
+    void onFinish() noexcept { 
+        if (shouldExecute()) {
+            switch (getExecCode()) {
+                case ExecCodes::DrawPixel:
+                    tft.drawPixel(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4]);
+                    break;
+                case ExecCodes::FillScreen:
+                    tft.fillScreen(_argumentStorage[2]);
+                    break;
+                case ExecCodes::DrawLine:
+                    tft.drawLine(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+                            _argumentStorage[6]);
+                    break;
+                case ExecCodes::DrawFastHLine:
+                    tft.drawFastHLine(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5]);
+                    break;
+                case ExecCodes::DrawFastVLine:
+                    tft.drawFastVLine(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5]);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
     private:
-        int16_t _cursorX = 0;
-        int16_t _cursorY = 0;
+        constexpr ExecCodes getExecCode() const noexcept {
+            return static_cast<ExecCodes>(_argumentStorage[1]);
+        }
+        constexpr bool shouldExecute() const noexcept {
+            return _argumentStorage[0] != 0;
+        }
+        void clearExecStatus() noexcept {
+            _argumentStorage[0] = 0;
+        }
+    private:
+        uint16_t _argumentStorage[16];
 };
 
 OLEDInterface oledDisplay;
-OLEDControlInterface oledControl;
 
 struct i960Interface {
   i960Interface() = delete;
@@ -829,12 +880,6 @@ struct i960Interface {
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
               break;
-          case 0x40 ... 0x4F:
-              doMemoryCellTransaction<isReadTransaction>(oledDisplay, lineOffset);
-              break;
-          case 0x50 ... 0x5F:
-              doMemoryCellTransaction<isReadTransaction>(oledControl, lineOffset);
-              break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -846,6 +891,9 @@ struct i960Interface {
       switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
               handleBuiltinDevices<isReadTransaction>(address & 0xFF);
+              break;
+          case 0x00'0100 ... 0x00'01FF:
+              doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
               break;
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
