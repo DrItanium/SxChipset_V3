@@ -552,8 +552,63 @@ struct OLEDInterface final {
     private:
         MemoryCellBlock _backingStore;
 };
+struct OLEDControlInterface final {
+    enum class Fields : uint8_t {
+        Rotation,
+
+        Width,
+        Height,
+
+        CursorX,
+        CursorY,
+    };
+    void update() noexcept { 
+        _cursorX = tft.getCursorX();
+        _cursorY = tft.getCursorY();
+    }
+    
+    void onFinish() noexcept { 
+        tft.setCursor(_cursorX, _cursorY);
+    }
+
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (static_cast<Fields>(offset & 0b111)) {
+            case Fields::Rotation: 
+                return tft.getRotation();
+            case Fields::Width:
+                return tft.width();
+            case Fields::Height:
+                return tft.height();
+            case Fields::CursorX:
+                return tft.getCursorX();
+            case Fields::CursorY:
+                return tft.getCursorY();
+            default:
+                return 0;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
+        switch (static_cast<Fields>(offset & 0b111)) {
+            case Fields::Rotation:
+                tft.setRotation(value);
+                break;
+            case Fields::CursorX:
+                _cursorX = value;
+                break;
+            case Fields::CursorY:
+                _cursorY = value;
+                break;
+            default:
+                break;
+        }
+    }
+    private:
+        int16_t _cursorX = 0;
+        int16_t _cursorY = 0;
+};
 
 OLEDInterface oledDisplay;
+OLEDControlInterface oledControl;
 
 struct i960Interface {
   i960Interface() = delete;
@@ -776,6 +831,9 @@ struct i960Interface {
               break;
           case 0x40 ... 0x4F:
               doMemoryCellTransaction<isReadTransaction>(oledDisplay, lineOffset);
+              break;
+          case 0x50 ... 0x5F:
+              doMemoryCellTransaction<isReadTransaction>(oledControl, lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
