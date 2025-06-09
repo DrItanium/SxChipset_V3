@@ -37,7 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Metro.h>
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1351.h>
+//#include <Adafruit_SSD1351.h>
+#include <Adafruit_ILI9341.h>
 #include <Adafruit_EEPROM_I2C.h>
 #include "Pinout.h"
 #include "Core.h"
@@ -53,12 +54,19 @@ constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram
 constexpr auto EEPROM_I2C_Address = 0x50; // default address
 Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
+#if 0
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
         &SPI,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
+#else
+Adafruit_ILI9341 tft(&SPI, 
+        pinIndexConvert(Pin::EYESPI_DC),
+        pinIndexConvert(Pin::EYESPI_TCS),
+        pinIndexConvert(Pin::EYESPI_RST));
+#endif
 //Metro screenUpdate{1};
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
@@ -528,12 +536,15 @@ struct OLEDInterface final {
         Argument13,
         // then we start with the other fields
         Rotation,
-
+        Brightness,
         ScreenWidth,
         ScreenHeight,
 
         CursorX,
         CursorY,
+
+        TextSize,
+
     };
     // this "MemoryBlock" reserves a 256 byte section of the 32-bit IO space
     void update() noexcept {
@@ -603,6 +614,11 @@ struct OLEDInterface final {
                 break;
             case Fields::CursorY:
                 tft.setCursor(tft.getCursorX(), value);
+                break;
+            case Fields::TextSize: 
+                tft.setTextSize(
+                        static_cast<uint8_t>(value), 
+                        static_cast<uint8_t>(value >> 8));
                 break;
             default:
                 break;
