@@ -526,13 +526,11 @@ struct OLEDInterface final {
         Argument11,
         Argument12,
         Argument13,
-        Argument14,
-        Argument15,
         // then we start with the other fields
         Rotation,
 
-        Width,
-        Height,
+        ScreenWidth,
+        ScreenHeight,
 
         CursorX,
         CursorY,
@@ -562,14 +560,12 @@ struct OLEDInterface final {
             case Fields::Argument11:
             case Fields::Argument12:
             case Fields::Argument13:
-            case Fields::Argument14:
-            case Fields::Argument15:
                 return _argumentStorage[offset];
             case Fields::Rotation:
                 return tft.getRotation();
-            case Fields::Width:
+            case Fields::ScreenWidth:
                 return tft.width();
-            case Fields::Height:
+            case Fields::ScreenHeight:
                 return tft.height();
             case Fields::CursorX:
                 return tft.getCursorX();
@@ -597,8 +593,6 @@ struct OLEDInterface final {
             case Fields::Argument11:
             case Fields::Argument12:
             case Fields::Argument13:
-            case Fields::Argument14:
-            case Fields::Argument15:
                 _argumentStorage[offset] = value; 
                 break;
             case Fields::Rotation:
@@ -902,7 +896,7 @@ struct i960Interface {
   }
   static inline void
   doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset) {
+      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
               signalReady();
@@ -921,7 +915,7 @@ struct i960Interface {
   }
   static inline void
   doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; wordOffset < 8; ++wordOffset ) {
+      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               signalReady();
@@ -1039,6 +1033,7 @@ setupTFTDisplay() noexcept {
     tft.setFont();
     tft.fillScreen(Color_Black);
     tft.setTextColor(Color_White, Color_Black);
+    Serial.printf("TFT Display (WxH): %d pixels by %d pixels\n", tft.width(), tft.height());
 }
 void 
 setupSDCard() noexcept {
