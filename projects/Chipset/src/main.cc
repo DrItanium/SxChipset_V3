@@ -500,6 +500,14 @@ struct OLEDInterface final {
         DrawLine,
         DrawFastHLine,
         DrawFastVLine,
+        DrawRect,
+        FillRect,
+        DrawCircle,
+        FillCircle,
+        DrawTriangle,
+        FillTriangle,
+        DrawRoundRect,
+        FillRoundRect,
     };
     enum class Fields : uint8_t {
         Execute,
@@ -639,6 +647,90 @@ struct OLEDInterface final {
                             _argumentStorage[3],
                             _argumentStorage[4],
                             _argumentStorage[5]);
+                    break;
+                case ExecCodes::DrawRect:
+                    tft.drawRect(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+                            _argumentStorage[6]);
+                    break;
+                case ExecCodes::FillRect:
+                    tft.fillRect(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+                            _argumentStorage[6]);
+                    break;
+                case ExecCodes::DrawCircle:
+                    tft.drawCircle(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5]);
+                    break;
+                case ExecCodes::FillCircle:
+                    tft.fillCircle(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+                            _argumentStorage[4],
+                            _argumentStorage[5]);
+                    break;
+                case ExecCodes::DrawTriangle:
+                    tft.drawTriangle(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+
+                            _argumentStorage[6],
+                            _argumentStorage[7],
+
+                            _argumentStorage[8]
+                            
+                            );
+                    break;
+                case ExecCodes::FillTriangle:
+                    tft.fillTriangle(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+
+                            _argumentStorage[6],
+                            _argumentStorage[7],
+
+                            _argumentStorage[8]
+                            
+                            );
+                    break;
+                case ExecCodes::DrawRoundRect:
+                    tft.drawRoundRect(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+
+                            _argumentStorage[6],
+                            _argumentStorage[7]
+                            );
+                    break;
+                case ExecCodes::FillRoundRect:
+                    tft.fillRoundRect(
+                            _argumentStorage[2],
+                            _argumentStorage[3],
+
+                            _argumentStorage[4],
+                            _argumentStorage[5],
+
+                            _argumentStorage[6],
+                            _argumentStorage[7]
+                            );
                     break;
                 default:
                     break;
