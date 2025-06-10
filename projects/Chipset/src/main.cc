@@ -37,8 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Metro.h>
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1351.h>
-#include <Adafruit_ILI9341.h>
+#include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
 #include "Pinout.h"
 #include "Core.h"
@@ -52,22 +51,18 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto EEPROM_I2C_Address = 0x50; // default address
+volatile bool adsTriggered = false;
+volatile bool readyTriggered = false;
+volatile bool systemCounterEnabled = false;
 Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
-#if 0
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
         &SPI,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
-#else
-Adafruit_ILI9341 tft(&SPI, 
-        pinIndexConvert(Pin::EYESPI_DC),
-        pinIndexConvert(Pin::EYESPI_TCS),
-        pinIndexConvert(Pin::EYESPI_RST));
-#endif
-//Metro screenUpdate{1};
+Metro systemCounterWatcher{50}; // every 50ms
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
     return (static_cast<uint16_t>(r & 0xF8) << 8) |
@@ -239,7 +234,6 @@ struct RandomSourceRelatedThings {
     void update() noexcept {
         _currentRandomValue = random();
     }
-    void onFinish() noexcept { }
 
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset) {
@@ -247,12 +241,22 @@ struct RandomSourceRelatedThings {
                 return static_cast<uint16_t>(_currentRandomValue);
             case 1: // arduino random upper
                 return static_cast<uint16_t>(_currentRandomValue >> 16);
+            case 2: // system counter enable 
+                return systemCounterEnabled ? 0xFFFF : 0x0000;
             default:
                 return 0;
         }
     }
-    void setWord(uint8_t, uint16_t) noexcept { }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
+        switch (offset) {
+            case 2: // system counter enable
+                systemCounterEnabled = (value != 0);
+                break;
+            default:
+                break;
+        }
+    }
+    void onFinish() noexcept { }
 private:
     uint32_t _currentRandomValue = 0;
 };
@@ -314,8 +318,6 @@ RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
-volatile bool adsTriggered = false;
-volatile bool readyTriggered = false;
 struct CH351 {
   constexpr CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
@@ -1218,30 +1220,6 @@ setup() {
     // okay so we want to handle the initial boot process
     systemBooted = true;
 }
-#if 0
-uint32_t rndval = 1;
-uint16_t currentColor = 0;
-template<auto width = OLEDScreenWidth, auto height = OLEDScreenHeight>
-void 
-fizzleFadeOne() noexcept {
-    if (rndval == 1) {
-        auto rval = Entropy.random();
-        currentColor = color565(static_cast<uint8_t>(rval >> 16), static_cast<uint8_t>(rval >> 8), static_cast<uint8_t>(rval));
-    } 
-    // core FizzleFade code courtesy of Fabien Sanglard
-    uint16_t x = rndval & 0x000FF; // Y = low 8 bits
-    uint16_t y = (rndval & 0x1FF00) >> 8; // X = High 9 bits
-    uint32_t lsb  = rndval & 1; // get the output bit
-    rndval >>= 1; // shift register
-    if (lsb) {
-        // if output is 0, the xor can be skipped
-        rndval ^= 0x00012000; 
-    }
-    if (x < width && y < height) {
-        tft.drawPixel(x, y, currentColor);
-    }
-}
-#endif
 void 
 loop() {
     if (adsTriggered) {
@@ -1254,6 +1232,12 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-    } 
+    } else {
+        if (systemCounterWatcher.check()) {
+            if (systemCounterEnabled) {
+                digitalToggleFast(Pin::INT960_0);
+            }
+        }
+    }
 }
 
