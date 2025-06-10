@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 #include <concepts>
 #include <functional>
+
 #include <SPI.h>
 #include <Wire.h>
 #include <SD.h>
@@ -39,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
+#include <USBHost_t36.h>
+
 #include "Pinout.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
@@ -62,7 +65,7 @@ Adafruit_SSD1351 tft(OLEDScreenWidth,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
-Metro systemCounterWatcher{50}; // every 50ms
+Metro systemCounterWatcher{1}; // every 1ms
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
     return (static_cast<uint16_t>(r & 0xF8) << 8) |
@@ -1220,6 +1223,12 @@ setup() {
     // okay so we want to handle the initial boot process
     systemBooted = true;
 }
+void
+trigger_INT0() noexcept {
+    digitalWriteFast(Pin::INT960_0, LOW);
+    delayNanoseconds(200);
+    digitalWriteFast(Pin::INT960_0, HIGH);
+}
 void 
 loop() {
     if (adsTriggered) {
@@ -1235,7 +1244,7 @@ loop() {
     } else {
         if (systemCounterWatcher.check()) {
             if (systemCounterEnabled) {
-                digitalToggleFast(Pin::INT960_0);
+                trigger_INT0();
             }
         }
     }
