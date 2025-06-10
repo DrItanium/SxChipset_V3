@@ -65,7 +65,7 @@ Adafruit_SSD1351 tft(OLEDScreenWidth,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
-Metro systemCounterWatcher{1}; // every 1ms
+Metro systemCounterWatcher{25}; // every 25ms, do a toggle
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
     return (static_cast<uint16_t>(r & 0xF8) << 8) |
@@ -1225,9 +1225,9 @@ setup() {
 }
 void
 trigger_INT0() noexcept {
-    digitalWriteFast(Pin::INT960_0, LOW);
-    delayNanoseconds(200);
-    digitalWriteFast(Pin::INT960_0, HIGH);
+    if (systemCounterEnabled) {
+        digitalToggleFast(Pin::INT960_0);
+    }
 }
 void 
 loop() {
@@ -1243,9 +1243,7 @@ loop() {
         }
     } else {
         if (systemCounterWatcher.check()) {
-            if (systemCounterEnabled) {
-                trigger_INT0();
-            }
+            trigger_INT0();
         }
     }
 }
