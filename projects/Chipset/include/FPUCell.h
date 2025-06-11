@@ -26,5 +26,49 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHIPSET_FPU_CELL_H__
 #include <cstdint>
 #include "MemoryCell.h"
+
+/**
+ * Takes advantage of the FPU built into the teensy to assist the i960
+ */
+class FPUCell {
+    public:
+
+        void update() noexcept {
+            clearEnableWord();
+        }
+        uint16_t getWord(uint8_t offset) const noexcept {
+            return _words[offset & 0b1111];
+        }
+        void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
+            // ignore the ByteEnable bits since this thing only operates on
+            // 16-bit values
+            _words[offset & 0b1111] = value;
+        }
+        void onFinish() noexcept {
+            if (doOperation()) {
+                // do something with the arguments
+                switch (getOpcode()) {
+                    default:
+                        break;
+                }
+            }
+        }
+    private:
+        void clearEnableWord() noexcept {
+            _words[0] = 0;
+        }
+        constexpr bool doOperation() const noexcept {
+            return _words[0] != 0;
+        }
+        constexpr uint16_t getOpcode() const noexcept {
+            return _words[1];
+        }
+    private:
+        union {
+            uint16_t _words[16];
+            float _f32s[8];
+            double _f64s[4];
+        };
+};
 #endif // end ! defined CHIPSET_FPU_CELL_H__
 
