@@ -24,7 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Arduino.h>
 #include <type_traits>
-#include <concepts>
 #include <functional>
 
 #include <SPI.h>
@@ -43,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <USBHost_t36.h>
 
 #include "Pinout.h"
+#include "MemoryCell.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
 // Thanks to an interactive session with copilot I am realizing that while the
@@ -86,16 +86,6 @@ setupEEPROM2() noexcept {
         Serial.println("No I2C EEPROM Found!");
     }
 }
-// A high speed interface that we can abstract contents of memory 
-template<typename T>
-concept MemoryCell = requires(T a) {
-    { a.update() };
-    // only operate on 16-bit words
-    { a.getWord(0) } -> uint16_t;
-    { a.setWord(0, 0) };
-    { a.setWord(0, 0, true, true) };
-    { a.onFinish() };
-};
 
 union MemoryCellBlock {
   constexpr MemoryCellBlock(uint32_t a = 0, uint32_t b = 0, uint32_t c = 0, uint32_t d = 0) : words{a, b, c, d} { }
