@@ -87,38 +87,6 @@ setupEEPROM2() noexcept {
     }
 }
 
-union MemoryCellBlock {
-  constexpr MemoryCellBlock(uint32_t a = 0, uint32_t b = 0, uint32_t c = 0, uint32_t d = 0) : words{a, b, c, d} { }
-private:
-  uint8_t bytes[16];
-  uint16_t shorts[8];
-  uint32_t words[4];
-public:
-  void update() noexcept {
-
-  }
-  void clear() noexcept {
-      for (auto& a : words) {
-          a = 0;
-      }
-  }
-  [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
-  inline void setWord(uint8_t offset, uint16_t value) noexcept { shorts[offset & 0b111] = value; }
-  inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
-    // convert to an 8-bit setup so we can do conversions as needed
-    uint8_t baseOffset = (offset << 1) & 0b1110;
-    if (updateLo) {
-        bytes[baseOffset] = static_cast<uint8_t>(value);
-    }
-    if (updateHi) {
-        bytes[baseOffset+1] = static_cast<uint8_t>(value >> 8);
-    }
-  }
-  inline void setWord32(uint8_t offset, uint32_t value) noexcept {
-      words[offset & 0b11] = value;
-  }
-  void onFinish() noexcept { }
-};
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
     void updateBaseAddress(uint16_t base) noexcept {
