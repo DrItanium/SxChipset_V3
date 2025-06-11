@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifndef CHIPSET_MEMORY_CELL_H__
 #define CHIPSET_MEMORY_CELL_H__
-#include <stdint.h>
+#include <cstdint>
 #include <concepts>
 
 // A high speed interface that we can abstract contents of memory 
