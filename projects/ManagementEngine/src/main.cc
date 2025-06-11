@@ -218,6 +218,7 @@ setup() {
 }
 void
 loop() {
+    delay(1000);
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
