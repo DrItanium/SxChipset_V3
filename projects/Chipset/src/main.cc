@@ -45,7 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryCell.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
-#include "FPUCell.h"
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -280,7 +279,6 @@ RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
-FPUCell fpuInterface;
 struct CH351 {
   constexpr CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
@@ -961,9 +959,6 @@ struct i960Interface {
               break;
           case 0x00'0100 ... 0x00'01FF:
               doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
-              break;
-          case 0x00'0200 ... 0x00'02FF:
-              doMemoryCellTransaction<isReadTransaction>(fpuInterface, address & 0xFF);
               break;
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
