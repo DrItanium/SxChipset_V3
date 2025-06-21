@@ -32,6 +32,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class FPUCell {
     public:
+        enum class FPUOperations : uint16_t {
+            // lowest quarter is 32-bit floating point operations 
+            Nothing = 0x00,
+            Add32,
+            Sub32,
+            Mul32,
+            Div32,
+            Equals32,
+            NotEquals32,
+            GreaterThan32,
+            LessThan32,
+            GreaterThanOrEqual32,
+            LessThanOrEqual32,
+            Nothing64 = 0x40, // next quarter is 64-bit fpu operations
+            Add64,
+            Sub64,
+            Mul64,
+            Div64,
+            Equals64,
+            NotEquals64,
+            GreaterThan64,
+            LessThan64,
+            GreaterThanOrEqual64,
+            LessThanOrEqual64,
+        };
 
         void update() noexcept {
             clearEnableWord();
@@ -48,6 +73,28 @@ class FPUCell {
             if (doOperation()) {
                 // do something with the arguments
                 switch (getOpcode()) {
+#define X(code, op, field, destination) case FPUOperations:: code : field . destination = field .src2 op field .src1; break
+                    X(Add32, +, float32View, dest);
+                    X(Sub32, -, float32View, dest);
+                    X(Mul32, *, float32View, dest);
+                    X(Div32, /, float32View, dest);
+                    X(Equals32, ==, float32View, boolResult);
+                    X(NotEquals32, !=, float32View, boolResult);
+                    X(GreaterThan32, >, float32View, boolResult);
+                    X(LessThan32, <, float32View, boolResult);
+                    X(GreaterThanOrEqual32, >=, float32View, boolResult);
+                    X(LessThanOrEqual32, <=, float32View, boolResult);
+                    X(Add64, +, float64View, dest);
+                    X(Sub64, -, float64View, dest);
+                    X(Mul64, *, float64View, dest);
+                    X(Div64, /, float64View, dest);
+                    X(Equals64, ==, float64View, boolResult);
+                    X(NotEquals64, !=, float64View, boolResult);
+                    X(GreaterThan64, >, float64View, boolResult);
+                    X(LessThan64, <, float64View, boolResult);
+                    X(GreaterThanOrEqual64, >=, float64View, boolResult);
+                    X(LessThanOrEqual64, <=, float64View, boolResult);
+#undef X
                     default:
                         break;
                 }
@@ -60,14 +107,29 @@ class FPUCell {
         constexpr bool doOperation() const noexcept {
             return _words[0] != 0;
         }
-        constexpr uint16_t getOpcode() const noexcept {
-            return _words[1];
+        constexpr FPUOperations getOpcode() const noexcept {
+            return static_cast<FPUOperations>(_words[1]);
         }
     private:
         union {
             uint16_t _words[16];
-            float _f32s[8];
-            double _f64s[4];
+            struct {
+                uint16_t enable;
+                uint16_t op;
+                uint32_t boolResult;
+                float src1;
+                float src2;
+                float dest;
+                float rest[3];
+            } float32View;
+            struct {
+                uint16_t enable;
+                uint16_t op;
+                uint32_t boolResult;
+                double src1;
+                double src2;
+                double dest;
+            } float64View;
         };
 };
 #endif // end ! defined CHIPSET_FPU_CELL_H__
