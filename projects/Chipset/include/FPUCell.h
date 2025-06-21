@@ -62,12 +62,23 @@ class FPUCell {
             clearEnableWord();
         }
         uint16_t getWord(uint8_t offset) const noexcept {
-            return _words[offset & 0b1111];
+            switch (offset) {
+                case 0 ... 15:
+                    return _words[offset];
+                default:
+                    return 0;
+            }
         }
         void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
             // ignore the ByteEnable bits since this thing only operates on
             // 16-bit values
-            _words[offset & 0b1111] = value;
+            switch (offset) {
+                case 0 ... 15:
+                    _words[offset] = value;
+                    break;
+                default:
+                    break;
+            }
         }
         void onFinish() noexcept {
             if (doOperation()) {
