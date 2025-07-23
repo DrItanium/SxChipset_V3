@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
-#include <USBHost_t36.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
