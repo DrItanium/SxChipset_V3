@@ -1155,6 +1155,7 @@ setup() {
     while (!Serial) {
         delay(10);
     }
+    SerialUSB1.begin(115200);
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
