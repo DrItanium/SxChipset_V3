@@ -872,8 +872,9 @@ struct i960Interface {
     }
     signalReady();
   }
+  template<MemoryCell MC>
   static inline void
-  doMemoryCellReadTransaction(const MemoryCell& target, uint8_t offset) noexcept {
+  doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
@@ -891,8 +892,9 @@ struct i960Interface {
       uint16_t b = read8(dataLines.getDataPortBaseAddress()+1);
       return a| (b<< 8);
   }
+  template<MemoryCell MC>
   static inline void
-  doMemoryCellWriteTransaction(MemoryCell& target, uint8_t offset) noexcept {
+  doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
@@ -903,9 +905,9 @@ struct i960Interface {
           }
       }
   }
-  template<bool isReadTransaction>
+  template<bool isReadTransaction, MemoryCell MC>
   static inline void
-  doMemoryCellTransaction(MemoryCell& target, uint8_t offset) noexcept {
+  doMemoryCellTransaction(MC& target, uint8_t offset) noexcept {
       target.update();
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(target, offset);
@@ -914,9 +916,9 @@ struct i960Interface {
       }
       target.onFinish();
   }
-  template<bool isReadTransaction>
+  template<bool isReadTransaction, MemoryCell MC>
   static inline void 
-  transmitConstantMemoryCell(const MemoryCell& cell, uint8_t offset) noexcept {
+  transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(cell, offset);
       } else {

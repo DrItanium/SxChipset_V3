@@ -26,13 +26,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHIPSET_MEMORY_CELL_H__
 #include <cstdint>
 #include <concepts>
+#include <type_traits>
 
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
     { a.update() };
     // only operate on 16-bit words
-    { a.getWord(0) } -> uint16_t;
+    { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0) };
     { a.setWord(0, 0, true, true) };
     { a.onFinish() };
