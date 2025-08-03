@@ -58,7 +58,6 @@ constexpr auto EEPROM_I2C_Address = 0x50; // default address
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-volatile bool systemBooted = false;
 Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
@@ -1129,7 +1128,7 @@ TaskHandle_t memoryTask = nullptr,
 void
 triggerADS() noexcept {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveIndexedFromISR(memoryTask, 0, &higherPriorityTaskWoken);
+    vTaskNotifyGiveIndexedFromISR(memoryTask, 1, &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 void
@@ -1138,6 +1137,32 @@ triggerReadySync() noexcept {
 }
 void
 initializeSystem(void*) noexcept {
+    Wire2.begin();
+    inputPin(Pin::AVR_UP);
+    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
+        delay(10);
+    }
+    putCPUInReset();
+    inputPin(Pin::ADS);
+    inputPin(Pin::DEN);
+    //outputPin(Pin::HOLD, LOW);
+    outputPin(Pin::INT960_0, HIGH);
+    outputPin(Pin::INT960_1, LOW);
+    outputPin(Pin::INT960_2, LOW);
+    outputPin(Pin::INT960_3, HIGH);
+    //inputPin(Pin::LOCK);
+    inputPin(Pin::BE0);
+    inputPin(Pin::BE1);
+    inputPin(Pin::WR);
+    outputPin(Pin::READY, HIGH);
+    inputPin(Pin::BLAST);
+    inputPin(Pin::READY_SYNC);
+
+    Serial.begin(9600);
+    while (!Serial) {
+        delay(10);
+    }
+    SerialUSB1.begin(115200);
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
@@ -1158,17 +1183,15 @@ initializeSystem(void*) noexcept {
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
-    systemBooted = true;
-    BaseType_t higherPriorityTaskWoken = pdFALSE;
-    xTaskNotifyGiveIndexed(memoryTask, 1);
+    xTaskNotifyGiveIndexed(memoryTask, 0);
     xTaskNotifyGiveIndexed(systemCounterTask, 0);
     vTaskDelete(nullptr);
 }
 void
 handleMemoryTransaction(void*) noexcept {
-    ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
+    ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     while (true) {
-        ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
+        ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
@@ -1196,41 +1219,12 @@ handleSystemCounterWatcher(void*) noexcept {
 }
 void 
 setup() {
-    Wire2.begin();
-    inputPin(Pin::AVR_UP);
-    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
-        delay(10);
-    }
-    putCPUInReset();
-    inputPin(Pin::ADS);
-    inputPin(Pin::DEN);
-    //outputPin(Pin::HOLD, LOW);
-    outputPin(Pin::INT960_0, HIGH);
-    outputPin(Pin::INT960_1, LOW);
-    outputPin(Pin::INT960_2, LOW);
-    outputPin(Pin::INT960_3, HIGH);
-    //inputPin(Pin::LOCK);
-    inputPin(Pin::BE0);
-    inputPin(Pin::BE1);
-    inputPin(Pin::WR);
-    outputPin(Pin::READY, HIGH);
-    inputPin(Pin::BLAST);
-    inputPin(Pin::READY_SYNC);
-
-    Serial.begin(9600);
-    while (!Serial) {
-        delay(10);
-    }
-    SerialUSB1.begin(115200);
     // we use multiple tasks to handle different fixed concepts
     // syscount -> queries metro to see if we should trigger INT0 on the i960
     // memory -> configures the i960 interface and then responds to requests, higher priority than other tasks
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
     xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, &systemCounterTask);
     xTaskCreate(initializeSystem, "init", 4096, nullptr, 4, nullptr);
-
-    Serial.println(F("Starting scheduler ..."));
-    Serial.flush();
     vTaskStartScheduler();
 }
 void 
