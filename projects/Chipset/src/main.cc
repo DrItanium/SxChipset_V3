@@ -1124,7 +1124,8 @@ pullCPUOutOfReset() noexcept {
     Wire2.endTransmission();
 }
 //SemaphoreHandle_t adsTriggeredSemaphore;
-TaskHandle_t memoryTask = nullptr;
+TaskHandle_t memoryTask = nullptr,
+             systemCounterTask = nullptr;
 void
 triggerADS() noexcept {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
@@ -1136,7 +1137,7 @@ triggerReadySync() noexcept {
     readyTriggered = true;
 }
 void
-handleMemoryTransaction(void*) noexcept {
+initializeSystem(void*) noexcept {
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
@@ -1158,8 +1159,16 @@ handleMemoryTransaction(void*) noexcept {
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
     systemBooted = true;
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+    xTaskNotifyGiveIndexed(memoryTask, 1);
+    xTaskNotifyGiveIndexed(systemCounterTask, 0);
+    vTaskDelete(nullptr);
+}
+void
+handleMemoryTransaction(void*) noexcept {
+    ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
     while (true) {
-        (void)ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
+        ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
@@ -1174,12 +1183,11 @@ handleMemoryTransaction(void*) noexcept {
 }
 void
 handleSystemCounterWatcher(void*) noexcept {
+    ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     while (true) {
-        if (systemBooted) {
-            if (systemCounterWatcher.check()) {
-                if (systemCounterEnabled) {
-                    digitalToggleFast(Pin::INT960_0);
-                }
+        if (systemCounterWatcher.check()) {
+            if (systemCounterEnabled) {
+                digitalToggleFast(Pin::INT960_0);
             }
         }
         taskYIELD();
@@ -1218,7 +1226,8 @@ setup() {
     // syscount -> queries metro to see if we should trigger INT0 on the i960
     // memory -> configures the i960 interface and then responds to requests, higher priority than other tasks
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
-    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
+    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, &systemCounterTask);
+    xTaskCreate(initializeSystem, "init", 4096, nullptr, 4, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
     Serial.flush();
