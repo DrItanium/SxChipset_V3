@@ -878,6 +878,7 @@ struct i960Interface {
   static inline void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
+          Serial.printf("\t%d: %x\r\n", wordOffset, target.getWord(wordOffset));
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
               signalReady();
@@ -1164,6 +1165,7 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
+        Serial.printf("Target Address: %x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
