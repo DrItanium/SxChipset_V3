@@ -130,7 +130,6 @@ struct USBSerialBlock {
     }
     void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
         // ignore the hi and lo operations
-        //Serial.printf("offset: 0x%x: 0x%x\n", offset, value);
         // 16-bit value offset so
         // 0 -> Serial.write
         // 1 -> nil
@@ -783,10 +782,9 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<0, compareWithPrevious>();
   }
-  inline static void
+  static void
   waitForReadyTrigger() noexcept {
-        while (!readyTriggered) {
-            yield();
+        while (!readyTriggered) { 
         }
   }
   inline static void 
@@ -878,8 +876,8 @@ struct i960Interface {
   static inline void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
-          Serial.printf("\t%d: %x\r\n", wordOffset, target.getWord(wordOffset));
-          writeDataLines(target.getWord(wordOffset));
+          auto lines = target.getWord(wordOffset);
+          writeDataLines(lines);
           if (isBurstLast()) {
               signalReady();
               break;
@@ -899,7 +897,8 @@ struct i960Interface {
   static inline void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
-          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          auto lines = readDataLines();
+          target.setWord(wordOffset, lines, byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               signalReady();
               break;
@@ -1162,14 +1161,16 @@ handleMemoryTransaction(void*) noexcept {
     Serial.println("Booted i960");
     while (true) {
         (void)ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
-        readyTriggered = false;
-        while (digitalReadFast(Pin::DEN) == HIGH) ;
-        auto targetAddress = i960Interface::getAddress();
-        Serial.printf("Target Address: %x\n", targetAddress);
-        if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
-        } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
+        // we want nothing else to take over while this section is running
+        {
+            readyTriggered = false;
+            while (digitalReadFast(Pin::DEN) == HIGH) ;
+            auto targetAddress = i960Interface::getAddress();
+            if (i960Interface::isReadOperation()) {
+                i960Interface::doMemoryTransaction<true>(targetAddress);
+            } else {
+                i960Interface::doMemoryTransaction<false>(targetAddress);
+            }
         }
     }
     vTaskDelete(nullptr);
@@ -1226,8 +1227,8 @@ setup() {
     //adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
-    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
-    xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
+    //xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
+    //xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
     Serial.flush();
