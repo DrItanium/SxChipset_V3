@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
+#include <arduino_freertos.h>
+#include <semphr.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -1073,15 +1075,6 @@ void setupMemory() noexcept {
   }
 }
 void
-triggerADS() noexcept {
-  adsTriggered = true;
-}
-void
-triggerReadySync() noexcept {
-    readyTriggered = true;
-    //digitalWriteFast(Pin::READY, HIGH);
-}
-void
 setupRTC() noexcept {
     if (rtc.begin(&Wire2)) {
         if (rtc.lostPower()) {
@@ -1117,7 +1110,6 @@ displayClockSpeedInformation() noexcept {
     Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
-volatile bool systemBooted = false;
 void
 putCPUInReset() noexcept {
     Wire2.beginTransmission(0x08);
@@ -1129,6 +1121,47 @@ pullCPUOutOfReset() noexcept {
     Wire2.beginTransmission(0x08);
     Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
     Wire2.endTransmission();
+}
+SemaphoreHandle_t adsTriggeredSemaphore;
+void
+triggerADS() noexcept {
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(adsTriggeredSemaphore, &higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
+void
+triggerReadySync() noexcept {
+    readyTriggered = true;
+}
+void
+handleMemoryTransaction() noexcept {
+    pullCPUOutOfReset();
+    
+    delay(1000);
+    // so attaching the interrupt seems to not be functioning fully
+    Serial.println("Booted i960");
+    while (true) {
+        if (xSemaphoreTake(adsTriggeredSemaphore, portMAX_DELAY) == pdTRUE) {
+            readyTriggered = false;
+            while (digitalReadFast(Pin::DEN) == HIGH) ;
+            auto targetAddress = i960Interface::getAddress();
+            if (i960Interface::isReadOperation()) {
+                i960Interface::doMemoryTransaction<true>(targetAddress);
+            } else {
+                i960Interface::doMemoryTransaction<false>(targetAddress);
+            }
+        }
+    }
+}
+void
+handleSystemCounterWatcher() noexcept {
+    while (true) {
+        if (systemCounterWatcher.check()) {
+            if (systemCounterEnabled) {
+                digitalToggleFast(Pin::INT960_0);
+            }
+        }
+    }
 }
 void 
 setup() {
@@ -1175,36 +1208,16 @@ setup() {
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     interrupts();
     displayClockSpeedInformation();
-    pullCPUOutOfReset();
-    
-    delay(1000);
-    // so attaching the interrupt seems to not be functioning fully
-    Serial.println("Booted i960");
+    adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
-    systemBooted = true;
-}
-void
-trigger_INT0() noexcept {
-    if (systemCounterEnabled) {
-        digitalToggleFast(Pin::INT960_0);
-    }
+    xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, nullptr);
+    xTaskCreate(handleSystemCounterWatcher, "syscount", 128, nullptr, 2, nullptr);
+
+    Serial.println(F("Starting scheduler ..."));
+    Serial.flush();
+    vTaskStartScheduler();
 }
 void 
 loop() {
-    if (adsTriggered) {
-        readyTriggered = false;
-        adsTriggered = false;
-        while (digitalReadFast(Pin::DEN) == HIGH) ;
-        auto targetAddress = i960Interface::getAddress();
-        if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
-        } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
-        }
-    } else {
-        if (systemCounterWatcher.check()) {
-            trigger_INT0();
-        }
-    }
 }
 
