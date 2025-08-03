@@ -1135,6 +1135,23 @@ triggerReadySync() noexcept {
 }
 void
 handleMemoryTransaction() noexcept {
+    Entropy.Initialize();
+    EEPROM.begin();
+    // put your setup code here, to run once:
+    EBIInterface::begin();
+    i960Interface::begin();
+    setupMemory();
+    setupRTC();
+    setupSDCard();
+    setupTFTDisplay();
+    setupRandomSeed();
+    setupEEPROM2();
+    Entropy.Initialize();
+    noInterrupts();
+    attachInterrupt(Pin::ADS, triggerADS, RISING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
+    interrupts();
+    displayClockSpeedInformation();
     pullCPUOutOfReset();
     
     delay(1000);
@@ -1191,23 +1208,6 @@ setup() {
         delay(10);
     }
     SerialUSB1.begin(115200);
-    Entropy.Initialize();
-    EEPROM.begin();
-    // put your setup code here, to run once:
-    EBIInterface::begin();
-    i960Interface::begin();
-    setupMemory();
-    setupRTC();
-    setupSDCard();
-    setupTFTDisplay();
-    setupRandomSeed();
-    setupEEPROM2();
-    Entropy.Initialize();
-    noInterrupts();
-    attachInterrupt(Pin::ADS, triggerADS, RISING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
-    interrupts();
-    displayClockSpeedInformation();
     adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, nullptr);
