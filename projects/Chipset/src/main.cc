@@ -58,6 +58,7 @@ constexpr auto EEPROM_I2C_Address = 0x50; // default address
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+volatile bool systemBooted = false;
 Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
@@ -1159,6 +1160,7 @@ handleMemoryTransaction(void*) noexcept {
     //vTaskDelay(pdMS_TO_TICKS(1000));
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
+    systemBooted = true;
     while (true) {
         (void)ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
@@ -1178,9 +1180,11 @@ handleMemoryTransaction(void*) noexcept {
 void
 handleSystemCounterWatcher(void*) noexcept {
     while (true) {
-        if (systemCounterWatcher.check()) {
-            if (systemCounterEnabled) {
-                digitalToggleFast(Pin::INT960_0);
+        if (systemBooted) {
+            if (systemCounterWatcher.check()) {
+                if (systemCounterEnabled) {
+                    digitalToggleFast(Pin::INT960_0);
+                }
             }
         }
     }
@@ -1227,8 +1231,8 @@ setup() {
     //adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
-    //xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
-    //xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
+    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
+    xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
     Serial.flush();
