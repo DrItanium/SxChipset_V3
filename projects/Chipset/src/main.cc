@@ -1122,12 +1122,12 @@ pullCPUOutOfReset() noexcept {
     Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
     Wire2.endTransmission();
 }
-SemaphoreHandle_t adsTriggeredSemaphore;
-BaseType_t memoryTask;
+//SemaphoreHandle_t adsTriggeredSemaphore;
+TaskHandle_t memoryTask = nullptr;
 void
 triggerADS() noexcept {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
-    xSemaphoreGiveFromISR(adsTriggeredSemaphore, &higherPriorityTaskWoken);
+    vTaskNotifyGiveIndexedFromISR(memoryTask, 0, &higherPriorityTaskWoken);
     portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 void
@@ -1148,27 +1148,26 @@ handleMemoryTransaction(void*) noexcept {
     setupRandomSeed();
     setupEEPROM2();
     Entropy.Initialize();
-    portDISABLE_INTERRUPTS();
+    taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
-    portENABLE_INTERRUPTS();
+    taskENABLE_INTERRUPTS();
+    taskENTER_CRITICAL();
     displayClockSpeedInformation();
-    portENTER_CRITICAL();
     pullCPUOutOfReset();
-    portEXIT_CRITICAL();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    taskEXIT_CRITICAL();
+    //vTaskDelay(pdMS_TO_TICKS(1000));
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
     while (true) {
-        if (xSemaphoreTake(adsTriggeredSemaphore, portMAX_DELAY) == pdTRUE) {
-            readyTriggered = false;
-            while (digitalReadFast(Pin::DEN) == HIGH) ;
-            auto targetAddress = i960Interface::getAddress();
-            if (i960Interface::isReadOperation()) {
-                i960Interface::doMemoryTransaction<true>(targetAddress);
-            } else {
-                i960Interface::doMemoryTransaction<false>(targetAddress);
-            }
+        (void)ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
+        readyTriggered = false;
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
+        auto targetAddress = i960Interface::getAddress();
+        if (i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
         }
     }
     vTaskDelete(nullptr);
@@ -1222,10 +1221,10 @@ setup() {
         delay(10);
     }
     SerialUSB1.begin(115200);
-    adsTriggeredSemaphore = xSemaphoreCreateBinary();
+    //adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
-    memoryTask = xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, nullptr);
-    xTaskCreate(handleSystemCounterWatcher, "syscount", 128, nullptr, 2, nullptr);
+    xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
+    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
     xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
