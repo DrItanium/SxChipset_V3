@@ -1153,26 +1153,21 @@ handleMemoryTransaction(void*) noexcept {
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     taskENABLE_INTERRUPTS();
-    taskENTER_CRITICAL();
     displayClockSpeedInformation();
     pullCPUOutOfReset();
-    taskEXIT_CRITICAL();
-    //vTaskDelay(pdMS_TO_TICKS(1000));
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
     systemBooted = true;
     while (true) {
         (void)ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
-        {
-            readyTriggered = false;
-            while (digitalReadFast(Pin::DEN) == HIGH) ;
-            auto targetAddress = i960Interface::getAddress();
-            if (i960Interface::isReadOperation()) {
-                i960Interface::doMemoryTransaction<true>(targetAddress);
-            } else {
-                i960Interface::doMemoryTransaction<false>(targetAddress);
-            }
+        readyTriggered = false;
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
+        auto targetAddress = i960Interface::getAddress();
+        if (i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
         }
     }
     vTaskDelete(nullptr);
@@ -1187,16 +1182,7 @@ handleSystemCounterWatcher(void*) noexcept {
                 }
             }
         }
-    }
-    vTaskDelete(nullptr);
-}
-void
-lifeTest(void*) noexcept {
-    while (true) {
-        SerialUSB1.println("TICK");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        SerialUSB1.println("TOCK");
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        taskYIELD();
     }
     vTaskDelete(nullptr);
 }
@@ -1228,11 +1214,11 @@ setup() {
         delay(10);
     }
     SerialUSB1.begin(115200);
-    //adsTriggeredSemaphore = xSemaphoreCreateBinary();
-    // okay so we want to handle the initial boot process
+    // we use multiple tasks to handle different fixed concepts
+    // syscount -> queries metro to see if we should trigger INT0 on the i960
+    // memory -> configures the i960 interface and then responds to requests, higher priority than other tasks
     xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
     xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, nullptr);
-    xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
     Serial.flush();
