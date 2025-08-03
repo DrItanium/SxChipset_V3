@@ -1123,6 +1123,7 @@ pullCPUOutOfReset() noexcept {
     Wire2.endTransmission();
 }
 SemaphoreHandle_t adsTriggeredSemaphore;
+BaseType_t memoryTask;
 void
 triggerADS() noexcept {
     BaseType_t higherPriorityTaskWoken = pdFALSE;
@@ -1134,7 +1135,7 @@ triggerReadySync() noexcept {
     readyTriggered = true;
 }
 void
-handleMemoryTransaction() noexcept {
+handleMemoryTransaction(void*) noexcept {
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
@@ -1147,14 +1148,15 @@ handleMemoryTransaction() noexcept {
     setupRandomSeed();
     setupEEPROM2();
     Entropy.Initialize();
-    noInterrupts();
+    portDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
-    interrupts();
+    portENABLE_INTERRUPTS();
     displayClockSpeedInformation();
+    portENTER_CRITICAL();
     pullCPUOutOfReset();
-    
-    delay(1000);
+    portEXIT_CRITICAL();
+    vTaskDelay(pdMS_TO_TICKS(1000));
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
     while (true) {
@@ -1169,9 +1171,10 @@ handleMemoryTransaction() noexcept {
             }
         }
     }
+    vTaskDelete(nullptr);
 }
 void
-handleSystemCounterWatcher() noexcept {
+handleSystemCounterWatcher(void*) noexcept {
     while (true) {
         if (systemCounterWatcher.check()) {
             if (systemCounterEnabled) {
@@ -1179,6 +1182,17 @@ handleSystemCounterWatcher() noexcept {
             }
         }
     }
+    vTaskDelete(nullptr);
+}
+void
+lifeTest(void*) noexcept {
+    while (true) {
+        SerialUSB1.println("TICK");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        SerialUSB1.println("TOCK");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    vTaskDelete(nullptr);
 }
 void 
 setup() {
@@ -1210,8 +1224,9 @@ setup() {
     SerialUSB1.begin(115200);
     adsTriggeredSemaphore = xSemaphoreCreateBinary();
     // okay so we want to handle the initial boot process
-    xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, nullptr);
+    memoryTask = xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, nullptr);
     xTaskCreate(handleSystemCounterWatcher, "syscount", 128, nullptr, 2, nullptr);
+    xTaskCreate(lifeTest, "life", 128, nullptr, 2, nullptr);
 
     Serial.println(F("Starting scheduler ..."));
     Serial.flush();
