@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_SSD1351.h>
 #include <Adafruit_EEPROM_I2C.h>
 #include <arduino_freertos.h>
-#include <semphr.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -549,7 +548,7 @@ struct OLEDInterface final {
                 return 0;
         }
     }
-    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
+    void setWord(uint8_t offset, uint16_t value, bool = true, bool = true) noexcept { 
         switch (static_cast<Fields>(offset)) {
             case Fields::Execute:
             case Fields::Opcode:
@@ -1158,11 +1157,12 @@ initializeSystem(void*) noexcept {
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
 
-    Serial.begin(9600);
+    Serial.begin(115200);
     while (!Serial) {
         delay(10);
     }
     SerialUSB1.begin(115200);
+    SerialUSB2.begin(115200);
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
