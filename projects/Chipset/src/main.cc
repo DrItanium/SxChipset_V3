@@ -54,6 +54,7 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto EEPROM_I2C_Address = 0x50; // default address
+constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -318,7 +319,6 @@ constexpr uint32_t EBIOutputTransformation[256] {
 #undef X
 };
 
-
 struct EBIWrapperInterface {
 public:
   EBIWrapperInterface() = delete;
@@ -357,7 +357,7 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines<true>(0);
   }
-  template<bool directPortManipulation = true>
+  template<bool directPortManipulation = UseDirectPortManipulation>
   static void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
@@ -372,7 +372,7 @@ public:
           digitalWriteFast(Pin::EBI_A5, address & 0b100000);
       }
   }
-  template<bool checkD0 = true, bool useDirectPortRead = true>
+  template<bool checkD0 = true, bool useDirectPortRead = UseDirectPortManipulation>
   static uint8_t
   readDataLines() noexcept {
       if constexpr (useDirectPortRead) {
@@ -395,7 +395,7 @@ public:
           return value;
       }
   }
-  template<bool force = false, bool directPortManipulation = true>
+  template<bool force = false, bool directPortManipulation = UseDirectPortManipulation>
   static void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
