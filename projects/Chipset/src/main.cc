@@ -892,26 +892,12 @@ struct i960Interface {
       }
       // nothing to do on target end
   }
-  template<bool CheckEnableSignals = false>
   static inline uint16_t
   readDataLines() noexcept {
-      uint16_t a = 0;
-      uint16_t b = 0;
       auto baseAddress = dataLines.getDataPortBaseAddress();
-      if constexpr (CheckEnableSignals) {
-        // In this mode, evaluation can either be instantaneous, 250ns, or 500ns
-        if (byteEnableLow()) {
-            a = read8(baseAddress);
-        } 
-        if (byteEnableHigh()) {
-            b = read8(baseAddress+1);
-        }
-      } else {
-        // this will take at least 500ns to complete
-        // This may result in waste if both lo and hi are not enabled
-        a = read8(baseAddress); // at least 250ns
-        b = read8(baseAddress+1); // at least 250ns
-      }
+      // this will take at least 500ns to complete
+      uint16_t a = read8(baseAddress); // at least 250ns
+      uint16_t b = read8(baseAddress+1); // at least 250ns
       return a| (b<< 8);
   }
   template<MemoryCell MC>
