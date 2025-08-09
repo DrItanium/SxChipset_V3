@@ -744,6 +744,20 @@ struct i960Interface {
     digitalWriteFast(Pin::EBI_WR, HIGH);
     delayNanoseconds(100); // data hold after WR + tWH
   }
+  static inline uint8_t
+  read8(uint8_t address) noexcept {
+      // the CH351 has some very strict requirements
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(address);
+      delayNanoseconds(100);
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      delayNanoseconds(80); // wait for things to get selected properly
+      uint8_t output = EBIInterface::readDataLines();
+      delayNanoseconds(20);
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      delayNanoseconds(50);
+      return output;
+  }
   static void
   begin() noexcept {
       write8(addressLines.getConfigPortBaseAddress(), 0);
@@ -810,20 +824,6 @@ struct i960Interface {
   static inline bool
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
-  }
-  static inline uint8_t
-  read8(uint8_t address) noexcept {
-      // the CH351 has some very strict requirements
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(address);
-      delayNanoseconds(100);
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(80); // wait for things to get selected properly
-      uint8_t output = EBIInterface::readDataLines();
-      delayNanoseconds(20);
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(50);
-      return output;
   }
   static inline uint32_t
   getAddress() noexcept {
