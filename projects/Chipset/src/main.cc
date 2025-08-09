@@ -749,7 +749,7 @@ struct i960Interface {
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(100); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
-    delayNanoseconds(100); // data hold after WR + tWH
+    delayNanoseconds(150); // data hold after WR + tWH + breathe (50ns)
     // update the address
     EBIOutputStorage[address] = value;
   }
@@ -771,13 +771,9 @@ struct i960Interface {
   static void
   begin() noexcept {
       write8<true>(addressLines.getConfigPortBaseAddress(), 0);
-      delayNanoseconds(50); // breathe for 50ns
       write8<true>(addressLines.getConfigPortBaseAddress() + 1, 0);
-      delayNanoseconds(50); // breathe for 50ns
       write8<true>(addressLines.getConfigPortBaseAddress() + 2, 0);
-      delayNanoseconds(50); // breathe for 50ns
       write8<true>(addressLines.getConfigPortBaseAddress() + 3, 0);
-      delayNanoseconds(50); // breathe for 50ns
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
   }
@@ -790,9 +786,7 @@ struct i960Interface {
           }
       }
       write8<true>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
-      delayNanoseconds(50); // breathe
       write8<true>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
-      delayNanoseconds(50); // breathe
       _dataLinesDirection = value;
   }
   template<bool compareWithPrevious = true>
@@ -866,9 +860,7 @@ struct i960Interface {
       // This function will take at least 660ns to complete
       auto baseAddress = dataLines.getDataPortBaseAddress();
       write8(baseAddress, static_cast<uint8_t>(value)); // at least 280ns
-      delayNanoseconds(50); // breathe
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 280ns
-      delayNanoseconds(50); // breathe
   }
 
   template<bool isReadTransaction>
