@@ -733,9 +733,9 @@ struct i960Interface {
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
 
-  template<bool force = false>
+  template<bool CompareWithPrevious = true>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
-    if constexpr (!force) {
+    if constexpr (CompareWithPrevious) {
         if (EBIOutputStorage[address] == value) {
             return;
         }
@@ -770,24 +770,18 @@ struct i960Interface {
   }
   static void
   begin() noexcept {
-      write8<true>(addressLines.getConfigPortBaseAddress(), 0);
-      write8<true>(addressLines.getConfigPortBaseAddress() + 1, 0);
-      write8<true>(addressLines.getConfigPortBaseAddress() + 2, 0);
-      write8<true>(addressLines.getConfigPortBaseAddress() + 3, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
-      if constexpr (compareWithPrevious) {
-          if (_dataLinesDirection == value) {
-              return;
-          }
-      }
-      write8<true>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
-      write8<true>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
-      _dataLinesDirection = value;
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
   }
   template<bool compareWithPrevious = true>
   static inline void
@@ -1010,7 +1004,6 @@ struct i960Interface {
       CLKValues.setWord32(1, clk2);
   }
 private:
-  static inline uint16_t _dataLinesDirection = 0xFFFF;
   // allocate a 2k memory cache like the avr did
   static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
