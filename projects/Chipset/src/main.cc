@@ -734,6 +734,7 @@ struct i960Interface {
   i960Interface& operator=(i960Interface&&) = delete;
 
   static inline void write8(uint8_t address, uint8_t value) noexcept {
+    // This function will take at least 280 ns to complete
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
     delayNanoseconds(50);
@@ -747,6 +748,7 @@ struct i960Interface {
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
+      // This function will take at least 250 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
       delayNanoseconds(100);
@@ -827,14 +829,16 @@ struct i960Interface {
   }
   static inline uint32_t
   getAddress() noexcept {
-      uint32_t a = read8(addressLines.getDataPortBaseAddress());
-      delayNanoseconds(50);
-      uint32_t b = read8(addressLines.getDataPortBaseAddress() + 1);
-      delayNanoseconds(50);
-      uint32_t c = read8(addressLines.getDataPortBaseAddress() + 2);
-      delayNanoseconds(50);
-      uint32_t d = read8(addressLines.getDataPortBaseAddress() + 3);
-      delayNanoseconds(50);
+      // this function will take at least 1200ns (1.2 usec) to complete!
+      auto baseAddress = addressLines.getDataPortBaseAddress();
+      uint32_t a = read8(baseAddress); // at least 250ns
+      //delayNanoseconds(50);
+      uint32_t b = read8(baseAddress + 1); // at least 250ns
+      //delayNanoseconds(50);
+      uint32_t c = read8(baseAddress + 2); // at least 250ns
+      //delayNanoseconds(50);
+      uint32_t d = read8(baseAddress + 3); // at least 250ns
+      //delayNanoseconds(50);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
   static inline bool
@@ -851,9 +855,11 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      write8(dataLines.getDataPortBaseAddress(), static_cast<uint8_t>(value));
+      // This function will take at least 660ns to complete
+      auto baseAddress = dataLines.getDataPortBaseAddress();
+      write8(baseAddress, static_cast<uint8_t>(value)); // at least 280ns
       delayNanoseconds(50); // breathe
-      write8(dataLines.getDataPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 280ns
       delayNanoseconds(50); // breathe
   }
 
@@ -886,10 +892,26 @@ struct i960Interface {
       }
       // nothing to do on target end
   }
+  template<bool CheckEnableSignals = false>
   static inline uint16_t
   readDataLines() noexcept {
-      uint16_t a = read8(dataLines.getDataPortBaseAddress());
-      uint16_t b = read8(dataLines.getDataPortBaseAddress()+1);
+      uint16_t a = 0;
+      uint16_t b = 0;
+      auto baseAddress = dataLines.getDataPortBaseAddress();
+      if constexpr (CheckEnableSignals) {
+        // In this mode, evaluation can either be instantaneous, 250ns, or 500ns
+        if (byteEnableLow()) {
+            a = read8(baseAddress);
+        } 
+        if (byteEnableHigh()) {
+            b = read8(baseAddress+1);
+        }
+      } else {
+        // this will take at least 500ns to complete
+        // This may result in waste if both lo and hi are not enabled
+        a = read8(baseAddress); // at least 250ns
+        b = read8(baseAddress+1); // at least 250ns
+      }
       return a| (b<< 8);
   }
   template<MemoryCell MC>
