@@ -733,7 +733,13 @@ struct i960Interface {
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
 
+  template<bool force = false>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
+    if constexpr (!force) {
+        if (EBIOutputStorage[address] == value) {
+            return;
+        }
+    }
     // This function will take at least 280 ns to complete
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
@@ -744,6 +750,8 @@ struct i960Interface {
     delayNanoseconds(100); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
     delayNanoseconds(100); // data hold after WR + tWH
+    // update the address
+    EBIOutputStorage[address] = value;
   }
   static inline uint8_t
   read8(uint8_t address) noexcept {
@@ -762,13 +770,13 @@ struct i960Interface {
   }
   static void
   begin() noexcept {
-      write8(addressLines.getConfigPortBaseAddress(), 0);
+      write8<true>(addressLines.getConfigPortBaseAddress(), 0);
       delayNanoseconds(50); // breathe for 50ns
-      write8(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8<true>(addressLines.getConfigPortBaseAddress() + 1, 0);
       delayNanoseconds(50); // breathe for 50ns
-      write8(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8<true>(addressLines.getConfigPortBaseAddress() + 2, 0);
       delayNanoseconds(50); // breathe for 50ns
-      write8(addressLines.getConfigPortBaseAddress() + 3, 0);
+      write8<true>(addressLines.getConfigPortBaseAddress() + 3, 0);
       delayNanoseconds(50); // breathe for 50ns
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
@@ -781,9 +789,9 @@ struct i960Interface {
               return;
           }
       }
-      write8(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
+      write8<true>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
       delayNanoseconds(50); // breathe
-      write8(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
+      write8<true>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
       delayNanoseconds(50); // breathe
       _dataLinesDirection = value;
   }
@@ -1014,6 +1022,10 @@ private:
   // allocate a 2k memory cache like the avr did
   static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
+  // use this to keep track of the output values that were sent to the EBI
+  // useful when you don't want to waste time if the given output address
+  // already contains the value in question. This does not apply to reads
+  static inline uint8_t EBIOutputStorage[256] = { 0 }; 
 };
 
 void
