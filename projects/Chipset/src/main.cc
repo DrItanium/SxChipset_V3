@@ -732,7 +732,9 @@ struct InterfaceTimingDescription {
     constexpr InterfaceTimingDescription(uint32_t a, uint32_t b, uint32_t c, uint32_t d) : addressWait(a), setupTime(b), holdTime(c), afterTime(d) { }
 };
 static constexpr InterfaceTimingDescription defaultWrite8{50, 30, 100, 150};
-static constexpr InterfaceTimingDescription customWrite8{50, 30, 80, 150};
+static constexpr InterfaceTimingDescription customWrite8{75, 30, 80, 50};
+static constexpr InterfaceTimingDescription defaultRead8{100, 80, 20, 50};
+static constexpr InterfaceTimingDescription customRead8{75, 50, 20, 50};
 
 struct i960Interface {
   i960Interface() = delete;
@@ -741,7 +743,7 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = defaultWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
         if (EBIOutputStorage[address] == value) {
@@ -761,19 +763,21 @@ struct i960Interface {
     EBIOutputStorage[address] = value;
     delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
   }
+
+  template<InterfaceTimingDescription decl = defaultRead8>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
       // This function will take at least 250 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
-      delayNanoseconds(100);
+      delayNanoseconds(decl.addressWait);
       digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(80); // wait for things to get selected properly
+      delayNanoseconds(decl.setupTime); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
-      delayNanoseconds(20);
+      delayNanoseconds(decl.holdTime);
       digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(50);
+      delayNanoseconds(decl.afterTime);
       return output;
   }
   static void
@@ -810,11 +814,12 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
+  template<uint32_t readyDelayTimer = 50>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
-      delayNanoseconds(200);  // wait some amount of time
+      delayNanoseconds(readyDelayTimer);  // wait some amount of time
   }
   static inline void
   signalReady() noexcept {
