@@ -900,12 +900,11 @@ struct i960Interface {
           auto lines = target.getWord(wordOffset);
           writeDataLines(lines);
           if (isBurstLast()) {
-              signalReady();
               break;
-          } else {
-              signalReady();
-          }
+          } 
+          signalReady();
       }
+      signalReady();
       // nothing to do on target end
   }
   static inline uint16_t
@@ -923,12 +922,11 @@ struct i960Interface {
           auto lines = readDataLines();
           target.setWord(wordOffset, lines, byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
-              signalReady();
               break;
-          } else {
-              signalReady();
-          }
+          } 
+          signalReady();
       }
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
@@ -1221,8 +1219,8 @@ handleMemoryTransaction(void*) noexcept {
         ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
         readyTriggered = false;
-        while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
