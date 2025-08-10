@@ -1219,8 +1219,8 @@ handleMemoryTransaction(void*) noexcept {
         ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
         // we want nothing else to take over while this section is running
         readyTriggered = false;
-        auto targetAddress = i960Interface::getAddress();
         while (digitalReadFast(Pin::DEN) == HIGH) ;
+        auto targetAddress = i960Interface::getAddress();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
