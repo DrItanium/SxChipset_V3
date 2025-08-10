@@ -724,6 +724,15 @@ struct OLEDInterface final {
 };
 
 OLEDInterface oledDisplay;
+struct InterfaceTimingDescription {
+    uint32_t addressWait;
+    uint32_t setupTime;
+    uint32_t holdTime;
+    uint32_t afterTime;
+    constexpr InterfaceTimingDescription(uint32_t a, uint32_t b, uint32_t c, uint32_t d) : addressWait(a), setupTime(b), holdTime(c), afterTime(d) { }
+};
+static constexpr InterfaceTimingDescription defaultWrite8{50, 30, 100, 150};
+static constexpr InterfaceTimingDescription customWrite8{50, 30, 80, 150};
 
 struct i960Interface {
   i960Interface() = delete;
@@ -732,8 +741,7 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
-
-  template<bool CompareWithPrevious = true>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
         if (EBIOutputStorage[address] == value) {
@@ -743,15 +751,15 @@ struct i960Interface {
     // This function will take at least 280 ns to complete
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
-    delayNanoseconds(50);
+    delayNanoseconds(decl.addressWait);
     EBIInterface::setDataLines(value);
-    delayNanoseconds(30); // setup time (tDS), normally 30
+    delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
     digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(100); // tWL hold for at least 80ns
+    delayNanoseconds(decl.holdTime); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
-    delayNanoseconds(150); // data hold after WR + tWH + breathe (50ns)
     // update the address
     EBIOutputStorage[address] = value;
+    delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
   }
   static inline uint8_t
   read8(uint8_t address) noexcept {
