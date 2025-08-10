@@ -800,8 +800,9 @@ struct i960Interface {
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value));
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8));
+      // 470ns worth of delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
   }
   template<bool compareWithPrevious = true>
   static inline void
@@ -846,15 +847,15 @@ struct i960Interface {
   }
   static inline uint32_t
   getAddress() noexcept {
-      // this function will take at least 1200ns (1.2 usec) to complete!
+      // 780ns worth of delay
       auto baseAddress = addressLines.getDataPortBaseAddress();
-      uint32_t a = read8(baseAddress); // at least 250ns
+      uint32_t a = read8(baseAddress); // at least 195ns
       //delayNanoseconds(50);
-      uint32_t b = read8(baseAddress + 1); // at least 250ns
+      uint32_t b = read8(baseAddress + 1); // at least 195ns
       //delayNanoseconds(50);
-      uint32_t c = read8(baseAddress + 2); // at least 250ns
+      uint32_t c = read8(baseAddress + 2); // at least 195ns
       //delayNanoseconds(50);
-      uint32_t d = read8(baseAddress + 3); // at least 250ns
+      uint32_t d = read8(baseAddress + 3); // at least 195ns
       //delayNanoseconds(50);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
@@ -872,10 +873,10 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      // This function will take at least 660ns to complete
+      // This function will take at least 470ns worth of delay
       auto baseAddress = dataLines.getDataPortBaseAddress();
-      write8(baseAddress, static_cast<uint8_t>(value)); // at least 280ns
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 280ns
+      write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
   }
 
   template<bool isReadTransaction>
@@ -910,9 +911,9 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortBaseAddress();
-      // this will take at least 500ns to complete
-      uint16_t a = read8(baseAddress); // at least 250ns
-      uint16_t b = read8(baseAddress+1); // at least 250ns
+      // this will take at least 390ns to complete
+      uint16_t a = read8(baseAddress); // at least 195ns
+      uint16_t b = read8(baseAddress+1); // at least 195ns
       return a| (b<< 8);
   }
   template<MemoryCell MC>
