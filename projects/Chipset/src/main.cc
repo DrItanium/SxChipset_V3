@@ -31,12 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SD.h>
 #include <Ethernet.h>
 #include <Entropy.h>
+#include <EEPROM.h>
 #include <FastCRC.h>
 #include <LittleFS.h>
 #include <Metro.h>
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
+#include <Adafruit_EEPROM_I2C.h>
 #include <arduino_freertos.h>
 
 #include "Pinout.h"
@@ -49,12 +51,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 constexpr auto OLEDScreenWidth = 128;
 constexpr auto OLEDScreenHeight = 128;
-constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
+constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
+constexpr auto EEPROM_I2C_Address = 0x50; // default address
 constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
@@ -75,6 +79,39 @@ constexpr uint16_t Color_Red = color565(255, 0, 0);
 constexpr uint16_t Color_Green = color565(0, 255, 0);
 constexpr uint16_t Color_Purple = color565(255, 0, 255);
 constexpr uint16_t Color_White = color565(255, 255, 255);
+void
+setupEEPROM2() noexcept {
+    if (eeprom2.begin(EEPROM_I2C_Address, &Wire2)) {
+        Serial.println("Found I2C EEPROM!");
+    } else {
+        Serial.println("No I2C EEPROM Found!");
+    }
+}
+
+struct EEPROMWrapper {
+    constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
+    void updateBaseAddress(uint16_t base) noexcept {
+        _baseOffset = base & 0x0FF0;
+    }
+    void update() noexcept { }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        uint16_t value = 0;
+        return EEPROM.get<uint16_t>(_baseOffset + ((offset << 1) & 0b1110), value);
+    }
+    void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
+        auto computedOffset = ((offset << 1)) & 0b1110;
+        if (updateLo) {
+            EEPROM.put(_baseOffset + computedOffset, static_cast<uint8_t>(value));
+        }
+        if (updateHi) {
+            EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
+        }
+    }
+    void onFinish() noexcept { }
+
+    private:
+        uint16_t _baseOffset = 0;
+};
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
     void update() noexcept { }
@@ -134,7 +171,7 @@ struct TimingRelatedThings {
             case 3:
                 return static_cast<uint16_t>(_currentMicros >> 16);
             case 4: // eeprom
-                return static_cast<uint16_t>(0);
+                return static_cast<uint16_t>(4096);
             case 5:
                 return 0;
             case 6:
@@ -240,6 +277,7 @@ USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
+EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 struct CH351 {
   constexpr CH351(uint8_t baseAddress) noexcept
@@ -946,8 +984,12 @@ struct i960Interface {
           case 0x00'0100 ... 0x00'01FF:
               doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
               break;
-          case 0x01'0000 ... 0x01'FFFF: // 64k sram block
-              doMemoryCellTransaction<isReadTransaction>(sramCache[((address & 0x00'FFFF) >> 4) & 0xFFF], address & 0xF);
+          case 0x00'0800 ... 0x00'0FFF: 
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+              break;
+          case 0x00'1000 ... 0x00'1FFF: // EEPROM
+              eeprom.updateBaseAddress(address);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -1147,6 +1189,7 @@ initializeSystem(void*) noexcept {
     SerialUSB1.begin(115200);
     SerialUSB2.begin(115200);
     Entropy.Initialize();
+    EEPROM.begin();
     // put your setup code here, to run once:
     EBIInterface::begin();
     i960Interface::begin();
@@ -1155,6 +1198,7 @@ initializeSystem(void*) noexcept {
     setupSDCard();
     setupTFTDisplay();
     setupRandomSeed();
+    setupEEPROM2();
     Entropy.Initialize();
     taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
