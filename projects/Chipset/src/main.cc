@@ -751,7 +751,7 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = defaultWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
         if (EBIOutputStorage[address] == value) {
@@ -772,7 +772,7 @@ struct i960Interface {
     delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = customRead8>
+  template<InterfaceTimingDescription decl = defaultRead8>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
