@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
-#include <Adafruit_EEPROM_I2C.h>
 #include <arduino_freertos.h>
 
 #include "Pinout.h"
@@ -53,12 +52,10 @@ constexpr auto OLEDScreenWidth = 128;
 constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
-constexpr auto EEPROM_I2C_Address = 0x50; // default address
 constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-Adafruit_EEPROM_I2C eeprom2;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
@@ -79,14 +76,6 @@ constexpr uint16_t Color_Red = color565(255, 0, 0);
 constexpr uint16_t Color_Green = color565(0, 255, 0);
 constexpr uint16_t Color_Purple = color565(255, 0, 255);
 constexpr uint16_t Color_White = color565(255, 255, 255);
-void
-setupEEPROM2() noexcept {
-    if (eeprom2.begin(EEPROM_I2C_Address, &Wire2)) {
-        Serial.println("Found I2C EEPROM!");
-    } else {
-        Serial.println("No I2C EEPROM Found!");
-    }
-}
 
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -1198,7 +1187,6 @@ initializeSystem(void*) noexcept {
     setupSDCard();
     setupTFTDisplay();
     setupRandomSeed();
-    setupEEPROM2();
     Entropy.Initialize();
     taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
