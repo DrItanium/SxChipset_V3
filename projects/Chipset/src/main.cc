@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 constexpr auto OLEDScreenWidth = 128;
 constexpr auto OLEDScreenHeight = 128;
-constexpr uint32_t OnboardSRAMCacheSize = 2048;
+constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
@@ -946,8 +946,8 @@ struct i960Interface {
           case 0x00'0100 ... 0x00'01FF:
               doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
               break;
-          case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+          case 0x01'0000 ... 0x01'FFFF: // 64k sram block
+              doMemoryCellTransaction<isReadTransaction>(sramCache[((address & 0x00'FFFF) >> 4) & 0xFFF], address & 0xF);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
