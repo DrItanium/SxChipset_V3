@@ -7,14 +7,14 @@ generation) of the i960Sx Chipset.
 
 After cloning the repo do the following from the root of the repo
 
-1. ` python -m venv . `
-2. ` . bin/activate `
+1. ` python -m venv .venv `
+2. ` . .venv/bin/activate `
 3. ` pip install --upgrade platformio `
 
 After this point the initial setup is done. After this all you need to do on a
 new terminal is run
 
-` . bin/activate `
+` . .venv/bin/activate `
 
 
 
