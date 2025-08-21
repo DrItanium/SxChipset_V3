@@ -61,6 +61,14 @@ enum class Pin : uint8_t {
   RPI_D31 = 31,
   RPI_D32 = 34,
   RPI_D33 = 35,
+  RPI_D34 = 10,
+  RPI_D35 = 11,
+  RPI_D36 = 12,
+  RPI_D37 = 13,
+  RPI_D38 = 0,
+  RPI_D39 = 1,
+  RPI_D40 = 24,
+  RPI_D41 = 25,
   EBI_A5 = RPI_D0, // AD_B0_03
   EBI_A4 = RPI_D1, // AD_B0_02
   EBI_A3 = RPI_D2, // EMC_04
@@ -93,9 +101,9 @@ enum class Pin : uint8_t {
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
-  EYESPI_TCS = 10,
-  EYESPI_RST = 1,
-  EYESPI_DC = 0,
+  EYESPI_TCS = RPI_D34,
+  EYESPI_RST = RPI_D39,
+  EYESPI_DC = RPI_D38,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
