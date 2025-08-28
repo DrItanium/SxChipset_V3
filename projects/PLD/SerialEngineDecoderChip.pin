@@ -23,7 +23,7 @@
   19   | OE3      | NC
   20   | EN2      | NC
   21   | PL2      | NC
-  22   | EN       | NC
-  23   | PL       | NC
+  22   | EN       | Output
+  23   | PL       | Output
   24   | VCC      | VCC
 
