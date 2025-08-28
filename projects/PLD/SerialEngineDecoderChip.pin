@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | CLK      | Clock/Input
+   2   | ADS      | Input
+   3   | I3       | Input
+   4   | I4       | Input
+   5   | I5       | Input
+   6   | I6       | Input
+   7   | I7       | Input
+   8   | I8       | Input
+   9   | I9       | Input
+  10   | I10      | Input
+  11   | I11      | Input
+  12   | GND      | GND
+  13   | I13      | Input
+  14   | IO14     | NC
+  15   | IO15     | NC
+  16   | IO16     | NC
+  17   | CLR3     | NC
+  18   | EN3      | NC
+  19   | OE3      | NC
+  20   | EN2      | NC
+  21   | PL2      | NC
+  22   | EN       | NC
+  23   | PL       | NC
+  24   | VCC      | VCC
+
