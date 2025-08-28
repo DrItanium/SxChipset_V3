@@ -15,7 +15,7 @@ install_NewCPUCardDecoder_B: NewCPUCardDecoder.jed
 	minipro -p ATF16V8B --write $< 
 
 install_SerialEngineDecoderChip: SerialEngineDecoderChip.jed
-	minipro -p 'ATF22LV10CQZ(UES)' --write $< 
+	minipro -p 'ATF22V10CQZ(UES)' --write $< 
 
 clean:
 	@echo -n "Cleaning..."
