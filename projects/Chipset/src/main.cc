@@ -1158,12 +1158,10 @@ initializeSystem(void*) noexcept {
     putCPUInReset();
     inputPin(Pin::ADS);
     inputPin(Pin::DEN);
-    //outputPin(Pin::HOLD, LOW);
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
     outputPin(Pin::INT960_3, HIGH);
-    //inputPin(Pin::LOCK);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::WR);
