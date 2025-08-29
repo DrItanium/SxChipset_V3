@@ -740,14 +740,15 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = defaultWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
         if (EBIOutputStorage[address] == value) {
             return;
         }
     }
-    // This function will take at least 280 ns to complete
+    // defaultWrite8 will take 300ns since setuptime is ignored
+    // customWrite8 will take 290ns since setupTime is ignored
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
     EBIInterface::setDataLines(value);
@@ -765,7 +766,7 @@ struct i960Interface {
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
-      // This function will take at least 250 ns to complete
+      // This function will take at least 230 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
       delayNanoseconds(decl.addressWait);
