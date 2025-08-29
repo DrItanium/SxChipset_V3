@@ -730,8 +730,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    100, 80, 20, 50
-}; // 250ns worth of delay
+    50, 80, 20, 50
+}; // 200ns worth of delay
 
 struct i960Interface {
   i960Interface() = delete;
@@ -762,10 +762,12 @@ struct i960Interface {
     delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = defaultRead8>
+  template<InterfaceTimingDescription decl = customRead8>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
+      // defaultRead8: 230ns
+      // customRead8: 180ns
       // This function will take at least 230 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
