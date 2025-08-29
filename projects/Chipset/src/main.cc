@@ -1165,8 +1165,8 @@ setupLEDMatrix() noexcept {
         ledmatrix.enable(true);
         ledmatrix.setRotation(0);
         ledmatrix.setTextWrap(false);
-        ledmatrix.setGlobalCurrent(5);
         ledmatrix.print("i960");
+        ledmatrix.setGlobalCurrent(5);
     }
 }
 void
