@@ -987,7 +987,6 @@ struct i960Interface {
       }
   }
 
-
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
@@ -996,11 +995,11 @@ struct i960Interface {
       } else {
           configureDataLinesForWrite();
       }
-      switch (address) {
-          case 0x0000'0000 ... 0x00FF'FFFF: // PSRAM
+      switch (static_cast<uint8_t>(address >> 24)) {
+          case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
               break;
-          case 0xFE00'0000 ... 0xFEFF'FFFF: // IO Space
+          case 0xFE: // IO Space
               doIOTransaction<isReadTransaction>(address);
               break;
           default:
