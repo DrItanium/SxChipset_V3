@@ -744,6 +744,35 @@ struct i960Interface {
   i960Interface(i960Interface&&) = delete;
   i960Interface& operator=(const i960Interface&) = delete;
   i960Interface& operator=(i960Interface&&) = delete;
+  // signal information from CH351DS3.pdf
+  // TWW : Valid Write Strobe Pulse Width : 25ns (40ns) minimum
+  // TRW : Valid Read Strobe Pulse Width : 25ns (40ns) minimum
+  // TWS : Read or Write strobe pulse interval width : 25ns (40ns) minimum
+  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
+  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
+  // TIS : Data input setup time before write strobe : 5 ns minimum
+  // TIH : Data input hold time after write strobe : 5 ns minimum
+  // TON : Read strobe assert to data out valid time : 
+  //        typical time: 15ns (22ns)
+  //        maximum time: 22ns (33ns)
+  // TOF : Read strobe deassert to data out invalid time :
+  //        maximum time: 18 (25ns)
+  //
+  // The parens contain the 3.3v times so for the teensy, this is what we care
+  // about:
+  //
+  // TWW : Valid Write Strobe Pulse Width : 40ns minimum
+  // TRW : Valid Read Strobe Pulse Width : 40ns minimum
+  // TWS : Read or Write strobe pulse interval width : 40ns minimum
+  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
+  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
+  // TIS : Data input setup time before write strobe : 5 ns minimum
+  // TIH : Data input hold time after write strobe : 5 ns minimum
+  // TON : Read strobe assert to data out valid time : 
+  //        typical time: 22ns
+  //        maximum time: 33ns
+  // TOF : Read strobe deassert to data out invalid time :
+  //        maximum time: 25ns
   template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
@@ -782,6 +811,7 @@ struct i960Interface {
       delayNanoseconds(decl.afterTime);
       return output;
   }
+
   static void
   begin() noexcept {
       write8<false>(addressLines.getConfigPortBaseAddress(), 0);
