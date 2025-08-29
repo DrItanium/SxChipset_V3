@@ -1318,6 +1318,8 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
+        auto targetAddress2 = i960Interface::read32(addressLines.getDataPortBaseAddress());
+        Serial.printf("old: %x vs new: %x\n", targetAddress, targetAddress2);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
