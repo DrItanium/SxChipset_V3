@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <arduino_freertos.h>
+#include <Adafruit_IS31FL3741.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -63,6 +64,9 @@ Adafruit_SSD1351 tft(OLEDScreenWidth,
         pinIndexConvert(Pin::EYESPI_TCS),
         pinIndexConvert(Pin::EYESPI_DC),
         pinIndexConvert(Pin::EYESPI_RST));
+
+Adafruit_IS31FL3741_QT ledmatrix;
+
 Metro systemCounterWatcher{25}; // every 25ms, do a toggle
 constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
     // taken from the color565 routine in Adafruit GFX
@@ -1149,6 +1153,23 @@ triggerReadySync() noexcept {
     readyTriggered = true;
 }
 void
+setupLEDMatrix() noexcept {
+    if (!ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire2)) {
+        Serial.println("IS41 not found!");
+    } else {
+        ledmatrix.setLEDscaling(0xff);
+        ledmatrix.setGlobalCurrent(0xff);
+        Serial.print("Global LED Current set to: ");
+        Serial.println(ledmatrix.getGlobalCurrent());
+        ledmatrix.fill(0);
+        ledmatrix.enable(true);
+        ledmatrix.setRotation(0);
+        ledmatrix.setTextWrap(false);
+        ledmatrix.setGlobalCurrent(5);
+        ledmatrix.print("i960");
+    }
+}
+void
 initializeSystem(void*) noexcept {
     Wire2.begin();
     inputPin(Pin::AVR_UP);
@@ -1185,6 +1206,7 @@ initializeSystem(void*) noexcept {
     setupSDCard();
     setupTFTDisplay();
     setupRandomSeed();
+    setupLEDMatrix();
     Entropy.Initialize();
     taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
