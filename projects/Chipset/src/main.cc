@@ -724,8 +724,8 @@ static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
 static constexpr InterfaceTimingDescription customWrite8 {
-    75, 30, 80, 50
-}; // 235ns worth of delay
+    50, 30, 90, 150
+}; // 320ns worth of delay
 static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
@@ -750,9 +750,9 @@ struct i960Interface {
     // This function will take at least 280 ns to complete
     EBIInterface::setDataLinesDirection<OUTPUT>();
     EBIInterface::setAddress(address);
-    delayNanoseconds(decl.addressWait);
     EBIInterface::setDataLines(value);
-    delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
+    delayNanoseconds(decl.addressWait);
+    //delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
     digitalWriteFast(Pin::EBI_WR, LOW);
     delayNanoseconds(decl.holdTime); // tWL hold for at least 80ns
     digitalWriteFast(Pin::EBI_WR, HIGH);
@@ -772,7 +772,7 @@ struct i960Interface {
       digitalWriteFast(Pin::EBI_RD, LOW);
       delayNanoseconds(decl.setupTime); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
-      delayNanoseconds(decl.holdTime);
+      //delayNanoseconds(decl.holdTime);
       digitalWriteFast(Pin::EBI_RD, HIGH);
       delayNanoseconds(decl.afterTime);
       return output;
