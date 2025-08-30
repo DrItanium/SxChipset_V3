@@ -92,7 +92,12 @@ enum class Pin : uint8_t {
   BE0 = RPI_D20,
   BE1 = RPI_D21,
   INT960_0 = RPI_D22,  
-
+  ADR_CH0 = RPI_D23,
+  ADR_CH1 = RPI_D24,
+  ADR_CH2 = RPI_D25,
+  ADR_CH3 = RPI_D26,
+  ADR_CLK = RPI_D27,
+  ADR_RST = RPI_D28,
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
