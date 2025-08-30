@@ -3,7 +3,7 @@
  Pin # | Name     | Pin Type
 -----------------------------
    1   | CLK      | Clock/Input
-   2   | NC       | Input
+   2   | RST      | Input
    3   | NC       | Input
    4   | NC       | Input
    5   | NC       | Input
@@ -21,9 +21,9 @@
   17   | NC       | NC
   18   | NC       | NC
   19   | NC       | NC
-  20   | NC       | NC
-  21   | A2       | NC
-  22   | A1       | NC
-  23   | A0       | NC
+  20   | A3       | Output
+  21   | A2       | Output
+  22   | A1       | Output
+  23   | A0       | Output
   24   | VCC      | VCC
 
