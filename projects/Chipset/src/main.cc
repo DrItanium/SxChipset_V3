@@ -886,60 +886,20 @@ struct i960Interface {
   }
   static inline uint32_t 
   getAddress2() noexcept {
-      union {
-          uint32_t value;
-          struct {
-              uint32_t b0 : 1;
-              uint32_t b1 : 1;
-              uint32_t b2 : 1;
-              uint32_t b3 : 1;
-              uint32_t b4 : 1;
-              uint32_t b5 : 1;
-              uint32_t b6 : 1;
-              uint32_t b7 : 1;
-              uint32_t b8 : 1;
-              uint32_t b9 : 1;
-              uint32_t b10 : 1;
-              uint32_t b11 : 1;
-              uint32_t b12 : 1;
-              uint32_t b13 : 1;
-              uint32_t b14 : 1;
-              uint32_t b15 : 1;
-              uint32_t b16 : 1;
-              uint32_t b17 : 1;
-              uint32_t b18 : 1;
-              uint32_t b19 : 1;
-              uint32_t b20 : 1;
-              uint32_t b21 : 1;
-              uint32_t b22 : 1;
-              uint32_t b23 : 1;
-              uint32_t b24 : 1;
-              uint32_t b25 : 1;
-              uint32_t b26 : 1;
-              uint32_t b27 : 1;
-              uint32_t b28 : 1;
-              uint32_t b29 : 1;
-              uint32_t b30 : 1;
-              uint32_t b31 : 1;
-          };
-      } data;
-      data.value = 0;
+      uint32_t value = 0;
       digitalToggleFast(Pin::ADR_RST);
       delayNanoseconds(10);
       digitalToggleFast(Pin::ADR_RST);
       delayNanoseconds(10);
 #define X(index, c0, c1, c2, c3) { \
+    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
+    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
+    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH2)) << c2 ; \
+    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH3)) << c3 ; \
     digitalToggleFast(Pin::ADR_CLK); \
-    auto ch0 = digitalReadFast(Pin::ADR_CH0); \
-    auto ch1 = digitalReadFast(Pin::ADR_CH1); \
-    auto ch2 = digitalReadFast(Pin::ADR_CH2); \
-    auto ch3 = digitalReadFast(Pin::ADR_CH3); \
-    data.b ## c0  = ch0; \
-    data.b ## c1  = ch1; \
-    data.b ## c2  = ch2; \
-    data.b ## c3  = ch3; \
+    delayNanoseconds(25); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(50); \
+    delayNanoseconds(25); \
 }
       X(0, 0, 1, 16, 17);
       X(1, 2, 3, 18, 19);
@@ -955,7 +915,7 @@ struct i960Interface {
       //
       // According to my calculations, this should takes far less time to work
       // with
-      return data.value;
+      return value;
 
   }
   static inline bool
