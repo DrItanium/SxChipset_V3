@@ -884,6 +884,80 @@ struct i960Interface {
       //delayNanoseconds(50);
       return a |  (b << 8) | (c << 16) | (d << 24);
   }
+  static inline uint32_t 
+  getAddress2() noexcept {
+      union {
+          uint32_t value;
+          struct {
+              uint32_t b0 : 1;
+              uint32_t b1 : 1;
+              uint32_t b2 : 1;
+              uint32_t b3 : 1;
+              uint32_t b4 : 1;
+              uint32_t b5 : 1;
+              uint32_t b6 : 1;
+              uint32_t b7 : 1;
+              uint32_t b8 : 1;
+              uint32_t b9 : 1;
+              uint32_t b10 : 1;
+              uint32_t b11 : 1;
+              uint32_t b12 : 1;
+              uint32_t b13 : 1;
+              uint32_t b14 : 1;
+              uint32_t b15 : 1;
+              uint32_t b16 : 1;
+              uint32_t b17 : 1;
+              uint32_t b18 : 1;
+              uint32_t b19 : 1;
+              uint32_t b20 : 1;
+              uint32_t b21 : 1;
+              uint32_t b22 : 1;
+              uint32_t b23 : 1;
+              uint32_t b24 : 1;
+              uint32_t b25 : 1;
+              uint32_t b26 : 1;
+              uint32_t b27 : 1;
+              uint32_t b28 : 1;
+              uint32_t b29 : 1;
+              uint32_t b30 : 1;
+              uint32_t b31 : 1;
+          };
+      } data;
+      data.value = 0;
+      digitalToggleFast(Pin::ADR_RST);
+      delayNanoseconds(10);
+      digitalToggleFast(Pin::ADR_RST);
+      delayNanoseconds(10);
+#define X(index, c0, c1, c2, c3) { \
+    digitalToggleFast(Pin::ADR_CLK); \
+    auto ch0 = digitalReadFast(Pin::ADR_CH0); \
+    auto ch1 = digitalReadFast(Pin::ADR_CH1); \
+    auto ch2 = digitalReadFast(Pin::ADR_CH2); \
+    auto ch3 = digitalReadFast(Pin::ADR_CH3); \
+    data.b ## c0  = ch0; \
+    data.b ## c1  = ch1; \
+    data.b ## c2  = ch2; \
+    data.b ## c3  = ch3; \
+    digitalToggleFast(Pin::ADR_CLK); \
+    delayNanoseconds(50); \
+}
+      X(0, 0, 1, 16, 17);
+      X(1, 2, 3, 18, 19);
+      X(2, 4, 5, 20, 21);
+      X(3, 6, 7, 22, 23);
+      X(4, 8, 9, 24, 25);
+      X(5, 10, 11, 26, 27);
+      X(6, 12, 13, 28, 29);
+      X(7, 14, 15, 30, 31);
+#undef X
+      // I know this is inefficient but I want to see if it helps with access
+      // times
+      //
+      // According to my calculations, this should takes far less time to work
+      // with
+      return data.value;
+
+  }
   static inline bool
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
@@ -1262,69 +1336,7 @@ handleMemoryTransaction(void*) noexcept {
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        auto targetAddress = i960Interface::getAddress();
-        {
-            union {
-                uint32_t value;
-                struct {
-                    uint32_t b0 : 1;
-                    uint32_t b1 : 1;
-                    uint32_t b2 : 1;
-                    uint32_t b3 : 1;
-                    uint32_t b4 : 1;
-                    uint32_t b5 : 1;
-                    uint32_t b6 : 1;
-                    uint32_t b7 : 1;
-                    uint32_t b8 : 1;
-                    uint32_t b9 : 1;
-                    uint32_t b10 : 1;
-                    uint32_t b11 : 1;
-                    uint32_t b12 : 1;
-                    uint32_t b13 : 1;
-                    uint32_t b14 : 1;
-                    uint32_t b15 : 1;
-                    uint32_t b16 : 1;
-                    uint32_t b17 : 1;
-                    uint32_t b18 : 1;
-                    uint32_t b19 : 1;
-                    uint32_t b20 : 1;
-                    uint32_t b21 : 1;
-                    uint32_t b22 : 1;
-                    uint32_t b23 : 1;
-                    uint32_t b24 : 1;
-                    uint32_t b25 : 1;
-                    uint32_t b26 : 1;
-                    uint32_t b27 : 1;
-                    uint32_t b28 : 1;
-                    uint32_t b29 : 1;
-                    uint32_t b30 : 1;
-                    uint32_t b31 : 1;
-                };
-            } data;
-            data.value = 0;
-            digitalWriteFast(Pin::ADR_RST, LOW);
-            delayNanoseconds(10);
-            digitalWriteFast(Pin::ADR_RST,HIGH);
-#define X(c0, c1, c2, c3) \
-            delayNanoseconds(10); \
-            digitalWriteFast(Pin::ADR_CLK, LOW); \
-            data.b ## c0 = digitalReadFast(Pin::ADR_CH0); \
-            data.b ## c1 = digitalReadFast(Pin::ADR_CH1); \
-            data.b ## c2 = digitalReadFast(Pin::ADR_CH2); \
-            data.b ## c3 = digitalReadFast(Pin::ADR_CH3); \
-            delayNanoseconds(10); \
-            digitalWriteFast(Pin::ADR_CLK, HIGH)
-            X(0, 1, 16, 17);
-            X(2, 3, 18, 19);
-            X(4, 5, 20, 21);
-            X(6, 7, 22, 23);
-            X(8, 9, 24, 25);
-            X(10, 11, 26, 27);
-            X(12, 13, 28, 29);
-            X(14, 15, 30, 31);
-#undef X
-            Serial.printf("CH351: 0x%x vs GALs: 0x%x\n", targetAddress, data.value);
-        }
+        auto targetAddress = i960Interface::getAddress2();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
