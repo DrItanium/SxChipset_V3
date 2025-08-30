@@ -1,0 +1,12 @@
+GAL22V10
+ParallelDataCaptureMux
+
+CLK NC NC NC NC NC NC NC NC NC NC GND
+NC  NC NC NC NC NC NC NC NC NC NC VCC
+
+
+
+
+DESCRIPTION
+
+This is an implementation of a parallel address mux
