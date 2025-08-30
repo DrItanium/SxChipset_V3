@@ -888,9 +888,9 @@ struct i960Interface {
   getAddress2() noexcept {
       uint32_t value = 0;
       digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(10);
+      delayNanoseconds(25);
       digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(10);
+      delayNanoseconds(25);
 #define X(index, c0, c1, c2, c3) { \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
