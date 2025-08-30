@@ -773,65 +773,7 @@ struct i960Interface {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
-  static inline uint32_t
-  read32(uint8_t address) noexcept {
-      // so the problem is that we have a TWS pulse interval width to
-      // potentially worry about but lets just fix up reading a 32-bit value
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(address);
-      delayNanoseconds(5); // TAS is 2ns minimum so hold 5ns to be on the safe
-                           // side
-      digitalWriteFast(Pin::EBI_RD, LOW); // okay so we've pulled RD low and we
-                                          // should now give the drivers in the
-                                          // chip time to charge up and do
-                                          // their thing
-      delayNanoseconds(35); // TON is between 22 and 33ns so wait 35 to be on
-                            // the safe side 
-      uint8_t a = EBIInterface::readDataLines(); // grab the 8-bit value
-      delayNanoseconds(15); // TRW will be satisified this way
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(5); // TAH is 3ns minimum so hold for 5ns to be safe
-      delayNanoseconds(30); // TOF maximum time is 25ns so set to 30ns to be safe
-      delayNanoseconds(15); // TWS rest before we start the process again
-                            
-      EBIInterface::setAddress(address+1); // update address lines
-      delayNanoseconds(5); // TAS 
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(35);
-      uint8_t b = EBIInterface::readDataLines();
-      delayNanoseconds(15);
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(5);
-      delayNanoseconds(30);
-      delayNanoseconds(15);
 
-      EBIInterface::setAddress(address+2); // update address lines
-      delayNanoseconds(5); // TAS 
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(35);
-      uint8_t c = EBIInterface::readDataLines();
-      delayNanoseconds(15);
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(5);
-      delayNanoseconds(30);
-      delayNanoseconds(15);
-
-      EBIInterface::setAddress(address+3); // update address lines
-      delayNanoseconds(5); // TAS 
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(35);
-      uint8_t d = EBIInterface::readDataLines();
-      delayNanoseconds(15);
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(5);
-      delayNanoseconds(30);
-      delayNanoseconds(15);
-
-      return static_cast<uint32_t>(a) | 
-             (static_cast<uint32_t>(b) << 8) |
-             (static_cast<uint32_t>(c) << 16) |
-             (static_cast<uint32_t>(d) << 24);
-  }
   template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
     if constexpr (CompareWithPrevious) {
@@ -1318,8 +1260,6 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        auto targetAddress2 = i960Interface::read32(addressLines.getDataPortBaseAddress());
-        Serial.printf("old: %x vs new: %x\n", targetAddress, targetAddress2);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
