@@ -6,7 +6,8 @@
 all: NewCPUCardDecoder.jed \
 	RPiCH351Interface.jed \
 	SerialEngineDecoderChip.jed \
-	ParallelDataCaptureMux.jed
+	ParallelDataCaptureMux.jed \
+	ParallelDataCaptureMuxClockChip.jed
 
 install_RPiCH351Interface: RPiCH351Interface.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $<
@@ -20,9 +21,14 @@ install_SerialEngineDecoderChip: SerialEngineDecoderChip.jed
 install_ParallelDataCaptureMux: ParallelDataCaptureMux.jed
 	minipro -p 'ATF22V10CQZ(UES)' --write $< 
 
+install_ParallelDataCaptureMuxClockChip: ParallelDataCaptureMuxClockChip.jed
+	minipro -p 'ATF22V10CQZ(UES)' --write $< 
+
 clean:
 	@echo -n "Cleaning..."
 	@rm -rf *.chp *.fus *.jed *.pin
 	@echo "done"
 
 .PHONY: help clean
+
+
