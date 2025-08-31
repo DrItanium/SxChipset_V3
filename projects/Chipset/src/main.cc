@@ -883,9 +883,9 @@ struct i960Interface {
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH2)) << c2 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH3)) << c3 ; \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(25); \
+    delayNanoseconds(15); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(25); \
+    delayNanoseconds(15); \
 }
       X(0, 0, 1, 16, 17);
       X(1, 2, 3, 18, 19);
