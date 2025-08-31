@@ -848,7 +848,7 @@ struct i960Interface {
   triggerReady() noexcept {
       digitalWriteFast(Pin::READY, LOW);
   }
-  template<uint32_t readyDelayTimer = 50>
+  template<uint32_t readyDelayTimer = 25>
   inline static void
   finishReadyTrigger() noexcept {
       readyTriggered = false;
@@ -888,18 +888,18 @@ struct i960Interface {
   getAddress2() noexcept {
       uint32_t value = 0;
       digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(25);
+      delayNanoseconds(10);
       digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(25);
+      delayNanoseconds(10);
 #define X(index, c0, c1, c2, c3) { \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH2)) << c2 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH3)) << c3 ; \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(25); \
+    delayNanoseconds(15); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(25); \
+    delayNanoseconds(15); \
 }
       X(0, 0, 1, 16, 17);
       X(1, 2, 3, 18, 19);
