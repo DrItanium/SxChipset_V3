@@ -870,22 +870,8 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  static inline uint32_t
-  getAddress() noexcept {
-      // 780ns worth of delay
-      auto baseAddress = addressLines.getDataPortBaseAddress();
-      uint32_t a = read8(baseAddress); // at least 195ns
-      //delayNanoseconds(50);
-      uint32_t b = read8(baseAddress + 1); // at least 195ns
-      //delayNanoseconds(50);
-      uint32_t c = read8(baseAddress + 2); // at least 195ns
-      //delayNanoseconds(50);
-      uint32_t d = read8(baseAddress + 3); // at least 195ns
-      //delayNanoseconds(50);
-      return a |  (b << 8) | (c << 16) | (d << 24);
-  }
   static inline uint32_t 
-  getAddress2() noexcept {
+  getAddress() noexcept {
       uint32_t value = 0;
       digitalToggleFast(Pin::ADR_RST);
       delayNanoseconds(10);
@@ -1296,7 +1282,7 @@ handleMemoryTransaction(void*) noexcept {
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        auto targetAddress = i960Interface::getAddress2();
+        auto targetAddress = i960Interface::getAddress();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
