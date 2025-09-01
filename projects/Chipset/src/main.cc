@@ -873,12 +873,6 @@ struct i960Interface {
   static inline uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
-#if 0
-      digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(25);
-      digitalToggleFast(Pin::ADR_RST);
-      delayNanoseconds(25);
-#endif
 #define X(index, c0, c1, c2, c3) { \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
@@ -1238,7 +1232,6 @@ initializeSystem(void*) noexcept {
     inputPin(Pin::ADR_CH2);
     inputPin(Pin::ADR_CH3);
     outputPin(Pin::ADR_CLK, HIGH);
-    outputPin(Pin::ADR_RST, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::WR);
