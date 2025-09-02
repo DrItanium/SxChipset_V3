@@ -101,6 +101,7 @@ enum class Pin : uint8_t {
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
+  ReadySignalCheck = RPI_D32,
   EYESPI_TCS = RPI_D34,
   EYESPI_RST = RPI_D39,
   EYESPI_DC = RPI_D38,

@@ -54,7 +54,7 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
-constexpr auto UseEBI = false;
+constexpr auto UseEBI = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -777,24 +777,24 @@ struct i960Interface {
 
   template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
-    if constexpr (CompareWithPrevious) {
-        if (EBIOutputStorage[address] == value) {
-            return;
-        }
-    }
-    // defaultWrite8 will take 300ns since setuptime is ignored
-    // customWrite8 will take 290ns since setupTime is ignored
-    EBIInterface::setDataLinesDirection<OUTPUT>();
-    EBIInterface::setAddress(address);
-    EBIInterface::setDataLines(value);
-    delayNanoseconds(decl.addressWait);
-    //delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
-    digitalWriteFast(Pin::EBI_WR, LOW);
-    delayNanoseconds(decl.holdTime); // tWL hold for at least 80ns
-    digitalWriteFast(Pin::EBI_WR, HIGH);
-    // update the address
-    EBIOutputStorage[address] = value;
-    delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
+      if constexpr (CompareWithPrevious) {
+          if (EBIOutputStorage[address] == value) {
+              return;
+          }
+      }
+      // defaultWrite8 will take 300ns since setuptime is ignored
+      // customWrite8 will take 290ns since setupTime is ignored
+      EBIInterface::setDataLinesDirection<OUTPUT>();
+      EBIInterface::setAddress(address);
+      EBIInterface::setDataLines(value);
+      delayNanoseconds(decl.addressWait);
+      //delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      delayNanoseconds(decl.holdTime); // tWL hold for at least 80ns
+      digitalWriteFast(Pin::EBI_WR, HIGH);
+      // update the address
+      EBIOutputStorage[address] = value;
+      delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
   }
 
   template<InterfaceTimingDescription decl = customRead8>
@@ -873,6 +873,7 @@ struct i960Interface {
   }
   static inline uint32_t 
   getAddress() noexcept {
+      digitalWriteFast(Pin::ReadySignalCheck, LOW);
       uint32_t value = 0;
       if constexpr (UseEBI) {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
@@ -905,6 +906,7 @@ struct i960Interface {
       // According to my calculations, this should takes far less time to work
       // with
       }
+      digitalWriteFast(Pin::ReadySignalCheck, HIGH);
       return value;
 
   }
@@ -1248,6 +1250,7 @@ initializeSystem(void*) noexcept {
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     outputPin(Pin::SegmentStart, HIGH);
+    outputPin(Pin::ReadySignalCheck, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
