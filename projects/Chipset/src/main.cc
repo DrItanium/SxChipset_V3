@@ -1356,15 +1356,23 @@ AddressCaptureEngine::AddressCaptureEngine() {
 
 void
 AddressCaptureEngine::configure() {
-    inputPin(Pin::ADR_CH0);
-    inputPin(Pin::ADR_CH1);
-    inputPin(Pin::ADR_CH2);
-    inputPin(Pin::ADR_CH3);
-    outputPin(Pin::ADR_CLK, HIGH);
+    inputPin(Pin::ADR_CH0); // pin 2
+    inputPin(Pin::ADR_CH1); // pin 3
+    inputPin(Pin::ADR_CH2); // pin 4
+    inputPin(Pin::ADR_CH3); // pin 5
+    outputPin(Pin::ADR_CLK, HIGH); // pin 6
     // high speed and high drive configuration
     uint32_t pinConfig = IOMUXC_PAD_DSE(static_cast<uint8_t>(Pin::ADR_CLK)) | IOMUXC_PAD_SPEED(3) | ~IOMUXC_PAD_PKE | ~IOMUXC_PAD_SRE;
     IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 |= pinConfig;
     IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 &= ~pinConfig;
+    _hw->clock_gate_register &= ~(static_cast<uint32_t>(_hw->clock_gate_mask));
+    // clear the clock selector settings
+    CCM_CDCDR &= ~(CCM_CDCDR_FLEXIO1_CLK_SEL(3) | CCM_CDCDR_FLEXIO1_CLK_PRED(7) | CCM_CDCDR_FLEXIO1_CLK_PODF(7));
+    // use PLL3 PFD2 (508.24 MHz) and divide by 16
+    // Will tweak the values later on when I am ready to flatten it into a PCB
+    CCM_CDCDR |= (CCM_CDCDR_FLEXIO1_CLK_SEL(1) |
+                 CCM_CDCDR_FLEXIO1_CLK_PRED(4) |
+                 CCM_CDCDR_FLEXIO1_CLK_PODF(4)); 
     
     _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH0));
     _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH1));
@@ -1377,4 +1385,13 @@ AddressCaptureEngine::configure() {
     _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH2));
     _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH3));
     _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CLK));
+
+    // enable the clock
+    _hw->clock_gate_register |= _hw->clock_gate_mask;
+    // now we want to configure this for a four bit input per clock
+    // select pin offset pin 6
+    _p->SHIFTCTL[1] = 0b00000'000'1'00000'11'000'00010'0'0000'001;  // start at pin 2
+    _p->SHIFTCFG[1] = 0b00000000000'00011'000'0'00'0'0'00'00'00'00; // 4-bit wide
+    //hw->TIMCMP[0]
+
 }
