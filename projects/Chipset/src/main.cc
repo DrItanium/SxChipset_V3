@@ -1199,9 +1199,10 @@ TaskHandle_t memoryTask = nullptr,
              systemCounterTask = nullptr;
 void
 triggerADS() noexcept {
-    BaseType_t higherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveIndexedFromISR(memoryTask, 1, &higherPriorityTaskWoken);
-    portYIELD_FROM_ISR(higherPriorityTaskWoken);
+    //BaseType_t higherPriorityTaskWoken = pdFALSE;
+    //vTaskNotifyGiveIndexedFromISR(memoryTask, 1, &higherPriorityTaskWoken);
+    //portYIELD_FROM_ISR(higherPriorityTaskWoken);
+    adsTriggered = true;
 }
 void
 triggerReadySync() noexcept {
@@ -1246,6 +1247,7 @@ initializeSystem(void*) noexcept {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
+    outputPin(Pin::SegmentStart, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
@@ -1281,7 +1283,11 @@ void
 handleMemoryTransaction(void*) noexcept {
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     while (true) {
-        ulTaskNotifyTakeIndexed(1, pdTRUE, portMAX_DELAY);
+        while (!adsTriggered) {
+            taskYIELD();
+        }
+        digitalWriteFast(Pin::SegmentStart, LOW);
+        adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
@@ -1291,6 +1297,7 @@ handleMemoryTransaction(void*) noexcept {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
+        digitalWriteFast(Pin::SegmentStart, HIGH);
     }
     vTaskDelete(nullptr);
 }

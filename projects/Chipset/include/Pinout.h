@@ -97,6 +97,7 @@ enum class Pin : uint8_t {
   ADR_CH2 = RPI_D25,
   ADR_CH3 = RPI_D26,
   ADR_CLK = RPI_D27,
+  SegmentStart = RPI_D28,
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
