@@ -54,6 +54,7 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
+constexpr auto UseEBI = false;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -873,6 +874,12 @@ struct i960Interface {
   static inline uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
+      if constexpr (UseEBI) {
+        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      } else {
 #define X(index, c0, c1, c2, c3) { \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
     value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
@@ -883,20 +890,21 @@ struct i960Interface {
     digitalToggleFast(Pin::ADR_CLK); \
     delayNanoseconds(15); \
 }
-      X(0, 0, 1, 16, 17);
-      X(1, 2, 3, 18, 19);
-      X(2, 4, 5, 20, 21);
-      X(3, 6, 7, 22, 23);
-      X(4, 8, 9, 24, 25);
-      X(5, 10, 11, 26, 27);
-      X(6, 12, 13, 28, 29);
-      X(7, 14, 15, 30, 31);
+        X(0, 0, 1, 16, 17);
+        X(1, 2, 3, 18, 19);
+        X(2, 4, 5, 20, 21);
+        X(3, 6, 7, 22, 23);
+        X(4, 8, 9, 24, 25);
+        X(5, 10, 11, 26, 27);
+        X(6, 12, 13, 28, 29);
+        X(7, 14, 15, 30, 31);
 #undef X
       // I know this is inefficient but I want to see if it helps with access
       // times
       //
       // According to my calculations, this should takes far less time to work
       // with
+      }
       return value;
 
   }
