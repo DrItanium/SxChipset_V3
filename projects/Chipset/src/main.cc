@@ -1392,6 +1392,12 @@ AddressCaptureEngine::configure() {
     // select pin offset pin 6
     _p->SHIFTCTL[1] = 0b00000'000'1'00000'11'000'00010'0'0000'001;  // start at pin 2
     _p->SHIFTCFG[1] = 0b00000000000'00011'000'0'00'0'0'00'00'00'00; // 4-bit wide
-    //hw->TIMCMP[0]
+    _p->TIMCMP[0] = 0x0000'3F03; // divide flexio clock by 4
+    _p->TIMCFG[0] = 0x0100'2222;
+
+    _p->TIMCTL[0] = 0x01c3'0601;
+    //_p->SHIFTBUF[1] contains the data to be received
+    // how do we trigger the read operation now?
+    // That is the next step
 
 }
