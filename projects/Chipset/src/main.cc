@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
+#include <FlexIO_t4.h>
 #include <arduino_freertos.h>
 #include <Adafruit_IS31FL3741.h>
 
@@ -58,6 +59,21 @@ constexpr auto UseEBI = false;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+constexpr auto AddressCaptureFlexIOPort = 0; // FLEXIO1
+                                             // Use the teensy 4.1 pin2:4,33,
+                                             // and 5 for this.
+                                             // p2,3,4, and 33 are the data
+                                             // input lines
+                                             //
+                                             // p5 is the clock signal
+struct AddressCaptureEngine {
+    AddressCaptureEngine();
+    void configure();
+    FlexIOHandler* _handler;
+    IMXRT_FLEXIO_t* _p;
+    const FlexIOHandler::FLEXIO_Hardware_t* _hw;
+};
+AddressCaptureEngine ace;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
@@ -1331,3 +1347,34 @@ void
 loop() {
 }
 
+
+AddressCaptureEngine::AddressCaptureEngine() {
+    _handler = FlexIOHandler::flexIOHandler_list[AddressCaptureFlexIOPort];
+    _p = &_handler->port();
+    _hw = &_handler->hardware();
+}
+
+void
+AddressCaptureEngine::configure() {
+    inputPin(Pin::ADR_CH0);
+    inputPin(Pin::ADR_CH1);
+    inputPin(Pin::ADR_CH2);
+    inputPin(Pin::ADR_CH3);
+    outputPin(Pin::ADR_CLK, HIGH);
+    // high speed and high drive configuration
+    uint32_t pinConfig = IOMUXC_PAD_DSE(static_cast<uint8_t>(Pin::ADR_CLK)) | IOMUXC_PAD_SPEED(3) | ~IOMUXC_PAD_PKE | ~IOMUXC_PAD_SRE;
+    IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 |= pinConfig;
+    IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 &= ~pinConfig;
+    
+    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH0));
+    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH1));
+    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH2));
+    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH3));
+    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CLK));
+
+    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH0));
+    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH1));
+    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH2));
+    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH3));
+    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CLK));
+}
