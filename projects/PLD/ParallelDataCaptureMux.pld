@@ -4,7 +4,10 @@ ParallelDataCaptureMux
 CLK I0 I1 I2 I3 I4 I5 I6 I7 A0 A1 GND
 A2  I8 I9 I10 I11 I12 I13 I14 I15 OT2 OT VCC
 
+; OT is the lower channel which selects between the lower 8 inputs
 OT = I0 * /A0 * /A1 * /A2 + I1 * A0 * /A1 * /A2 + I2 * /A0 * A1 * /A2 + I3 * A0 * A1 * /A2 + I4 * /A0 * /A1 * A2 + I5 * A0 * /A1 * A2 + I6 * /A0 * A1 * A2 + I7 * A0 * A1 * A2
+
+; OT2 is the upper channel which selects between the upper 8 inputs
 OT2 = I8 * /A0 * /A1 * /A2 + I9 * A0 * /A1 * /A2 + I10 * /A0 * A1 * /A2 + I11 * A0 * A1 * /A2 + I12 * /A0 * /A1 * A2 + I13 * A0 * /A1 * A2 + I14 * /A0 * A1 * A2 + I15 * A0 * A1 * A2
 
 DESCRIPTION
