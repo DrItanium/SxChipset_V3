@@ -901,7 +901,6 @@ struct i960Interface {
     uint32_t part = GPIO9_PSR; \
     part >>= 4; \
     part &= 0b1111; \
-    __dsb(); \
     uint32_t lo = (part & 0b11) << c0; \
     uint32_t hi = ((part >> 2) & 0b11) << c2; \
     value |= lo; \
