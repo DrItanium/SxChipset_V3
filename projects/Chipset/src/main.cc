@@ -902,7 +902,7 @@ struct i960Interface {
     part >>= 4; \
     part &= 0b1111; \
     uint32_t lo = (part & 0b11) << c0; \
-    uint32_t hi = ((part >> 2) & 0b11) << c2; \
+    uint32_t hi = (part & 0b1100) << (c2 - 2); \
     value |= lo; \
     value |= hi; \
     digitalToggleFast(Pin::ADR_CLK); \
