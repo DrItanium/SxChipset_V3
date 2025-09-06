@@ -898,14 +898,18 @@ struct i960Interface {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       } else {
 #define X(index, c0, c1, c2, c3) { \
-    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH0)) << c0 ; \
-    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH1)) << c1 ; \
-    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH2)) << c2 ; \
-    value |= static_cast<uint32_t>(digitalReadFast(Pin::ADR_CH3)) << c3 ; \
+    uint32_t part = GPIO9_PSR; \
+    part >>= 4; \
+    part &= 0b1111; \
+    __dsb(); \
+    uint32_t lo = (part & 0b11) << c0; \
+    uint32_t hi = ((part >> 2) & 0b11) << c2; \
+    value |= lo; \
+    value |= hi; \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(15); \
+    delayNanoseconds(30); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(15); \
+    delayNanoseconds(30); \
 }
         X(0, 0, 1, 16, 17);
         X(1, 2, 3, 18, 19);
