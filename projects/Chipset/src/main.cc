@@ -862,7 +862,7 @@ struct i960Interface {
       // run and block until we get the completion pulse
       digitalWriteFast(Pin::READY, LOW);
       {
-          while (!readyTriggered);
+          while (!readyTriggered) { }
       }
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
