@@ -1275,7 +1275,7 @@ initializeSystem(void*) noexcept {
     setupLEDMatrix();
     Entropy.Initialize();
     taskDISABLE_INTERRUPTS();
-    attachInterrupt(Pin::ADS, triggerADS, RISING);
+    attachInterrupt(Pin::ADS, triggerADS, FALLING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     taskENABLE_INTERRUPTS();
     displayClockSpeedInformation();
@@ -1291,19 +1291,19 @@ handleMemoryTransaction(void*) noexcept {
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     while (true) {
         while (!adsTriggered) { }
+        __dsb();
+        digitalToggleFast(Pin::SegmentStart);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
-        __dsb();
-        //while (digitalReadFast(Pin::DEN) == HIGH) ;
-        digitalWriteFast(Pin::SegmentStart, LOW);
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        digitalWriteFast(Pin::SegmentStart, HIGH);
+        digitalToggleFast(Pin::SegmentStart);
     }
     vTaskDelete(nullptr);
 }
