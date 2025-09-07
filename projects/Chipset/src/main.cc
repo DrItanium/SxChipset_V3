@@ -876,7 +876,6 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<uint32_t DelayAmount = 30>
   static inline uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
@@ -895,9 +894,9 @@ struct i960Interface {
     value |= lo; \
     value |= hi; \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(DelayAmount); \
+    delayNanoseconds(30); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(DelayAmount); \
+    delayNanoseconds(30); \
 }
         X(0, 0, 1, 16, 17);
         X(1, 2, 3, 18, 19);
@@ -1293,18 +1292,18 @@ handleMemoryTransaction(void*) noexcept {
     while (true) {
         while (!adsTriggered) { }
         __dsb();
-        digitalToggleFast(Pin::SegmentStart);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
+        digitalToggleFast(Pin::SegmentStart);
         auto targetAddress = i960Interface::getAddress();
+        digitalToggleFast(Pin::SegmentStart);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        digitalToggleFast(Pin::SegmentStart);
     }
     vTaskDelete(nullptr);
 }
