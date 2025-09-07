@@ -1295,7 +1295,7 @@ handleMemoryTransaction(void*) noexcept {
         adsTriggered = false;
         readyTriggered = false;
         __dsb();
-        //while (digitalReadFast(Pin::DEN) == HIGH) ;
+        while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
