@@ -856,28 +856,17 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<0, compareWithPrevious>();
   }
-  static void
-  waitForReadyTrigger() noexcept {
-        while (!readyTriggered) { 
-        }
-  }
-  inline static void 
-  triggerReady() noexcept {
-      digitalWriteFast(Pin::READY, LOW);
-  }
   template<uint32_t readyDelayTimer = 25>
-  inline static void
-  finishReadyTrigger() noexcept {
+  static void
+  signalReady() noexcept {
+      // run and block until we get the completion pulse
+      digitalWriteFast(Pin::READY, LOW);
+      {
+        while (!readyTriggered);
+      }
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(readyDelayTimer);  // wait some amount of time
-  }
-  static inline void
-  signalReady() noexcept {
-      // run and block until we get the completion pulse
-      triggerReady();
-      waitForReadyTrigger();
-      finishReadyTrigger();
   }
   static inline bool
   isReadOperation() noexcept {
@@ -889,7 +878,6 @@ struct i960Interface {
   }
   static inline uint32_t 
   getAddress() noexcept {
-      digitalWriteFast(Pin::ReadySignalCheck, LOW);
       uint32_t value = 0;
       if constexpr (UseEBI) {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
@@ -925,7 +913,6 @@ struct i960Interface {
       // According to my calculations, this should takes far less time to work
       // with
       }
-      digitalWriteFast(Pin::ReadySignalCheck, HIGH);
       return value;
 
   }
@@ -967,8 +954,7 @@ struct i960Interface {
   static inline void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
-          auto lines = target.getWord(wordOffset);
-          writeDataLines(lines);
+          writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
               break;
           } 
@@ -989,8 +975,7 @@ struct i960Interface {
   static inline void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
-          auto lines = readDataLines();
-          target.setWord(wordOffset, lines, byteEnableLow(), byteEnableHigh());
+          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               break;
           } 
@@ -1308,7 +1293,7 @@ handleMemoryTransaction(void*) noexcept {
         while (!adsTriggered) {
             taskYIELD();
         }
-        digitalWriteFast(Pin::SegmentStart, LOW);
+        //digitalWriteFast(Pin::SegmentStart, LOW);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
@@ -1319,7 +1304,7 @@ handleMemoryTransaction(void*) noexcept {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        digitalWriteFast(Pin::SegmentStart, HIGH);
+        //digitalWriteFast(Pin::SegmentStart, HIGH);
     }
     vTaskDelete(nullptr);
 }
