@@ -1290,21 +1290,20 @@ void
 handleMemoryTransaction(void*) noexcept {
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     while (true) {
-        while (!adsTriggered) {
-            taskYIELD();
-        }
-        //digitalWriteFast(Pin::SegmentStart, LOW);
+        while (!adsTriggered) { }
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
-        while (digitalReadFast(Pin::DEN) == HIGH) ;
+        __dsb();
+        //while (digitalReadFast(Pin::DEN) == HIGH) ;
+        digitalWriteFast(Pin::SegmentStart, LOW);
         auto targetAddress = i960Interface::getAddress();
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        //digitalWriteFast(Pin::SegmentStart, HIGH);
+        digitalWriteFast(Pin::SegmentStart, HIGH);
     }
     vTaskDelete(nullptr);
 }
