@@ -861,9 +861,9 @@ struct i960Interface {
   signalReady() noexcept {
       // run and block until we get the completion pulse
       digitalWriteFast(Pin::READY, LOW);
-      __dsb();
-      while (!readyTriggered);
-      __dsb();
+      {
+          while (!readyTriggered);
+      }
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(readyDelayTimer);  // wait some amount of time
@@ -1276,7 +1276,7 @@ initializeSystem(void*) noexcept {
     Entropy.Initialize();
     taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, FALLING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     taskENABLE_INTERRUPTS();
     displayClockSpeedInformation();
     pullCPUOutOfReset();
