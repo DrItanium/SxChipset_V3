@@ -1293,12 +1293,10 @@ handleMemoryTransaction(void*) noexcept {
         while (!adsTriggered) { }
         __dsb();
         adsTriggered = false;
-        // we want nothing else to take over while this section is running
         readyTriggered = false;
+        __dsb();
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-        digitalToggleFast(Pin::SegmentStart);
         auto targetAddress = i960Interface::getAddress();
-        digitalToggleFast(Pin::SegmentStart);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
