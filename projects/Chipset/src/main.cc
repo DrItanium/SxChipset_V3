@@ -861,9 +861,9 @@ struct i960Interface {
   signalReady() noexcept {
       // run and block until we get the completion pulse
       digitalWriteFast(Pin::READY, LOW);
-      {
-        while (!readyTriggered);
-      }
+      __dsb();
+      while (!readyTriggered);
+      __dsb();
       readyTriggered = false;
       digitalWriteFast(Pin::READY, HIGH);
       delayNanoseconds(readyDelayTimer);  // wait some amount of time
