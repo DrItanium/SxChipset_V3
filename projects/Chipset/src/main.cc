@@ -856,7 +856,7 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<0, compareWithPrevious>();
   }
-  template<uint32_t readyDelayTimer = 25>
+  template<uint32_t readyDelayTimer = 10>
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
