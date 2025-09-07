@@ -876,6 +876,7 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+  template<uint32_t DelayAmount = 30>
   static inline uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
@@ -894,9 +895,9 @@ struct i960Interface {
     value |= lo; \
     value |= hi; \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(30); \
+    delayNanoseconds(DelayAmount); \
     digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(30); \
+    delayNanoseconds(DelayAmount); \
 }
         X(0, 0, 1, 16, 17);
         X(1, 2, 3, 18, 19);
