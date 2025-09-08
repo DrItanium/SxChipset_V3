@@ -1,0 +1,22 @@
+GAL22V10
+DENAndADSDetector
+
+CLK ADS DEN NC NC NC NC NC NC NC NC GND
+NC  NC  NC  NC NC FE D0 D1 A0 A1 RE VCC
+
+; RE is the detection circuit for ADS rising while DEN is falling
+
+D0.R = DEN
+D1.R = D0
+A0.R = ADS
+A1.R = A0
+RE.R = /D0 * D1 * A0 * /A1
+FE.R = /A0 * A1
+
+DESCRIPTION
+
+Detects the ADS and DEN states of the i960
+
+We see the rising edge of the ADS and the concurrent falling edge of the DEN at
+the same time. Also we detect the falling edge of the ADS pin as well for
+testing purposes.
