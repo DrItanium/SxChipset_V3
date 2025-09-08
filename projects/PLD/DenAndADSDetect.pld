@@ -1,10 +1,11 @@
 GAL22V10
 DENAndADSDetector
 
-CLK ADS DEN BLAST NC NC NC NC NC NC NC GND
-NC  NC  NC  NC    NC FE D0 D1 A0 A1 RE VCC
+CLK ADS DEN BLAST NC  NC NC NC NC NC NC GND
+NC  NC  NC  NC    RE2 FE D0 D1 A0 A1 RE VCC
 
 ; RE is the detection circuit for ADS rising while DEN is falling
+; RE2 is used for the DEN signal
 
 ; two stage synchronizer
 D0.R = DEN
@@ -18,6 +19,7 @@ A1.R = A0
 ; This just detects when ADS is going LOW as part of the start of the address
 ; transaction
 /FE.R = /A0 * A1
+/RE2.R = /DEN * /BLAST
 
 DESCRIPTION
 
