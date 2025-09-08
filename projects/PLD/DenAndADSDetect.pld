@@ -1,11 +1,10 @@
 GAL22V10
 DENAndADSDetector
 
-CLK ADS DEN NC NC NC NC NC NC NC NC GND
-NC  NC  A2  FT0 FT1 FE D0 D1 A0 A1 RE VCC
+CLK ADS DEN BLAST NC NC NC NC NC NC NC GND
+NC  NC  NC  NC    NC FE D0 D1 A0 A1 RE VCC
 
 ; RE is the detection circuit for ADS rising while DEN is falling
-; FT stands for full transaction and 0 is for one style and 1 is for the other
 
 ; two stage synchronizer
 D0.R = DEN
@@ -15,14 +14,10 @@ A0.R = ADS
 A1.R = A0
 ; RE is the rising edge detector, what it does is detect that ADS is going high
 ; while DEN is going LOW at the same time. 
-RE.R = /D0 * D1 * A0 * /A1
+/RE.R = /D0 * D1 * A0 * /A1
 ; This just detects when ADS is going LOW as part of the start of the address
 ; transaction
-FE.R = /A0 * A1
-; three stage synchronizer
-A2.R = A1
-FT0.R = A0 * /A1 * A2
-FT1.R = /A0 * A1 * /A2
+/FE.R = /A0 * A1
 
 DESCRIPTION
 

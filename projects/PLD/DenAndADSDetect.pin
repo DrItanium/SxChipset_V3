@@ -5,7 +5,7 @@
    1   | CLK      | Clock/Input
    2   | ADS      | Input
    3   | DEN      | Input
-   4   | NC       | Input
+   4   | BLAST    | Input
    5   | NC       | Input
    6   | NC       | Input
    7   | NC       | Input
@@ -16,9 +16,9 @@
   12   | GND      | GND
   13   | NC       | Input
   14   | NC       | NC
-  15   | A2       | Output
-  16   | FT0      | Output
-  17   | FT1      | Output
+  15   | NC       | NC
+  16   | NC       | NC
+  17   | NC       | NC
   18   | FE       | Output
   19   | D0       | Output
   20   | D1       | Output
