@@ -8,7 +8,7 @@
     "image": ""
   },
   "design": {
-    "board": "upduino31",
+    "board": "alhambra-ii",
     "graph": {
       "blocks": [
         {
@@ -140,8 +140,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "gpio_20",
-                "value": "20"
+                "name": "CLK",
+                "value": "49"
               }
             ],
             "clock": true
@@ -380,8 +380,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "gpio_35",
-                "value": "35"
+                "name": "D3",
+                "value": "3"
               }
             ]
           },
@@ -651,8 +651,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "gpio_2",
-                "value": "2"
+                "name": "D4",
+                "value": "8"
               }
             ]
           },
@@ -679,88 +679,6 @@
           "position": {
             "x": 1528,
             "y": 1752
-          }
-        },
-        {
-          "id": "78f92074-229a-4b09-88c4-5e5190eefc7f",
-          "type": "basic.input",
-          "data": {
-            "name": "ADS",
-            "virtual": false,
-            "pins": [
-              {
-                "index": "0",
-                "name": "gpio_28",
-                "value": "28"
-              }
-            ],
-            "clock": false,
-            "isParametric": false
-          },
-          "position": {
-            "x": 600,
-            "y": 1768
-          }
-        },
-        {
-          "id": "87095c7c-d59b-455c-8048-2c2f7052ce24",
-          "type": "basic.inputLabel",
-          "data": {
-            "name": "ADS",
-            "blockColor": "fuchsia",
-            "virtual": true,
-            "pins": [
-              {
-                "index": "0",
-                "name": "NULL",
-                "value": "NULL"
-              }
-            ]
-          },
-          "position": {
-            "x": 784,
-            "y": 1768
-          }
-        },
-        {
-          "id": "0620a1b9-0094-4c21-8438-8c68461bcf6d",
-          "type": "basic.input",
-          "data": {
-            "name": "DEN",
-            "virtual": false,
-            "pins": [
-              {
-                "index": "0",
-                "name": "gpio_38",
-                "value": "38"
-              }
-            ],
-            "clock": false,
-            "isParametric": false
-          },
-          "position": {
-            "x": 600,
-            "y": 1840
-          }
-        },
-        {
-          "id": "0474147c-fea0-4001-bff8-e9a7e1122a82",
-          "type": "basic.inputLabel",
-          "data": {
-            "name": "DEN",
-            "blockColor": "fuchsia",
-            "virtual": true,
-            "pins": [
-              {
-                "index": "0",
-                "name": "NULL",
-                "value": "NULL"
-              }
-            ]
-          },
-          "position": {
-            "x": 784,
-            "y": 1840
           }
         },
         {
@@ -859,13 +777,13 @@
             "pins": [
               {
                 "index": "1",
-                "name": "gpio_23",
-                "value": "23"
+                "name": "D13",
+                "value": "64"
               },
               {
                 "index": "0",
-                "name": "gpio_26",
-                "value": "26"
+                "name": "D12",
+                "value": "63"
               }
             ]
           },
@@ -1043,8 +961,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "gpio_3",
-                "value": "3"
+                "name": "D8",
+                "value": "20"
               }
             ]
           },
@@ -1109,7 +1027,7 @@
             ]
           },
           "position": {
-            "x": 1568,
+            "x": 1536,
             "y": 2456
           }
         },
@@ -1122,8 +1040,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "gpio_42",
-                "value": "42"
+                "name": "D0",
+                "value": "2"
               }
             ],
             "clock": false
@@ -1154,6 +1072,47 @@
           }
         },
         {
+          "id": "78f92074-229a-4b09-88c4-5e5190eefc7f",
+          "type": "basic.input",
+          "data": {
+            "name": "ADS",
+            "virtual": false,
+            "pins": [
+              {
+                "index": "0",
+                "name": "D1",
+                "value": "1"
+              }
+            ],
+            "clock": false,
+            "isParametric": false
+          },
+          "position": {
+            "x": 1352,
+            "y": 2528
+          }
+        },
+        {
+          "id": "87095c7c-d59b-455c-8048-2c2f7052ce24",
+          "type": "basic.inputLabel",
+          "data": {
+            "name": "ADS",
+            "blockColor": "fuchsia",
+            "virtual": true,
+            "pins": [
+              {
+                "index": "0",
+                "name": "NULL",
+                "value": "NULL"
+              }
+            ]
+          },
+          "position": {
+            "x": 1536,
+            "y": 2528
+          }
+        },
+        {
           "id": "8442062c-e52c-48d8-8850-3c2c32650840",
           "type": "basic.inputLabel",
           "data": {
@@ -1171,6 +1130,47 @@
           "position": {
             "x": 224,
             "y": 2536
+          }
+        },
+        {
+          "id": "0620a1b9-0094-4c21-8438-8c68461bcf6d",
+          "type": "basic.input",
+          "data": {
+            "name": "DEN",
+            "virtual": false,
+            "pins": [
+              {
+                "index": "0",
+                "name": "D2",
+                "value": "4"
+              }
+            ],
+            "clock": false,
+            "isParametric": false
+          },
+          "position": {
+            "x": 1352,
+            "y": 2600
+          }
+        },
+        {
+          "id": "0474147c-fea0-4001-bff8-e9a7e1122a82",
+          "type": "basic.inputLabel",
+          "data": {
+            "name": "DEN",
+            "blockColor": "fuchsia",
+            "virtual": true,
+            "pins": [
+              {
+                "index": "0",
+                "name": "NULL",
+                "value": "NULL"
+              }
+            ]
+          },
+          "position": {
+            "x": 1536,
+            "y": 2600
           }
         },
         {
