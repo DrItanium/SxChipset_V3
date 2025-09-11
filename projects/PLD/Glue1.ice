@@ -537,6 +537,25 @@
           }
         },
         {
+          "id": "15a2ef5b-18e4-40ea-8e16-31924f71d31f",
+          "type": "basic.output",
+          "data": {
+            "name": "READY_FEEDBACK",
+            "virtual": false,
+            "pins": [
+              {
+                "index": "0",
+                "name": "D4",
+                "value": "8"
+              }
+            ]
+          },
+          "position": {
+            "x": 1568,
+            "y": 1648
+          }
+        },
+        {
           "id": "fcf482f7-fe99-4260-bb84-24f0841bca8e",
           "type": "basic.outputLabel",
           "data": {
@@ -557,25 +576,6 @@
           }
         },
         {
-          "id": "15a2ef5b-18e4-40ea-8e16-31924f71d31f",
-          "type": "basic.output",
-          "data": {
-            "name": "READY_FEEDBACK",
-            "virtual": false,
-            "pins": [
-              {
-                "index": "0",
-                "name": "D4",
-                "value": "8"
-              }
-            ]
-          },
-          "position": {
-            "x": 1552,
-            "y": 1704
-          }
-        },
-        {
           "id": "02c08ac9-22c9-4a64-8a85-4ba4a81e4c0b",
           "type": "basic.input",
           "data": {
@@ -591,7 +591,7 @@
             "clock": false
           },
           "position": {
-            "x": 816,
+            "x": 824,
             "y": 1712
           }
         },
@@ -1485,16 +1485,6 @@
         },
         {
           "source": {
-            "block": "000c463c-4a0f-4879-b9e9-db6a39d5f35a",
-            "port": "664caf9e-5f40-4df4-800a-b626af702e62"
-          },
-          "target": {
-            "block": "15a2ef5b-18e4-40ea-8e16-31924f71d31f",
-            "port": "in"
-          }
-        },
-        {
-          "source": {
             "block": "7db8a3e0-cf26-4af8-9f32-f69fcf53ed66",
             "port": "9e864fa8-af58-46dd-9b16-8bc862c8fb46"
           },
@@ -1555,16 +1545,6 @@
           "target": {
             "block": "2b47afaa-363c-4f0e-8fde-f8cce3a1c9ab",
             "port": "1ee1f0e1-9e00-4224-82dd-d976319e771f"
-          }
-        },
-        {
-          "source": {
-            "block": "02c08ac9-22c9-4a64-8a85-4ba4a81e4c0b",
-            "port": "out"
-          },
-          "target": {
-            "block": "6362395e-13af-4726-b2bb-e42f0e63feb7",
-            "port": "bf2f0c53-2d04-4cba-aa70-2df85502d24f"
           }
         },
         {
@@ -1636,6 +1616,26 @@
           "target": {
             "block": "1d47985d-b738-4033-b442-9ee65b0c822f",
             "port": "inlabel"
+          }
+        },
+        {
+          "source": {
+            "block": "02c08ac9-22c9-4a64-8a85-4ba4a81e4c0b",
+            "port": "out"
+          },
+          "target": {
+            "block": "6362395e-13af-4726-b2bb-e42f0e63feb7",
+            "port": "bf2f0c53-2d04-4cba-aa70-2df85502d24f"
+          }
+        },
+        {
+          "source": {
+            "block": "000c463c-4a0f-4879-b9e9-db6a39d5f35a",
+            "port": "664caf9e-5f40-4df4-800a-b626af702e62"
+          },
+          "target": {
+            "block": "15a2ef5b-18e4-40ea-8e16-31924f71d31f",
+            "port": "in"
           }
         }
       ]
