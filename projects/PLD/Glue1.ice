@@ -3868,6 +3868,16 @@
             "block": "7003ffec-12be-428a-8597-5bf340a80905",
             "port": "b48d3bc5-541e-425e-b17f-926edf72c8ae"
           }
+        },
+        {
+          "source": {
+            "block": "5e7f844c-fe6c-46d8-81f5-c54bb3484a93",
+            "port": "9c4e6a55-2e25-4664-b90a-6fa81c8113f1"
+          },
+          "target": {
+            "block": "1ba97be8-73c7-4b2b-872b-19955b40aba4",
+            "port": "5e7920f4-32b5-4f7d-ac0e-30d6f69976de"
+          }
         }
       ]
     }
