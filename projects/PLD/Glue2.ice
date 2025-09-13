@@ -363,7 +363,7 @@
           }
         },
         {
-          "id": "0321a1aa-1ac6-4c14-9105-3d99a4cebe4f",
+          "id": "4c39ac1f-243c-4225-9769-eec27827d134",
           "type": "basic.outputLabel",
           "data": {
             "name": "CLK1",
@@ -378,8 +378,8 @@
             ]
           },
           "position": {
-            "x": 904,
-            "y": 1624
+            "x": 824,
+            "y": 1632
           }
         },
         {
@@ -2019,7 +2019,7 @@
           "type": "basic.constant",
           "data": {
             "name": "REG1_DEFAULT",
-            "value": "'h00",
+            "value": "'b00000001",
             "local": false
           },
           "position": {
@@ -2498,26 +2498,6 @@
           "target": {
             "block": "3dfa1efd-6e90-4015-8f02-75d8ecff9021",
             "port": "bf2f0c53-2d04-4cba-aa70-2df85502d24f"
-          }
-        },
-        {
-          "source": {
-            "block": "0321a1aa-1ac6-4c14-9105-3d99a4cebe4f",
-            "port": "outlabel"
-          },
-          "target": {
-            "block": "6362395e-13af-4726-b2bb-e42f0e63feb7",
-            "port": "3943e194-090b-4553-9df3-88bc4b17abc2"
-          }
-        },
-        {
-          "source": {
-            "block": "0321a1aa-1ac6-4c14-9105-3d99a4cebe4f",
-            "port": "outlabel"
-          },
-          "target": {
-            "block": "3dfa1efd-6e90-4015-8f02-75d8ecff9021",
-            "port": "3943e194-090b-4553-9df3-88bc4b17abc2"
           }
         },
         {
@@ -3541,6 +3521,26 @@
           "target": {
             "block": "e553c3ec-03e0-478f-b7fc-1c5d6ba5334f",
             "port": "inlabel"
+          }
+        },
+        {
+          "source": {
+            "block": "4c39ac1f-243c-4225-9769-eec27827d134",
+            "port": "outlabel"
+          },
+          "target": {
+            "block": "6362395e-13af-4726-b2bb-e42f0e63feb7",
+            "port": "3943e194-090b-4553-9df3-88bc4b17abc2"
+          }
+        },
+        {
+          "source": {
+            "block": "4c39ac1f-243c-4225-9769-eec27827d134",
+            "port": "outlabel"
+          },
+          "target": {
+            "block": "3dfa1efd-6e90-4015-8f02-75d8ecff9021",
+            "port": "3943e194-090b-4553-9df3-88bc4b17abc2"
           }
         }
       ]
