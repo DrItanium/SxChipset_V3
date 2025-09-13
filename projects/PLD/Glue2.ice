@@ -4241,6 +4241,16 @@
             "block": "00dea79a-510a-44a0-a75c-3721c140cc69",
             "port": "ca7c5f10-efb6-43f9-9364-52d751fc0bc6"
           }
+        },
+        {
+          "source": {
+            "block": "1507d44e-f1cf-44af-9fdb-dfcaed9881d9",
+            "port": "outlabel"
+          },
+          "target": {
+            "block": "00dea79a-510a-44a0-a75c-3721c140cc69",
+            "port": "2a921d76-1cbd-48fe-82a9-11b0ab4dbc06"
+          }
         }
       ]
     }
