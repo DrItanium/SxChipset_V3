@@ -8,7 +8,7 @@
     "image": ""
   },
   "design": {
-    "board": "alhambra-ii",
+    "board": "upduino31",
     "graph": {
       "blocks": [
         {
@@ -67,8 +67,8 @@
             ]
           },
           "position": {
-            "x": 96,
-            "y": 984
+            "x": -24,
+            "y": 992
           }
         },
         {
@@ -80,15 +80,15 @@
             "pins": [
               {
                 "index": "0",
-                "name": "CLK",
-                "value": "49"
+                "name": "gpio_35",
+                "value": "35"
               }
             ],
             "clock": true
           },
           "position": {
-            "x": -512,
-            "y": 984
+            "x": -552,
+            "y": 992
           }
         },
         {
@@ -292,6 +292,26 @@
           }
         },
         {
+          "id": "70d83b1c-4d36-4987-9bed-85e4d24c12f4",
+          "type": "basic.input",
+          "data": {
+            "name": "foo",
+            "virtual": false,
+            "pins": [
+              {
+                "index": "0",
+                "name": "NULL",
+                "value": "NULL"
+              }
+            ],
+            "clock": true
+          },
+          "position": {
+            "x": -1928,
+            "y": 1520
+          }
+        },
+        {
           "id": "dbc503ad-eee2-4a34-8915-52cbb9a2455e",
           "type": "basic.outputLabel",
           "data": {
@@ -321,13 +341,13 @@
             "pins": [
               {
                 "index": "1",
-                "name": "D1",
-                "value": "1"
+                "name": "gpio_23",
+                "value": "23"
               },
               {
                 "index": "0",
-                "name": "D0",
-                "value": "2"
+                "name": "gpio_25",
+                "value": "25"
               }
             ]
           },
@@ -391,8 +411,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D8",
-                "value": "20"
+                "name": "gpio_37",
+                "value": "37"
               }
             ]
           },
@@ -410,8 +430,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D9",
-                "value": "19"
+                "name": "gpio_31",
+                "value": "31"
               }
             ],
             "clock": false
@@ -430,8 +450,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D12",
-                "value": "63"
+                "name": "gpio_47",
+                "value": "47"
               }
             ]
           },
@@ -470,13 +490,13 @@
             "pins": [
               {
                 "index": "1",
-                "name": "D7",
-                "value": "9"
+                "name": "gpio_36",
+                "value": "36"
               },
               {
                 "index": "0",
-                "name": "D6",
-                "value": "10"
+                "name": "gpio_42",
+                "value": "42"
               }
             ]
           },
@@ -514,8 +534,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D11",
-                "value": "21"
+                "name": "gpio_46",
+                "value": "46"
               }
             ],
             "clock": false
@@ -590,8 +610,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D13",
-                "value": "64"
+                "name": "gpio_45",
+                "value": "45"
               }
             ],
             "clock": false
@@ -666,8 +686,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D10",
-                "value": "22"
+                "name": "gpio_2",
+                "value": "2"
               }
             ],
             "clock": false
@@ -706,8 +726,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D4",
-                "value": "8"
+                "name": "gpio_38",
+                "value": "38"
               }
             ],
             "clock": false
@@ -822,8 +842,8 @@
             "pins": [
               {
                 "index": "0",
-                "name": "D5",
-                "value": "7"
+                "name": "gpio_28",
+                "value": "28"
               }
             ],
             "clock": false
@@ -1726,58 +1746,33 @@
           }
         },
         {
-          "id": "c43da57c-1336-4170-9c08-68d1f71e0050",
+          "id": "9bc1ff4f-53a9-4cb7-80ba-fe504e0e60f9",
           "type": "basic.output",
           "data": {
             "name": "LEDS",
             "virtual": false,
-            "range": "[7:0]",
+            "range": "[2:0]",
             "pins": [
               {
-                "index": "7",
-                "name": "LED7",
-                "value": "37"
-              },
-              {
-                "index": "6",
-                "name": "LED6",
-                "value": "38"
-              },
-              {
-                "index": "5",
-                "name": "LED5",
-                "value": "39"
-              },
-              {
-                "index": "4",
-                "name": "LED4",
-                "value": "41"
-              },
-              {
-                "index": "3",
-                "name": "LED3",
-                "value": "42"
-              },
-              {
                 "index": "2",
-                "name": "LED2",
-                "value": "43"
+                "name": "led_blue",
+                "value": "40"
               },
               {
                 "index": "1",
-                "name": "LED1",
-                "value": "44"
+                "name": "led_green",
+                "value": "39"
               },
               {
                 "index": "0",
-                "name": "LED0",
-                "value": "45"
+                "name": "led_red",
+                "value": "41"
               }
             ]
           },
           "position": {
-            "x": -1120,
-            "y": 3088
+            "x": -1008,
+            "y": 3200
           }
         },
         {
@@ -2125,18 +2120,6 @@
           }
         },
         {
-          "id": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-          "type": "e86bdb5d4e1f902d0886c8450e0200bc186500d1",
-          "position": {
-            "x": -256,
-            "y": 968
-          },
-          "size": {
-            "width": 160,
-            "height": 96
-          }
-        },
-        {
           "id": "6362395e-13af-4726-b2bb-e42f0e63feb7",
           "type": "58ed2b5c7e33e2f215ccba6c101d9ea4ff60f284",
           "position": {
@@ -2471,71 +2454,33 @@
             "width": 96,
             "height": 64
           }
+        },
+        {
+          "id": "b28eef42-6138-49cb-95b0-421869e3bb75",
+          "type": "d63ed7ee568a7f65ae986261666030507de6dfa3",
+          "position": {
+            "x": -1232,
+            "y": 3216
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        },
+        {
+          "id": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+          "type": "e2b7ebc8987796fd3d9166d6b1e579783928ff08",
+          "position": {
+            "x": -288,
+            "y": 976
+          },
+          "size": {
+            "width": 160,
+            "height": 96
+          }
         }
       ],
       "wires": [
-        {
-          "source": {
-            "block": "36bfef11-d1c7-4bfd-8552-cc444b506a22",
-            "port": "constant-out"
-          },
-          "target": {
-            "block": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-            "port": "2fd92240-60a4-44c9-be80-6766ca83f848"
-          },
-          "vertices": [
-            {
-              "x": -320,
-              "y": 912
-            }
-          ]
-        },
-        {
-          "source": {
-            "block": "f25ed6bd-595d-4996-9ca6-54f14b3e8e91",
-            "port": "constant-out"
-          },
-          "target": {
-            "block": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-            "port": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8"
-          },
-          "vertices": [
-            {
-              "x": -272,
-              "y": 896
-            }
-          ]
-        },
-        {
-          "source": {
-            "block": "19adaa9d-7ad7-4e72-8db0-ee49d3b65458",
-            "port": "constant-out"
-          },
-          "target": {
-            "block": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-            "port": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88"
-          }
-        },
-        {
-          "source": {
-            "block": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-            "port": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0"
-          },
-          "target": {
-            "block": "2e19881c-e3ed-4bb5-9850-670d13634ccc",
-            "port": "inlabel"
-          }
-        },
-        {
-          "source": {
-            "block": "a7b42b47-2c9f-4f4b-b866-54fb683b3656",
-            "port": "out"
-          },
-          "target": {
-            "block": "3f305d0c-e631-4f3f-af9f-10163333d1d8",
-            "port": "0e2dc8d5-1136-4003-a3c7-e55ad946e0f7"
-          }
-        },
         {
           "source": {
             "block": "6362395e-13af-4726-b2bb-e42f0e63feb7",
@@ -3255,17 +3200,6 @@
         },
         {
           "source": {
-            "block": "35815306-9b6b-4713-aa54-5f44f67a3d16",
-            "port": "bf1fc6f1-5e26-42ce-bf52-d4d991298ac5"
-          },
-          "target": {
-            "block": "c43da57c-1336-4170-9c08-68d1f71e0050",
-            "port": "in"
-          },
-          "size": 8
-        },
-        {
-          "source": {
             "block": "1c7ac46e-615c-451f-97a9-3543bc1c0c7b",
             "port": "b4d1fb2e-3ad7-4d06-84f5-f6160f0f2c53"
           },
@@ -3538,484 +3472,83 @@
             "port": "037b43db-cd18-479f-868a-48585b9adc68"
           },
           "size": 8
+        },
+        {
+          "source": {
+            "block": "35815306-9b6b-4713-aa54-5f44f67a3d16",
+            "port": "bf1fc6f1-5e26-42ce-bf52-d4d991298ac5"
+          },
+          "target": {
+            "block": "b28eef42-6138-49cb-95b0-421869e3bb75",
+            "port": "f96fa616-e49a-4bb8-b1d0-ddafcc56569e"
+          },
+          "size": 8
+        },
+        {
+          "source": {
+            "block": "b28eef42-6138-49cb-95b0-421869e3bb75",
+            "port": "e2c79729-2f74-41e5-b3a3-d2319a53c0ae"
+          },
+          "target": {
+            "block": "9bc1ff4f-53a9-4cb7-80ba-fe504e0e60f9",
+            "port": "in"
+          },
+          "size": 3
+        },
+        {
+          "source": {
+            "block": "a7b42b47-2c9f-4f4b-b866-54fb683b3656",
+            "port": "out"
+          },
+          "target": {
+            "block": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+            "port": "2574504e-cb31-48e0-927c-a5a9d25a32ee"
+          }
+        },
+        {
+          "source": {
+            "block": "36bfef11-d1c7-4bfd-8552-cc444b506a22",
+            "port": "constant-out"
+          },
+          "target": {
+            "block": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+            "port": "2fd92240-60a4-44c9-be80-6766ca83f848"
+          }
+        },
+        {
+          "source": {
+            "block": "f25ed6bd-595d-4996-9ca6-54f14b3e8e91",
+            "port": "constant-out"
+          },
+          "target": {
+            "block": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+            "port": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8"
+          }
+        },
+        {
+          "source": {
+            "block": "19adaa9d-7ad7-4e72-8db0-ee49d3b65458",
+            "port": "constant-out"
+          },
+          "target": {
+            "block": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+            "port": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88"
+          }
+        },
+        {
+          "source": {
+            "block": "68d00964-7d59-45a5-9fa1-83a814a9426d",
+            "port": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0"
+          },
+          "target": {
+            "block": "2e19881c-e3ed-4bb5-9850-670d13634ccc",
+            "port": "inlabel"
+          }
         }
       ]
     }
   },
   "dependencies": {
-    "e86bdb5d4e1f902d0886c8450e0200bc186500d1": {
-      "package": {
-        "name": "PLL40_CORE",
-        "version": "0.9",
-        "description": "SB_PLL40_CORE",
-        "author": "J. C. Fabero",
-        "image": ""
-      },
-      "design": {
-        "graph": {
-          "blocks": [
-            {
-              "id": "c1d27914-585a-465d-bcb5-058c17f59330",
-              "type": "basic.output",
-              "data": {
-                "name": "PLLOUTGLOBAL"
-              },
-              "position": {
-                "x": 328,
-                "y": 72
-              }
-            },
-            {
-              "id": "0e2dc8d5-1136-4003-a3c7-e55ad946e0f7",
-              "type": "basic.input",
-              "data": {
-                "name": "REFERENCECLOCK",
-                "clock": false
-              },
-              "position": {
-                "x": -456,
-                "y": 72
-              }
-            },
-            {
-              "id": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0",
-              "type": "basic.output",
-              "data": {
-                "name": "PLLOUTCORE"
-              },
-              "position": {
-                "x": 328,
-                "y": 160
-              }
-            },
-            {
-              "id": "7903eca8-9973-4d6d-84f4-bf36c937357f",
-              "type": "basic.output",
-              "data": {
-                "name": "LOCK"
-              },
-              "position": {
-                "x": 328,
-                "y": 248
-              }
-            },
-            {
-              "id": "2fd92240-60a4-44c9-be80-6766ca83f848",
-              "type": "basic.constant",
-              "data": {
-                "name": "DIVR",
-                "value": "0",
-                "local": false
-              },
-              "position": {
-                "x": -264,
-                "y": -88
-              }
-            },
-            {
-              "id": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8",
-              "type": "basic.constant",
-              "data": {
-                "name": "DIVF",
-                "value": "79",
-                "local": false
-              },
-              "position": {
-                "x": -168,
-                "y": -88
-              }
-            },
-            {
-              "id": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88",
-              "type": "basic.constant",
-              "data": {
-                "name": "DIVQ",
-                "value": "4",
-                "local": false
-              },
-              "position": {
-                "x": -72,
-                "y": -88
-              }
-            },
-            {
-              "id": "90399137-a8c3-4ed5-840d-ca4d8761e77b",
-              "type": "basic.constant",
-              "data": {
-                "name": "FILTER_RANGE",
-                "value": "1",
-                "local": false
-              },
-              "position": {
-                "x": 24,
-                "y": -88
-              }
-            },
-            {
-              "id": "142bff3b-0e8d-4c90-be57-fd0cf90a83d0",
-              "type": "basic.constant",
-              "data": {
-                "name": "FEEDBACK_PATH",
-                "value": "\"SIMPLE\"",
-                "local": false
-              },
-              "position": {
-                "x": 120,
-                "y": -88
-              }
-            },
-            {
-              "id": "407b3bd7-435e-4bcc-b8c7-9d092172946a",
-              "type": "c83dcd1d9ab420d911df81b3dfae04681559c623",
-              "position": {
-                "x": -456,
-                "y": 160
-              },
-              "size": {
-                "width": 96,
-                "height": 64
-              }
-            },
-            {
-              "id": "83bc8e5a-1f84-4f17-8d2a-b8ad2b1776d5",
-              "type": "c4dd08263a85a91ba53e2ae2b38de344c5efcb52",
-              "position": {
-                "x": -456,
-                "y": 248
-              },
-              "size": {
-                "width": 96,
-                "height": 64
-              }
-            },
-            {
-              "id": "05875db9-4909-4232-8d14-729d8e0a4dca",
-              "type": "basic.info",
-              "data": {
-                "info": "SB_PLL40_CORE",
-                "readonly": false
-              },
-              "position": {
-                "x": -480,
-                "y": -80
-              },
-              "size": {
-                "width": 136,
-                "height": 32
-              }
-            },
-            {
-              "id": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-              "type": "basic.code",
-              "data": {
-                "code": "SB_PLL40_CORE #(\n\t\t.FEEDBACK_PATH(\"SIMPLE\"),\n\t\t.DIVR(DIVR),\t\t// DIVR =  0\n\t\t.DIVF(DIVF),\t// DIVF = 79\n\t\t.DIVQ(DIVQ),\t\t// DIVQ =  4\n\t\t.FILTER_RANGE(FILTER_RANGE)\t// FILTER_RANGE = 1\n\t) uut (\n\t\t.LOCK(LOCK),\n\t\t.RESETB(RESETB),\n\t\t.BYPASS(BYPASS),\n\t\t.REFERENCECLK(REFERENCECLK),\n\t\t.PLLOUTCORE(PLLOUTCORE),\n\t\t.PLLOUTGLOBAL(PLLOUTGLOBAL)\n\t\t);",
-                "params": [
-                  {
-                    "name": "DIVR"
-                  },
-                  {
-                    "name": "DIVF"
-                  },
-                  {
-                    "name": "DIVQ"
-                  },
-                  {
-                    "name": "FILTER_RANGE"
-                  },
-                  {
-                    "name": "FEEDBACK_PATH"
-                  }
-                ],
-                "ports": {
-                  "in": [
-                    {
-                      "name": "REFERENCECLK"
-                    },
-                    {
-                      "name": "RESETB"
-                    },
-                    {
-                      "name": "BYPASS"
-                    }
-                  ],
-                  "out": [
-                    {
-                      "name": "PLLOUTGLOBAL"
-                    },
-                    {
-                      "name": "PLLOUTCORE"
-                    },
-                    {
-                      "name": "LOCK"
-                    }
-                  ]
-                }
-              },
-              "position": {
-                "x": -264,
-                "y": 64
-              },
-              "size": {
-                "width": 480,
-                "height": 256
-              }
-            },
-            {
-              "id": "7640f36e-3ed2-40f6-b956-fb4ec571b0e9",
-              "type": "basic.info",
-              "data": {
-                "info": "To obtain parameter values:\nicepll -i 12 -o FREQ",
-                "readonly": false
-              },
-              "position": {
-                "x": -144,
-                "y": -144
-              },
-              "size": {
-                "width": 256,
-                "height": 56
-              }
-            }
-          ],
-          "wires": [
-            {
-              "source": {
-                "block": "2fd92240-60a4-44c9-be80-6766ca83f848",
-                "port": "constant-out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "DIVR"
-              }
-            },
-            {
-              "source": {
-                "block": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8",
-                "port": "constant-out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "DIVF"
-              }
-            },
-            {
-              "source": {
-                "block": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88",
-                "port": "constant-out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "DIVQ"
-              }
-            },
-            {
-              "source": {
-                "block": "90399137-a8c3-4ed5-840d-ca4d8761e77b",
-                "port": "constant-out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "FILTER_RANGE"
-              }
-            },
-            {
-              "source": {
-                "block": "142bff3b-0e8d-4c90-be57-fd0cf90a83d0",
-                "port": "constant-out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "FEEDBACK_PATH"
-              }
-            },
-            {
-              "source": {
-                "block": "407b3bd7-435e-4bcc-b8c7-9d092172946a",
-                "port": "19c8f68d-5022-487f-9ab0-f0a3cd58bead"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "RESETB"
-              }
-            },
-            {
-              "source": {
-                "block": "83bc8e5a-1f84-4f17-8d2a-b8ad2b1776d5",
-                "port": "19c8f68d-5022-487f-9ab0-f0a3cd58bead"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "BYPASS"
-              }
-            },
-            {
-              "source": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "PLLOUTGLOBAL"
-              },
-              "target": {
-                "block": "c1d27914-585a-465d-bcb5-058c17f59330",
-                "port": "in"
-              }
-            },
-            {
-              "source": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "PLLOUTCORE"
-              },
-              "target": {
-                "block": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0",
-                "port": "in"
-              }
-            },
-            {
-              "source": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "LOCK"
-              },
-              "target": {
-                "block": "7903eca8-9973-4d6d-84f4-bf36c937357f",
-                "port": "in"
-              }
-            },
-            {
-              "source": {
-                "block": "0e2dc8d5-1136-4003-a3c7-e55ad946e0f7",
-                "port": "out"
-              },
-              "target": {
-                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
-                "port": "REFERENCECLK"
-              }
-            }
-          ]
-        }
-      }
-    },
-    "c83dcd1d9ab420d911df81b3dfae04681559c623": {
-      "package": {
-        "name": "Bit 1",
-        "version": "1.0.0",
-        "description": "Assign 1 to the output wire",
-        "author": "Jesús Arroyo",
-        "image": "%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2247.303%22%20height=%2227.648%22%20viewBox=%220%200%2044.346456%2025.919999%22%3E%3Ctext%20style=%22line-height:125%25%22%20x=%22325.218%22%20y=%22315.455%22%20font-weight=%22400%22%20font-size=%2212.669%22%20font-family=%22sans-serif%22%20letter-spacing=%220%22%20word-spacing=%220%22%20transform=%22translate(-307.01%20-298.51)%22%3E%3Ctspan%20x=%22325.218%22%20y=%22315.455%22%20style=%22-inkscape-font-specification:'Courier%2010%20Pitch'%22%20font-family=%22Courier%2010%20Pitch%22%3E1%3C/tspan%3E%3C/text%3E%3C/svg%3E"
-      },
-      "design": {
-        "graph": {
-          "blocks": [
-            {
-              "id": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
-              "type": "basic.output",
-              "data": {
-                "name": ""
-              },
-              "position": {
-                "x": 608,
-                "y": 192
-              }
-            },
-            {
-              "id": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
-              "type": "basic.code",
-              "data": {
-                "code": "// Bit 1\n\nassign v = 1'b1;",
-                "params": [],
-                "ports": {
-                  "in": [],
-                  "out": [
-                    {
-                      "name": "v"
-                    }
-                  ]
-                }
-              },
-              "position": {
-                "x": 96,
-                "y": 96
-              },
-              "size": {
-                "width": 384,
-                "height": 256
-              }
-            }
-          ],
-          "wires": [
-            {
-              "source": {
-                "block": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
-                "port": "v"
-              },
-              "target": {
-                "block": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
-                "port": "in"
-              }
-            }
-          ]
-        }
-      }
-    },
-    "c4dd08263a85a91ba53e2ae2b38de344c5efcb52": {
-      "package": {
-        "name": "Bit 0",
-        "version": "1.0.0",
-        "description": "Assign 0 to the output wire",
-        "author": "Jesús Arroyo",
-        "image": "%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2247.303%22%20height=%2227.648%22%20viewBox=%220%200%2044.346456%2025.919999%22%3E%3Ctext%20style=%22line-height:125%25%22%20x=%22325.37%22%20y=%22315.373%22%20font-weight=%22400%22%20font-size=%2212.669%22%20font-family=%22sans-serif%22%20letter-spacing=%220%22%20word-spacing=%220%22%20transform=%22translate(-307.01%20-298.51)%22%3E%3Ctspan%20x=%22325.37%22%20y=%22315.373%22%20style=%22-inkscape-font-specification:'Courier%2010%20Pitch'%22%20font-family=%22Courier%2010%20Pitch%22%3E0%3C/tspan%3E%3C/text%3E%3C/svg%3E"
-      },
-      "design": {
-        "graph": {
-          "blocks": [
-            {
-              "id": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
-              "type": "basic.output",
-              "data": {
-                "name": ""
-              },
-              "position": {
-                "x": 608,
-                "y": 192
-              }
-            },
-            {
-              "id": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
-              "type": "basic.code",
-              "data": {
-                "code": "// Bit 0\n\nassign v = 1'b0;",
-                "params": [],
-                "ports": {
-                  "in": [],
-                  "out": [
-                    {
-                      "name": "v"
-                    }
-                  ]
-                }
-              },
-              "position": {
-                "x": 96,
-                "y": 96
-              },
-              "size": {
-                "width": 384,
-                "height": 256
-              }
-            }
-          ],
-          "wires": [
-            {
-              "source": {
-                "block": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
-                "port": "v"
-              },
-              "target": {
-                "block": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
-                "port": "in"
-              }
-            }
-          ]
-        }
-      }
-    },
     "58ed2b5c7e33e2f215ccba6c101d9ea4ff60f284": {
       "package": {
         "name": "sys-DFF-verilog",
@@ -17360,6 +16893,606 @@
                 "port": "in"
               },
               "size": 4
+            }
+          ]
+        }
+      }
+    },
+    "d63ed7ee568a7f65ae986261666030507de6dfa3": {
+      "package": {
+        "name": "Bus8-Split-5-3",
+        "version": "0.1",
+        "description": "Bus8-Split-5-3: Split the 8-bits bus into two buses of 5 and 3 wires",
+        "author": "Juan González-Gómez (Obijuan)",
+        "image": "%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22354.768%22%20height=%22241.058%22%20viewBox=%220%200%20332.59497%20225.99201%22%3E%3Cpath%20d=%22M168.377%2077.643l61.147-60.938C240.21%206.25%20254.56.461%20269.484.5h62.611v26.186l-61.698.046c-8.012-.043-15.705%203.133-21.47%208.81L187.48%2096.857a57.292%2057.292%200%200%201-39.993%2016.139%2057.292%2057.292%200%200%201%2039.993%2016.14l61.448%2061.314c5.765%205.677%2013.458%208.853%2021.47%208.81l61.698.046v26.186h-62.612c-14.924.039-29.463-5.9-40.204-16.28l-60.902-60.863a29.857%2029.857%200%200%200-21.347-8.81L.5%20139.427V86.457h146.524a29.884%2029.884%200%200%200%2021.353-8.814z%22%20fill=%22green%22%20stroke=%22#000%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22/%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "d0500438-fd2b-42fa-b965-b61137c947ba",
+              "type": "basic.output",
+              "data": {
+                "name": "1",
+                "range": "[4:0]",
+                "size": 5
+              },
+              "position": {
+                "x": 592,
+                "y": 112
+              }
+            },
+            {
+              "id": "f96fa616-e49a-4bb8-b1d0-ddafcc56569e",
+              "type": "basic.input",
+              "data": {
+                "name": "",
+                "range": "[7:0]",
+                "clock": false,
+                "size": 8
+              },
+              "position": {
+                "x": 120,
+                "y": 208
+              }
+            },
+            {
+              "id": "e2c79729-2f74-41e5-b3a3-d2319a53c0ae",
+              "type": "basic.output",
+              "data": {
+                "name": "0",
+                "range": "[2:0]",
+                "size": 3
+              },
+              "position": {
+                "x": 592,
+                "y": 232
+              }
+            },
+            {
+              "id": "16e78204-213e-4833-9096-89d735307ec2",
+              "type": "basic.code",
+              "data": {
+                "code": "assign o1 = i[7:3];\nassign o0 = i[2:0];",
+                "params": [],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "i",
+                      "range": "[7:0]",
+                      "size": 8
+                    }
+                  ],
+                  "out": [
+                    {
+                      "name": "o1",
+                      "range": "[4:0]",
+                      "size": 5
+                    },
+                    {
+                      "name": "o0",
+                      "range": "[2:0]",
+                      "size": 3
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 272,
+                "y": 176
+              },
+              "size": {
+                "width": 240,
+                "height": 120
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "f96fa616-e49a-4bb8-b1d0-ddafcc56569e",
+                "port": "out"
+              },
+              "target": {
+                "block": "16e78204-213e-4833-9096-89d735307ec2",
+                "port": "i"
+              },
+              "size": 8
+            },
+            {
+              "source": {
+                "block": "16e78204-213e-4833-9096-89d735307ec2",
+                "port": "o1"
+              },
+              "target": {
+                "block": "d0500438-fd2b-42fa-b965-b61137c947ba",
+                "port": "in"
+              },
+              "size": 5
+            },
+            {
+              "source": {
+                "block": "16e78204-213e-4833-9096-89d735307ec2",
+                "port": "o0"
+              },
+              "target": {
+                "block": "e2c79729-2f74-41e5-b3a3-d2319a53c0ae",
+                "port": "in"
+              },
+              "size": 3
+            }
+          ]
+        }
+      }
+    },
+    "e2b7ebc8987796fd3d9166d6b1e579783928ff08": {
+      "package": {
+        "name": "PLL40_PAD",
+        "version": "0.9",
+        "description": "SB_PLL40_PAD",
+        "author": "J. C. Fabero",
+        "image": ""
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "c1d27914-585a-465d-bcb5-058c17f59330",
+              "type": "basic.output",
+              "data": {
+                "name": "PLLOUTGLOBAL"
+              },
+              "position": {
+                "x": 328,
+                "y": 72
+              }
+            },
+            {
+              "id": "2574504e-cb31-48e0-927c-a5a9d25a32ee",
+              "type": "basic.input",
+              "data": {
+                "name": "PACKAGEPIN",
+                "clock": true
+              },
+              "position": {
+                "x": -456,
+                "y": 72
+              }
+            },
+            {
+              "id": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0",
+              "type": "basic.output",
+              "data": {
+                "name": "PLLOUTCORE"
+              },
+              "position": {
+                "x": 328,
+                "y": 160
+              }
+            },
+            {
+              "id": "7903eca8-9973-4d6d-84f4-bf36c937357f",
+              "type": "basic.output",
+              "data": {
+                "name": "LOCK"
+              },
+              "position": {
+                "x": 328,
+                "y": 248
+              }
+            },
+            {
+              "id": "2fd92240-60a4-44c9-be80-6766ca83f848",
+              "type": "basic.constant",
+              "data": {
+                "name": "DIVR",
+                "value": "0",
+                "local": false
+              },
+              "position": {
+                "x": -264,
+                "y": -88
+              }
+            },
+            {
+              "id": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8",
+              "type": "basic.constant",
+              "data": {
+                "name": "DIVF",
+                "value": "79",
+                "local": false
+              },
+              "position": {
+                "x": -168,
+                "y": -88
+              }
+            },
+            {
+              "id": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88",
+              "type": "basic.constant",
+              "data": {
+                "name": "DIVQ",
+                "value": "4",
+                "local": false
+              },
+              "position": {
+                "x": -72,
+                "y": -88
+              }
+            },
+            {
+              "id": "90399137-a8c3-4ed5-840d-ca4d8761e77b",
+              "type": "basic.constant",
+              "data": {
+                "name": "FILTER_RANGE",
+                "value": "1",
+                "local": false
+              },
+              "position": {
+                "x": 24,
+                "y": -88
+              }
+            },
+            {
+              "id": "142bff3b-0e8d-4c90-be57-fd0cf90a83d0",
+              "type": "basic.constant",
+              "data": {
+                "name": "FEEDBACK_PATH",
+                "value": "\"SIMPLE\"",
+                "local": false
+              },
+              "position": {
+                "x": 120,
+                "y": -88
+              }
+            },
+            {
+              "id": "407b3bd7-435e-4bcc-b8c7-9d092172946a",
+              "type": "c83dcd1d9ab420d911df81b3dfae04681559c623",
+              "position": {
+                "x": -456,
+                "y": 160
+              },
+              "size": {
+                "width": 96,
+                "height": 64
+              }
+            },
+            {
+              "id": "83bc8e5a-1f84-4f17-8d2a-b8ad2b1776d5",
+              "type": "c4dd08263a85a91ba53e2ae2b38de344c5efcb52",
+              "position": {
+                "x": -456,
+                "y": 248
+              },
+              "size": {
+                "width": 96,
+                "height": 64
+              }
+            },
+            {
+              "id": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+              "type": "basic.code",
+              "data": {
+                "code": "SB_PLL40_PAD #(\n\t\t.FEEDBACK_PATH(\"SIMPLE\"),\n\t\t.DIVR(DIVR),\t\t// DIVR =  0\n\t\t.DIVF(DIVF),\t// DIVF = 79\n\t\t.DIVQ(DIVQ),\t\t// DIVQ =  4\n\t\t.FILTER_RANGE(FILTER_RANGE)\t// FILTER_RANGE = 1\n\t) uut (\n\t\t.LOCK(LOCK),\n\t\t.RESETB(RESETB),\n\t\t.BYPASS(BYPASS),\n\t\t.PACKAGEPIN(PACKAGEPIN),\n\t\t.PLLOUTCORE(PLLOUTCORE),\n\t\t.PLLOUTGLOBAL(PLLOUTGLOBAL)\n\t\t);",
+                "params": [
+                  {
+                    "name": "DIVR"
+                  },
+                  {
+                    "name": "DIVF"
+                  },
+                  {
+                    "name": "DIVQ"
+                  },
+                  {
+                    "name": "FILTER_RANGE"
+                  },
+                  {
+                    "name": "FEEDBACK_PATH"
+                  }
+                ],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "PACKAGEPIN"
+                    },
+                    {
+                      "name": "RESETB"
+                    },
+                    {
+                      "name": "BYPASS"
+                    }
+                  ],
+                  "out": [
+                    {
+                      "name": "PLLOUTGLOBAL"
+                    },
+                    {
+                      "name": "PLLOUTCORE"
+                    },
+                    {
+                      "name": "LOCK"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": -264,
+                "y": 64
+              },
+              "size": {
+                "width": 480,
+                "height": 256
+              }
+            },
+            {
+              "id": "05875db9-4909-4232-8d14-729d8e0a4dca",
+              "type": "basic.info",
+              "data": {
+                "info": "SB_PLL40_PAD",
+                "readonly": false
+              },
+              "position": {
+                "x": -480,
+                "y": -80
+              },
+              "size": {
+                "width": 136,
+                "height": 32
+              }
+            },
+            {
+              "id": "25e58886-93ea-4c98-8d2f-1b5b225d9cef",
+              "type": "basic.info",
+              "data": {
+                "info": "To obtain parameter values:\nicepll -i 12 -o FREQ",
+                "readonly": false
+              },
+              "position": {
+                "x": -152,
+                "y": -152
+              },
+              "size": {
+                "width": 256,
+                "height": 56
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "2fd92240-60a4-44c9-be80-6766ca83f848",
+                "port": "constant-out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "DIVR"
+              }
+            },
+            {
+              "source": {
+                "block": "3f49b9df-fcf4-4280-b5c6-debfc6bc2bc8",
+                "port": "constant-out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "DIVF"
+              }
+            },
+            {
+              "source": {
+                "block": "98ad1141-8aab-4a8a-aafa-05e9e26f5c88",
+                "port": "constant-out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "DIVQ"
+              }
+            },
+            {
+              "source": {
+                "block": "90399137-a8c3-4ed5-840d-ca4d8761e77b",
+                "port": "constant-out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "FILTER_RANGE"
+              }
+            },
+            {
+              "source": {
+                "block": "142bff3b-0e8d-4c90-be57-fd0cf90a83d0",
+                "port": "constant-out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "FEEDBACK_PATH"
+              }
+            },
+            {
+              "source": {
+                "block": "407b3bd7-435e-4bcc-b8c7-9d092172946a",
+                "port": "19c8f68d-5022-487f-9ab0-f0a3cd58bead"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "RESETB"
+              }
+            },
+            {
+              "source": {
+                "block": "83bc8e5a-1f84-4f17-8d2a-b8ad2b1776d5",
+                "port": "19c8f68d-5022-487f-9ab0-f0a3cd58bead"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "BYPASS"
+              }
+            },
+            {
+              "source": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "PLLOUTGLOBAL"
+              },
+              "target": {
+                "block": "c1d27914-585a-465d-bcb5-058c17f59330",
+                "port": "in"
+              }
+            },
+            {
+              "source": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "PLLOUTCORE"
+              },
+              "target": {
+                "block": "32350a04-5ae1-4e2f-bbdd-e9de1e56c5f0",
+                "port": "in"
+              }
+            },
+            {
+              "source": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "LOCK"
+              },
+              "target": {
+                "block": "7903eca8-9973-4d6d-84f4-bf36c937357f",
+                "port": "in"
+              }
+            },
+            {
+              "source": {
+                "block": "2574504e-cb31-48e0-927c-a5a9d25a32ee",
+                "port": "out"
+              },
+              "target": {
+                "block": "464bc963-93ef-4a0c-9c14-c2fad71a8a0c",
+                "port": "PACKAGEPIN"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "c83dcd1d9ab420d911df81b3dfae04681559c623": {
+      "package": {
+        "name": "Bit 1",
+        "version": "1.0.0",
+        "description": "Assign 1 to the output wire",
+        "author": "Jesús Arroyo",
+        "image": "%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2247.303%22%20height=%2227.648%22%20viewBox=%220%200%2044.346456%2025.919999%22%3E%3Ctext%20style=%22line-height:125%25%22%20x=%22325.218%22%20y=%22315.455%22%20font-weight=%22400%22%20font-size=%2212.669%22%20font-family=%22sans-serif%22%20letter-spacing=%220%22%20word-spacing=%220%22%20transform=%22translate(-307.01%20-298.51)%22%3E%3Ctspan%20x=%22325.218%22%20y=%22315.455%22%20style=%22-inkscape-font-specification:'Courier%2010%20Pitch'%22%20font-family=%22Courier%2010%20Pitch%22%3E1%3C/tspan%3E%3C/text%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 608,
+                "y": 192
+              }
+            },
+            {
+              "id": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
+              "type": "basic.code",
+              "data": {
+                "code": "// Bit 1\n\nassign v = 1'b1;",
+                "params": [],
+                "ports": {
+                  "in": [],
+                  "out": [
+                    {
+                      "name": "v"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 96,
+                "y": 96
+              },
+              "size": {
+                "width": 384,
+                "height": 256
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
+                "port": "v"
+              },
+              "target": {
+                "block": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
+                "port": "in"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "c4dd08263a85a91ba53e2ae2b38de344c5efcb52": {
+      "package": {
+        "name": "Bit 0",
+        "version": "1.0.0",
+        "description": "Assign 0 to the output wire",
+        "author": "Jesús Arroyo",
+        "image": "%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2247.303%22%20height=%2227.648%22%20viewBox=%220%200%2044.346456%2025.919999%22%3E%3Ctext%20style=%22line-height:125%25%22%20x=%22325.37%22%20y=%22315.373%22%20font-weight=%22400%22%20font-size=%2212.669%22%20font-family=%22sans-serif%22%20letter-spacing=%220%22%20word-spacing=%220%22%20transform=%22translate(-307.01%20-298.51)%22%3E%3Ctspan%20x=%22325.37%22%20y=%22315.373%22%20style=%22-inkscape-font-specification:'Courier%2010%20Pitch'%22%20font-family=%22Courier%2010%20Pitch%22%3E0%3C/tspan%3E%3C/text%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 608,
+                "y": 192
+              }
+            },
+            {
+              "id": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
+              "type": "basic.code",
+              "data": {
+                "code": "// Bit 0\n\nassign v = 1'b0;",
+                "params": [],
+                "ports": {
+                  "in": [],
+                  "out": [
+                    {
+                      "name": "v"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 96,
+                "y": 96
+              },
+              "size": {
+                "width": 384,
+                "height": 256
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "b959fb96-ac67-4aea-90b3-ed35a4c17bf5",
+                "port": "v"
+              },
+              "target": {
+                "block": "19c8f68d-5022-487f-9ab0-f0a3cd58bead",
+                "port": "in"
+              }
             }
           ]
         }
