@@ -1453,64 +1453,8 @@
             ]
           },
           "position": {
-            "x": -984,
-            "y": 2640
-          }
-        },
-        {
-          "id": "0785d925-fa3d-42ce-a3c7-690836e16cc3",
-          "type": "basic.inputLabel",
-          "data": {
-            "name": "REG1CHIP",
-            "range": "[7:0]",
-            "blockColor": "fuchsia",
-            "virtual": true,
-            "pins": [
-              {
-                "index": "7",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "6",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "5",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "4",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "3",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "2",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "1",
-                "name": "NULL",
-                "value": "NULL"
-              },
-              {
-                "index": "0",
-                "name": "NULL",
-                "value": "NULL"
-              }
-            ]
-          },
-          "position": {
-            "x": -400,
-            "y": 2688
+            "x": -920,
+            "y": 2736
           }
         },
         {
@@ -1529,8 +1473,8 @@
             ]
           },
           "position": {
-            "x": -984,
-            "y": 2688
+            "x": -920,
+            "y": 2784
           }
         },
         {
@@ -1590,6 +1534,62 @@
           }
         },
         {
+          "id": "0785d925-fa3d-42ce-a3c7-690836e16cc3",
+          "type": "basic.inputLabel",
+          "data": {
+            "name": "REG1CHIP",
+            "range": "[7:0]",
+            "blockColor": "fuchsia",
+            "virtual": true,
+            "pins": [
+              {
+                "index": "7",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "6",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "5",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "4",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "3",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "2",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "1",
+                "name": "NULL",
+                "value": "NULL"
+              },
+              {
+                "index": "0",
+                "name": "NULL",
+                "value": "NULL"
+              }
+            ]
+          },
+          "position": {
+            "x": -400,
+            "y": 2864
+          }
+        },
+        {
           "id": "b5010b65-bd1e-4d56-a851-fc48d1142251",
           "type": "basic.inputLabel",
           "data": {
@@ -1605,8 +1605,8 @@
             ]
           },
           "position": {
-            "x": -840,
-            "y": 2880
+            "x": -704,
+            "y": 2904
           }
         },
         {
@@ -1701,8 +1701,8 @@
             ]
           },
           "position": {
-            "x": -840,
-            "y": 2928
+            "x": -704,
+            "y": 2952
           }
         },
         {
@@ -2441,7 +2441,7 @@
           "type": "afb28fd5426aea14477d11cbe30a290679f789f8",
           "position": {
             "x": -544,
-            "y": 2688
+            "y": 2784
           },
           "size": {
             "width": 96,
@@ -2452,8 +2452,8 @@
           "id": "9fd10d8a-c43c-49a7-b356-4e5857ed777a",
           "type": "84f0a15761ee8b753f67079819a7614923939472",
           "position": {
-            "x": -736,
-            "y": 2672
+            "x": -704,
+            "y": 2768
           },
           "size": {
             "width": 96,
@@ -2464,8 +2464,8 @@
           "id": "0bc43ee8-92a7-4a6b-9b04-72adb055711c",
           "type": "6a0d89c1084f97bc8bb2f0ce0eb2c9c0043237e5",
           "position": {
-            "x": -848,
-            "y": 2600
+            "x": -704,
+            "y": 2688
           },
           "size": {
             "width": 96,
