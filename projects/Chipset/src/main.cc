@@ -1389,3 +1389,22 @@ AddressCaptureEngine::configure() {
     // That is the next step
 
 }
+
+// XBAR1_OUT115 -> LPSPI1_TRG_INPUT (SPI2/MEMORY)
+// XBAR1_OUT117 -> LPSPI3_TRG_INPUT (SPI1)
+// XBAR1_OUT118 -> LPSPI4_TRG_INPUT (SPI)
+// XBAR1_OUT127 -> FLEXIO1_TRIGGER_IN0
+// XBAR1_OUT128 -> FLEXIO1_TRIGGER_IN1
+// XBAR1_OUT129 -> FLEXIO2_TRIGGER_IN0
+// XBAR1_OUT130 -> FLEXIO2_TRIGGER_IN1
+//
+// DEN is on pin 36 (XBAR_INOUT16)
+// ADS is on pin 8 (XBAR_INOUT14)
+// 
+// While ADS is going HIGH, DEN is going LOW at the same time. Once both are in
+// that state then it becomes possible to safely sample the address. After the
+// sample is done, we want to actually trigger the transaction process to
+// start. With the contents on FLEXIO1 we can safely also use DMA to stash the
+// result somewhere (or we can just read from the shifter).
+//
+// 
