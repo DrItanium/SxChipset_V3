@@ -1383,7 +1383,7 @@ AddressCaptureEngine::configure() {
     _p->TIMCMP[0] = 0x0000'3F03; // divide flexio clock by 4
     _p->TIMCFG[0] = 0x0100'2222;
 
-    _p->TIMCTL[0] = 0x01c3'0601;
+    _p->TIMCTL[0] = 0x05c3'0601;
     //_p->SHIFTBUF[1] contains the data to be received
     // how do we trigger the read operation now?
     // That is the next step
