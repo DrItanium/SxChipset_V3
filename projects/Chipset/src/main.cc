@@ -1407,4 +1407,5 @@ AddressCaptureEngine::configure() {
 // start. With the contents on FLEXIO1 we can safely also use DMA to stash the
 // result somewhere (or we can just read from the shifter).
 //
-// 
+// ADS -> RISING_EDGE -> TIMER_EDGE_ENABLE ??
+// What about reset?
