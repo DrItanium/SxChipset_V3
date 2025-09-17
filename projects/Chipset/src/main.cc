@@ -876,7 +876,18 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  static inline uint32_t 
+  template<uint8_t shift>
+  static uint32_t pullIn4BitPart() noexcept {
+      uint32_t part = GPIO9_PSR;
+      part >>= 4;
+      part &= 0b1111;
+      if constexpr (shift != 0) {
+        return part << (4*(shift & 0b111));
+      } else {
+        return part;
+      }
+  }
+  static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
       if constexpr (UseEBI) {
@@ -886,26 +897,21 @@ struct i960Interface {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       } else {
 #define X(index, c0, c1, c2, c3) { \
-    uint32_t part = GPIO9_PSR; \
-    part >>= 4; \
-    part &= 0b1111; \
-    uint32_t lo = (part & 0b11) << c0; \
-    uint32_t hi = (part & 0b1100) << (c2 - 2); \
-    value |= lo; \
-    value |= hi; \
+    value |= pullIn4BitPart<index>(); \
+    delayNanoseconds(30); \
     digitalToggleFast(Pin::ADR_CLK); \
     delayNanoseconds(30); \
     digitalToggleFast(Pin::ADR_CLK); \
     delayNanoseconds(30); \
 }
-        X(0, 0, 1, 16, 17);
-        X(1, 2, 3, 18, 19);
-        X(2, 4, 5, 20, 21);
-        X(3, 6, 7, 22, 23);
-        X(4, 8, 9, 24, 25);
-        X(5, 10, 11, 26, 27);
-        X(6, 12, 13, 28, 29);
-        X(7, 14, 15, 30, 31);
+        X(0, 0, 1, 2, 3);
+        X(1, 4, 5, 6, 7);
+        X(2, 8, 9, 10, 11);
+        X(3, 12, 13, 14, 15);
+        X(4, 16, 17, 18, 19);
+        X(5, 20, 21, 22, 23);
+        X(6, 24, 25, 26, 27);
+        X(7, 28, 29, 30, 31);
 #undef X
       // I know this is inefficient but I want to see if it helps with access
       // times
@@ -1299,6 +1305,7 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
+        //Serial.printf("Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
