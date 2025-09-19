@@ -13,13 +13,13 @@
                           |                 |
                        WR |  5           20 | A3
                           |                 |
-                      DEN |  6           19 | A4
+                      DEN |  6           19 | DCSO
                           |                 |
-                       NC |  7           18 | DCSO
+                       NC |  7           18 | DPLO
                           |                 |
-                       NC |  8           17 | DPLO
+                       NC |  8           17 | OE
                           |                 |
-                       NC |  9           16 | OE
+                       NC |  9           16 | NC
                           |                 |
                        NC | 10           15 | NC
                           |                 |
