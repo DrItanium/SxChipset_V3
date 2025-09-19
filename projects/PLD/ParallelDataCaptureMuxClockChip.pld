@@ -1,17 +1,34 @@
 GAL22V10
 ParallelDataCaptureMuxClockChip
 
-CLK RST NC NC NC NC NC NC NC NC NC GND
-NC  NC  NC NC NC NC NC A3 A2 A1 A0 VCC
+CLK RST NC CS WR   DEN  NC NC NC NC NC GND
+NC  NC  NC OE DPLO DCSO A4 A3 A2 A1 A0 VCC
 
+; RST is actually connected to the ADS pin so we can use it to perform a clear
 AR = /RST
 A0.R = /A0
 A1.R = /A1 *  A0 + A1 * /A0
 A2.R =  A2 * /A1 + A2 * /A0 + /A2 *  A1 *  A0
 A3.R =  A3 * /A2 + A3 * /A1 +  A3 * /A0 + /A3 *  A2 *  A1 *  A0
+A4.R =  /A4 * A3 * A2 * A1 * A0 + A4 * /A0 + A4 * /A1 + A4 * /A2 + A4 * /A3
+
+; Use CS for SH/~LD but inverted. By default, we are in constant load mode
+; When we want to access the input stream via SPI we use CS to activate this
+/DPLO = CS
+; DSCO is just a passthrough for the CS pin
+DCSO = CS
+; OE is used for enabling the output LVC595s
+; W/~R means that we want ~R
+; DEN needs to be LOW as well
+; A4 is used to make sure that we keep this stuff enabled as long as a new
+; transaction not started
+/OE =  /WR * /DEN * A4
 
 DESCRIPTION
 
 Allows the teensy 4.1 to get the i960 address lines with fewer pins
 
 Connects to the ParallelDataCaptureMux chips
+
+Adds an interface for interfacing with the data lines SPI interface for
+simplicity purposes

@@ -9,17 +9,17 @@
                           |                 |
                        NC |  3           22 | A1
                           |                 |
-                       NC |  4           21 | A2
+                       CS |  4           21 | A2
                           |                 |
-                       NC |  5           20 | A3
+                       WR |  5           20 | A3
                           |                 |
-                       NC |  6           19 | NC
+                      DEN |  6           19 | A4
                           |                 |
-                       NC |  7           18 | NC
+                       NC |  7           18 | DCSO
                           |                 |
-                       NC |  8           17 | NC
+                       NC |  8           17 | DPLO
                           |                 |
-                       NC |  9           16 | NC
+                       NC |  9           16 | OE
                           |                 |
                        NC | 10           15 | NC
                           |                 |

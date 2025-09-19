@@ -5,9 +5,9 @@
    1   | CLK      | Clock/Input
    2   | RST      | Input
    3   | NC       | Input
-   4   | NC       | Input
-   5   | NC       | Input
-   6   | NC       | Input
+   4   | CS       | Input
+   5   | WR       | Input
+   6   | DEN      | Input
    7   | NC       | Input
    8   | NC       | Input
    9   | NC       | Input
@@ -17,10 +17,10 @@
   13   | NC       | Input
   14   | NC       | NC
   15   | NC       | NC
-  16   | NC       | NC
-  17   | NC       | NC
-  18   | NC       | NC
-  19   | NC       | NC
+  16   | OE       | Output
+  17   | DPLO     | Output
+  18   | DCSO     | Output
+  19   | A4       | Output
   20   | A3       | Output
   21   | A2       | Output
   22   | A1       | Output
