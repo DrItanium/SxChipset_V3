@@ -22,7 +22,7 @@ DCSO = CS
 ; A3 is used to make sure that we keep this stuff enabled as long as a new
 ; transaction not started
 ; It takes 8 clocks to iterate over the 32-bit address
-/OE =  /WR * /DEN * A3
+/OE = /WR * /DEN * A3
 
 DESCRIPTION
 

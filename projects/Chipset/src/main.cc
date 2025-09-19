@@ -887,6 +887,13 @@ struct i960Interface {
         return part;
       }
   }
+  template<uint32_t pinDelay = 30>
+  static void pulseAddressCaptureNext() noexcept {
+    digitalToggleFast(Pin::ADR_CLK);
+    delayNanoseconds(pinDelay);
+    digitalToggleFast(Pin::ADR_CLK);
+    delayNanoseconds(pinDelay);
+  }
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
@@ -899,10 +906,7 @@ struct i960Interface {
 #define X(index, c0, c1, c2, c3) { \
     value |= pullIn4BitPart<index>(); \
     delayNanoseconds(30); \
-    digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(30); \
-    digitalToggleFast(Pin::ADR_CLK); \
-    delayNanoseconds(30); \
+    pulseAddressCaptureNext<30>(); \
 }
         X(0, 0, 1, 2, 3);
         X(1, 4, 5, 6, 7);
