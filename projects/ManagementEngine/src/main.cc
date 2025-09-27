@@ -3,6 +3,7 @@
 #include <Logic.h>
 #include <Wire.h>
 #include "ManagementEngineProtocol.h"
+constexpr auto SINGLE_SHOT_READY = PIN_PA2;
 constexpr auto CLKOUT = PIN_PA7;
 
 constexpr auto SystemUp = PIN_PB0;
@@ -18,7 +19,6 @@ constexpr auto RESET960 = PIN_PG4;
 constexpr auto HOLD960 = PIN_PG5;
 constexpr auto LOCK960 = PIN_PG6;
 constexpr auto HLDA960 = PIN_PG7;
-constexpr auto SINGLE_SHOT_READY = PIN_PA2;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -40,7 +40,7 @@ configurePins() noexcept {
     pinMode(RP2350_READY_IN, INPUT);
     pinMode(RP2350_READY_SYNC, OUTPUT);
     pinMode(SINGLE_SHOT_READY, OUTPUT);
-    digitalWrite(SINGLE_SHOT_READY, LOW);
+    digitalWrite(SINGLE_SHOT_READY, HIGH);
     digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
@@ -131,7 +131,7 @@ configureReadySynchronizer() noexcept {
   // Ideally, these extra delay cycles are the perfect time to get the teensy
   // ready for the next part of the transaction.
   Logic1.filter = filter::synch; 
-  Logic1.truth = 0b1111'1010; // rising edge detector that generates a high
+  Logic1.truth = 0b1111'0101; // rising edge detector that generates a high
                               // pulse
   Logic1.init();
   // invert the output pin to make it output the correct pulse shape :). 
@@ -140,17 +140,6 @@ configureReadySynchronizer() noexcept {
   // will generate a low pulse that the i960 expects
   PORTC.PIN6CTRL |= PORT_INVEN_bm;
   PORTD.PIN7CTRL |= PORT_INVEN_bm; 
-  // okay, so start configuring the secondary single shot setup
-  PORTC.PIN0CTRL |= PORT_INVEN_bm; // invert the signal as needed
-  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
-  TCB0.CCMP = 2; // two cycles
-  TCB0.CNT = 2; // 
-  TCB0.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input
-  TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
-               TCB_CCMPEN_bm; // enable output via GPIO
-  TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
-               TCB_ENABLE_bm | // enable
-               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
 updateClockFrequency(uint32_t frequency) noexcept {
@@ -207,6 +196,17 @@ configureCCLs() {
   configureDivideByTwoCCL<true>(Logic4, Logic5); // divide by four
   updateClockFrequency(F_CPU / 2);
   configureReadySynchronizer();
+
+  // okay, so start configuring the secondary single shot setup
+  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
+  TCB0.CCMP = 2; // two cycles
+  TCB0.CNT = 2; // 
+  TCB0.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input
+  TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+               TCB_CCMPEN_bm; // enable output via GPIO
+  TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+               TCB_ENABLE_bm | // enable
+               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 
   Event0.start();
   Event1.start();
