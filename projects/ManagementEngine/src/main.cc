@@ -11,10 +11,10 @@ constexpr auto RedirectPin = PIN_PB2;
 constexpr auto CLK1Out = PIN_PB3;
 
 constexpr auto RP2350_READY_IN = PIN_PC0;
-constexpr auto RP2350_READY_SYNC = PIN_PC6;
+//constexpr auto RP2350_READY_SYNC = PIN_PC6;
 
 constexpr auto CLK2Out = PIN_PD3;
-constexpr auto i960_READY_SYNC = PIN_PD7;
+//constexpr auto i960_READY_SYNC = PIN_PD7;
 
 constexpr auto RESET960 = PIN_PG4;
 constexpr auto HOLD960 = PIN_PG5;
@@ -34,15 +34,15 @@ configurePins() noexcept {
     pinMode(LOCK960, INPUT); // this is open drain
     pinMode(RESET960, OUTPUT);
     digitalWrite(RESET960, LOW);
-    pinMode(i960_READY_SYNC, OUTPUT);  
+    //pinMode(i960_READY_SYNC, OUTPUT);  
     pinMode(CLKOUT, OUTPUT);
     pinMode(CLK1Out, OUTPUT);
     pinMode(CLK2Out, OUTPUT);
     pinMode(RP2350_READY_IN, INPUT);
-    pinMode(RP2350_READY_SYNC, OUTPUT);
+    //pinMode(RP2350_READY_SYNC, OUTPUT);
     pinMode(SINGLE_SHOT_READY, OUTPUT);
     pinMode(RedirectPin, OUTPUT);
-    digitalWrite(i960_READY_SYNC, HIGH);
+    //digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
 setupSystemClocks() noexcept {
@@ -190,14 +190,14 @@ configureCCLs() {
   // actually running completely at 3.3v. However, I have the flexibility to
   // move the AVR128DB64 into the i960's 5V domain and not need extra
   // conversion chips. 
-  Event4.set_generator(gen::ccl1_out); // ready signal generator via CCL
-  Event4.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
+  //Event4.set_generator(gen::ccl1_out); // ready signal generator via CCL
+  //Event4.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
 
 
   configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
   configureDivideByTwoCCL<true>(Logic4, Logic5); // divide by four
   updateClockFrequency(F_CPU / 2);
-  configureReadySynchronizer();
+  //configureReadySynchronizer();
 
   // okay, so start configuring the secondary single shot setup
   PORTMUX.TCBROUTEA = 0; // output on PA2
