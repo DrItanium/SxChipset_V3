@@ -13,10 +13,10 @@ constexpr auto SystemUp = PIN_PA4;
 constexpr auto READY_IN = PIN_PA5;
 constexpr auto CLKOUT = PIN_PA7;
 
-constexpr auto RESET960 = PIN_PG4;
-constexpr auto HOLD960 = PIN_PG5;
-constexpr auto LOCK960 = PIN_PG6;
-constexpr auto HLDA960 = PIN_PG7;
+constexpr auto RESET960 = PIN_PD4;
+constexpr auto HOLD960 = PIN_PD5;
+constexpr auto LOCK960 = PIN_PD6;
+constexpr auto HLDA960 = PIN_PD7;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
