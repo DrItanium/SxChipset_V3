@@ -11,7 +11,7 @@ constexpr auto RedirectPin = PIN_PB2;
 constexpr auto CLK1Out = PIN_PB3;
 
 constexpr auto RP2350_READY_IN = PIN_PC0;
-constexpr auto READY_SYNC = PIN_PB7;
+constexpr auto READY_SYNC = PIN_PC7;
 
 constexpr auto CLK2Out = PIN_PD3;
 
@@ -169,7 +169,7 @@ configureCCLs() {
   Event0.set_user(user::ccl3_event_a);
 
   Event1.set_generator(gen0::pin_pa2);
-  Event1.set_user(user::evoutb_pin_pb7);
+  Event1.set_user(user::evoutc_pin_pc7);
   // event 2 is used for the secondary ready signal detector
   Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
   Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
