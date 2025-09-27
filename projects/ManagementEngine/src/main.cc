@@ -7,6 +7,7 @@ constexpr auto SINGLE_SHOT_READY = PIN_PA2;
 constexpr auto CLKOUT = PIN_PA7;
 
 constexpr auto SystemUp = PIN_PB0;
+constexpr auto RedirectPin = PIN_PB2;
 constexpr auto CLK1Out = PIN_PB3;
 
 constexpr auto RP2350_READY_IN = PIN_PC0;
@@ -40,7 +41,7 @@ configurePins() noexcept {
     pinMode(RP2350_READY_IN, INPUT);
     pinMode(RP2350_READY_SYNC, OUTPUT);
     pinMode(SINGLE_SHOT_READY, OUTPUT);
-    digitalWrite(SINGLE_SHOT_READY, HIGH);
+    pinMode(RedirectPin, OUTPUT);
     digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
@@ -177,6 +178,7 @@ configureCCLs() {
   // event 2 is used for the secondary ready signal detector
   Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
   Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
+  Event2.set_user(user::evoutb_pin_pb2);
   // event 3 and event 4 are used for the ready signal detector
   Event3.set_generator(gen::ccl4_out); // 6/5MHz
   Event3.set_user(user::ccl1_event_a); // we want to use this as the source of
@@ -198,16 +200,17 @@ configureCCLs() {
   configureReadySynchronizer();
 
   // okay, so start configuring the secondary single shot setup
-  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
+  PORTMUX.TCBROUTEA = 0; // output on PA2
   TCB0.CCMP = 2; // two cycles
   TCB0.CNT = 2; // 
-  TCB0.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input
+  TCB0.EVCTRL = TCB_CAPTEI_bm ; // enable EVSYS input
   TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 
+  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
   Event0.start();
   Event1.start();
   Event2.start();
@@ -226,6 +229,7 @@ setup() {
     pinMode(SystemUp, OUTPUT);
     digitalWrite(SystemUp, LOW);
     setupSystemClocks();
+    takeOverTCA0();
     configurePins();
     configureCCLs();
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
