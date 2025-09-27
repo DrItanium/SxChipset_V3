@@ -11,10 +11,9 @@ constexpr auto RedirectPin = PIN_PB2;
 constexpr auto CLK1Out = PIN_PB3;
 
 constexpr auto RP2350_READY_IN = PIN_PC0;
-//constexpr auto RP2350_READY_SYNC = PIN_PC6;
+constexpr auto READY_SYNC = PIN_PB7;
 
 constexpr auto CLK2Out = PIN_PD3;
-//constexpr auto i960_READY_SYNC = PIN_PD7;
 
 constexpr auto RESET960 = PIN_PG4;
 constexpr auto HOLD960 = PIN_PG5;
@@ -34,15 +33,13 @@ configurePins() noexcept {
     pinMode(LOCK960, INPUT); // this is open drain
     pinMode(RESET960, OUTPUT);
     digitalWrite(RESET960, LOW);
-    //pinMode(i960_READY_SYNC, OUTPUT);  
     pinMode(CLKOUT, OUTPUT);
     pinMode(CLK1Out, OUTPUT);
     pinMode(CLK2Out, OUTPUT);
     pinMode(RP2350_READY_IN, INPUT);
-    //pinMode(RP2350_READY_SYNC, OUTPUT);
+    pinMode(READY_SYNC, OUTPUT);
     pinMode(SINGLE_SHOT_READY, OUTPUT);
     pinMode(RedirectPin, OUTPUT);
-    //digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
 setupSystemClocks() noexcept {
@@ -170,15 +167,17 @@ configureCCLs() {
   Event0.set_generator(gen0::pin_pa7); // 24/20MHz
   Event0.set_user(user::ccl2_event_a);
   Event0.set_user(user::ccl3_event_a);
-  // we redirect the output from the CCL2 to CCL4 and CCL5
-  Event1.set_generator(gen::ccl2_out); // 12/10MHz
-  Event1.set_user(user::ccl4_event_a);
-  Event1.set_user(user::ccl5_event_a);
-  Event1.set_user(user::tcb0_cnt); // TCB0 clock source
+
+  Event1.set_generator(gen0::pin_pa2);
+  Event1.set_user(user::evoutb_pin_pb7);
   // event 2 is used for the secondary ready signal detector
   Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
   Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
-  Event2.set_user(user::evoutb_pin_pb2);
+  // we redirect the output from the CCL2 to CCL4 and CCL5
+  Event3.set_generator(gen::ccl2_out); // 12/10MHz
+  Event3.set_user(user::ccl4_event_a);
+  Event3.set_user(user::ccl5_event_a);
+  Event3.set_user(user::tcb0_cnt); // TCB0 clock source
 
   // redirect the output to PD7 for the purpose of sending it off
   // Right now, it is a duplication of PC6's output since the AVR128DB64 is
@@ -208,6 +207,7 @@ configureCCLs() {
   Event0.start();
   Event1.start();
   Event2.start();
+  Event3.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
