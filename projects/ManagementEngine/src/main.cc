@@ -179,19 +179,12 @@ configureCCLs() {
   Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
   Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
   Event2.set_user(user::evoutb_pin_pb2);
-  // event 3 and event 4 are used for the ready signal detector
-  Event3.set_generator(gen::ccl4_out); // 6/5MHz
-  Event3.set_user(user::ccl1_event_a); // we want to use this as the source of
-                                       // our clock signal for the signal
-                                       // detector
 
   // redirect the output to PD7 for the purpose of sending it off
   // Right now, it is a duplication of PC6's output since the AVR128DB64 is
   // actually running completely at 3.3v. However, I have the flexibility to
   // move the AVR128DB64 into the i960's 5V domain and not need extra
   // conversion chips. 
-  //Event4.set_generator(gen::ccl1_out); // ready signal generator via CCL
-  //Event4.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
 
 
   configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
@@ -215,8 +208,6 @@ configureCCLs() {
   Event0.start();
   Event1.start();
   Event2.start();
-  Event3.start();
-  Event4.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
