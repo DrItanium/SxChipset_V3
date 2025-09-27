@@ -190,7 +190,7 @@ configureCCLs() {
   // actually running completely at 3.3v. However, I have the flexibility to
   // move the AVR128DB64 into the i960's 5V domain and not need extra
   // conversion chips. 
-  Event4.set_generator(gen::ccl1_out);
+  Event4.set_generator(gen::ccl1_out); // ready signal generator via CCL
   Event4.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
 
 
