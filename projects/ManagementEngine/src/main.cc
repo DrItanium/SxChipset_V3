@@ -18,6 +18,7 @@ constexpr auto RESET960 = PIN_PG4;
 constexpr auto HOLD960 = PIN_PG5;
 constexpr auto LOCK960 = PIN_PG6;
 constexpr auto HLDA960 = PIN_PG7;
+constexpr auto SINGLE_SHOT_READY = PIN_PA2;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -38,6 +39,8 @@ configurePins() noexcept {
     pinMode(CLK2Out, OUTPUT);
     pinMode(RP2350_READY_IN, INPUT);
     pinMode(RP2350_READY_SYNC, OUTPUT);
+    pinMode(SINGLE_SHOT_READY, OUTPUT);
+    digitalWrite(SINGLE_SHOT_READY, LOW);
     digitalWrite(i960_READY_SYNC, HIGH);
 }
 void
@@ -128,7 +131,7 @@ configureReadySynchronizer() noexcept {
   // Ideally, these extra delay cycles are the perfect time to get the teensy
   // ready for the next part of the transaction.
   Logic1.filter = filter::synch; 
-  Logic1.truth = 0b1111'0101; // falling edge detector that generates a high
+  Logic1.truth = 0b1111'1010; // rising edge detector that generates a high
                               // pulse
   Logic1.init();
   // invert the output pin to make it output the correct pulse shape :). 
@@ -137,7 +140,17 @@ configureReadySynchronizer() noexcept {
   // will generate a low pulse that the i960 expects
   PORTC.PIN6CTRL |= PORT_INVEN_bm;
   PORTD.PIN7CTRL |= PORT_INVEN_bm; 
-
+  // okay, so start configuring the secondary single shot setup
+  PORTC.PIN0CTRL |= PORT_INVEN_bm; // invert the signal as needed
+  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
+  TCB0.CCMP = 2; // two cycles
+  TCB0.CNT = 2; // 
+  TCB0.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input
+  TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+               TCB_CCMPEN_bm; // enable output via GPIO
+  TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+               TCB_ENABLE_bm | // enable
+               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
 updateClockFrequency(uint32_t frequency) noexcept {
@@ -171,9 +184,13 @@ configureCCLs() {
   Event1.set_generator(gen::ccl2_out); // 12/10MHz
   Event1.set_user(user::ccl4_event_a);
   Event1.set_user(user::ccl5_event_a);
-  // event 2 and event 3 are used for the ready signal detector
-  Event2.set_generator(gen::ccl4_out); // 6/5MHz
-  Event2.set_user(user::ccl1_event_a); // we want to use this as the source of
+  Event1.set_user(user::tcb0_cnt); // TCB0 clock source
+  // event 2 is used for the secondary ready signal detector
+  Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
+  Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
+  // event 3 and event 4 are used for the ready signal detector
+  Event3.set_generator(gen::ccl4_out); // 6/5MHz
+  Event3.set_user(user::ccl1_event_a); // we want to use this as the source of
                                        // our clock signal for the signal
                                        // detector
 
@@ -182,8 +199,8 @@ configureCCLs() {
   // actually running completely at 3.3v. However, I have the flexibility to
   // move the AVR128DB64 into the i960's 5V domain and not need extra
   // conversion chips. 
-  Event3.set_generator(gen::ccl1_out);
-  Event3.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
+  Event4.set_generator(gen::ccl1_out);
+  Event4.set_user(user::evoutd_pin_pd7); // i960 "5V" Ready transmit
 
 
   configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
@@ -195,6 +212,7 @@ configureCCLs() {
   Event1.start();
   Event2.start();
   Event3.start();
+  Event4.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
