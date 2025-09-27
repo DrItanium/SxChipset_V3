@@ -3,17 +3,15 @@
 #include <Logic.h>
 #include <Wire.h>
 #include "ManagementEngineProtocol.h"
-constexpr auto SINGLE_SHOT_READY = PIN_PA2;
+
+
+
+constexpr auto CLK2Out = PIN_PA0;
+constexpr auto READY_OUT = PIN_PA2;
+constexpr auto CLK1Out = PIN_PA3;
+constexpr auto SystemUp = PIN_PA4;
+constexpr auto READY_IN = PIN_PA5;
 constexpr auto CLKOUT = PIN_PA7;
-
-constexpr auto SystemUp = PIN_PB0;
-constexpr auto RedirectPin = PIN_PB2;
-constexpr auto CLK1Out = PIN_PB3;
-
-constexpr auto RP2350_READY_IN = PIN_PC0;
-constexpr auto READY_SYNC = PIN_PC7;
-
-constexpr auto CLK2Out = PIN_PD3;
 
 constexpr auto RESET960 = PIN_PG4;
 constexpr auto HOLD960 = PIN_PG5;
@@ -36,10 +34,8 @@ configurePins() noexcept {
     pinMode(CLKOUT, OUTPUT);
     pinMode(CLK1Out, OUTPUT);
     pinMode(CLK2Out, OUTPUT);
-    pinMode(RP2350_READY_IN, INPUT);
-    pinMode(READY_SYNC, OUTPUT);
-    pinMode(SINGLE_SHOT_READY, OUTPUT);
-    pinMode(RedirectPin, OUTPUT);
+    pinMode(READY_IN, INPUT);
+    pinMode(READY_OUT, OUTPUT);
 }
 void
 setupSystemClocks() noexcept {
@@ -103,43 +99,6 @@ configureDivideByTwoCCL(Logic& even, Logic& odd) {
   odd.init();
 }
 void
-configureReadySynchronizer() noexcept {
-  // ready signal detector
-  //
-  // The idea is that this piece of hardware generates a low pulse for exactly one CLK1 cycle
-  // to tell the i960 that data can be read/write off of the bus.
-  //
-  // We send the pulse to two places: the teensy (for synchronization) and to
-  // the i960 (as expected). 
-  //
-  Logic1.enable = true;
-  Logic1.input0 = in::pin; // wait for the signal on PC0
-  Logic1.input1 = in::disable;
-  Logic1.input2 = in::event_a; // CLK1 source
-  Logic1.output = out::enable; // enable pin output
-  Logic1.output_swap = out::pin_swap; // we want to use PC6 since PC3 is
-                                      // reserved for the Wire interface
-  Logic1.clocksource = clocksource::in2; // use input2 for the clock source
-  Logic1.edgedetect = edgedetect::enable; // we want the edge detector hardware
-  Logic1.sequencer = sequencer::disable; // not using any sequencer
-  // this synchronizer does introduce some delay but the upshot is that I can
-  // reduce the number of chips on the board. If that becomes a problem (which
-  // I do not think so) then I will handle then.
-  //
-  // Ideally, these extra delay cycles are the perfect time to get the teensy
-  // ready for the next part of the transaction.
-  Logic1.filter = filter::synch; 
-  Logic1.truth = 0b1111'1010; // rising edge detector that generates a high
-                              // pulse
-  Logic1.init();
-  // invert the output pin to make it output the correct pulse shape :). 
-  // This is done to make it easier to reason about how the edge detector
-  // works. It actually generates a high pulse but through the use of INVEN it
-  // will generate a low pulse that the i960 expects
-  PORTC.PIN6CTRL |= PORT_INVEN_bm;
-  PORTD.PIN7CTRL |= PORT_INVEN_bm; 
-}
-void
 updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
     CLKSpeeds[1] = frequency / 2;
@@ -163,33 +122,23 @@ configureCCLs() {
   // far simpler at the cost of wasting an event channel (although it isn't
   // actually a waste).
   //
+  // PA0 uses TCA0 to generate a 12MHz clock source
+  Event0.set_generator(gen0::pin_pa0);
+  Event0.set_user(user::ccl0_event_a); // route it to CCL0
+  Event0.set_user(user::ccl1_event_a); // route it to CCL1
+  Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
 
-  Event0.set_generator(gen0::pin_pa7); // 24/20MHz
-  Event0.set_user(user::ccl2_event_a);
-  Event0.set_user(user::ccl3_event_a);
+  // PA5 is the ready signal from the teensy
+  Event1.set_generator(gen0::pin_pa5); // use PA5 as the input 
+  Event1.set_user(user::tcb0_capt);
 
-  Event1.set_generator(gen0::pin_pa2);
-  Event1.set_user(user::evoutc_pin_pc7);
-  // event 2 is used for the secondary ready signal detector
-  Event2.set_generator(gen2::pin_pc0); // ready signal input also gets redirected
-  Event2.set_user(user::tcb0_capt); // trigger for TCB0's single shot mode
-  // we redirect the output from the CCL2 to CCL4 and CCL5
-  Event3.set_generator(gen::ccl2_out); // 12/10MHz
-  Event3.set_user(user::ccl4_event_a);
-  Event3.set_user(user::ccl5_event_a);
-  Event3.set_user(user::tcb0_cnt); // TCB0 clock source
-
-  // redirect the output to PD7 for the purpose of sending it off
-  // Right now, it is a duplication of PC6's output since the AVR128DB64 is
-  // actually running completely at 3.3v. However, I have the flexibility to
-  // move the AVR128DB64 into the i960's 5V domain and not need extra
-  // conversion chips. 
-
-
-  configureDivideByTwoCCL<true>(Logic2, Logic3); // divide by two
-  configureDivideByTwoCCL<true>(Logic4, Logic5); // divide by four
+  configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
   updateClockFrequency(F_CPU / 2);
-  //configureReadySynchronizer();
+
+  // create a divide by two clock generator
+  PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
+  TCA0.SINGLE.CMP0 = 0; // 12MHz compare
+  TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm | TCA_SINGLE_WGMODE_FRQ_gc; 
 
   // okay, so start configuring the secondary single shot setup
   PORTMUX.TCBROUTEA = 0; // output on PA2
@@ -201,13 +150,14 @@ configureCCLs() {
   TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
+  TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | TCA_SINGLE_RUNSTDBY_bm;
 
   PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
-  PORTC.PIN0CTRL |= PORT_INVEN_bm; // make it inverted
+  PORTA.PIN5CTRL |= PORT_INVEN_bm; // make it inverted
   Event0.start();
   Event1.start();
   Event2.start();
-  Event3.start();
+  //Event3.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
