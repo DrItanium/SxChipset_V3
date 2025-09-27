@@ -132,7 +132,7 @@ configureReadySynchronizer() noexcept {
   // Ideally, these extra delay cycles are the perfect time to get the teensy
   // ready for the next part of the transaction.
   Logic1.filter = filter::synch; 
-  Logic1.truth = 0b1111'0101; // rising edge detector that generates a high
+  Logic1.truth = 0b1111'1010; // rising edge detector that generates a high
                               // pulse
   Logic1.init();
   // invert the output pin to make it output the correct pulse shape :). 
@@ -211,6 +211,7 @@ configureCCLs() {
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 
   PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
+  PORTC.PIN0CTRL |= PORT_INVEN_bm; // make it inverted
   Event0.start();
   Event1.start();
   Event2.start();
