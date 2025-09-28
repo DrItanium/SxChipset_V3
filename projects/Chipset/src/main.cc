@@ -55,7 +55,7 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
-constexpr auto UseEBI = false;
+constexpr auto UseEBI = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -896,6 +896,7 @@ struct i960Interface {
   }
   static uint32_t 
   getAddress() noexcept {
+      static constexpr uint32_t DelayAmount = 30;
       uint32_t value = 0;
       if constexpr (UseEBI) {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
@@ -905,8 +906,8 @@ struct i960Interface {
       } else {
 #define X(index, c0, c1, c2, c3) { \
     value |= pullIn4BitPart<index>(); \
-    delayNanoseconds(30); \
-    pulseAddressCaptureNext<30>(); \
+    delayNanoseconds(DelayAmount); \
+    pulseAddressCaptureNext<DelayAmount>(); \
 }
         X(0, 0, 1, 2, 3);
         X(1, 4, 5, 6, 7);
