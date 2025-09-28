@@ -60,10 +60,11 @@ setupSystemClocks() noexcept {
   
     // configure the CLKOUT function and which oscillator is used for Main
     // Clock
+#if 0
     CCP = 0xD8; 
     CLKCTRL.MCLKCTRLA = 0b1000'0000; 
     asm volatile("nop"); // then wait one cycle
-
+#endif
     // configure the high frequency oscillator
     CCP = 0xD8; 
     CLKCTRL.OSCHFCTRLA = 0b1'0'1001'0'0; 
@@ -126,12 +127,13 @@ configureCCLs() {
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::ccl0_event_a); // route it to CCL0
   Event0.set_user(user::ccl1_event_a); // route it to CCL1
-  Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
+  //Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
 
   // PA5 is the ready signal from the teensy
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input 
   Event1.set_user(user::tcb0_capt);
-
+  Event2.set_generator(gen::ccl0_out);
+  Event2.set_user(user::tcb0_cnt);
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
   updateClockFrequency(F_CPU / 2);
 
@@ -142,8 +144,8 @@ configureCCLs() {
 
   // okay, so start configuring the secondary single shot setup
   PORTMUX.TCBROUTEA = 0; // output on PA2
-  TCB0.CCMP = 2; // two cycles
-  TCB0.CNT = 2; // 
+  TCB0.CCMP = 1; // two cycles
+  TCB0.CNT = 1; // 
   TCB0.EVCTRL = TCB_CAPTEI_bm ; // enable EVSYS input
   TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
@@ -157,7 +159,6 @@ configureCCLs() {
   Event0.start();
   Event1.start();
   Event2.start();
-  //Event3.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
