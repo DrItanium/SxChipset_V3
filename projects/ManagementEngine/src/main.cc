@@ -146,7 +146,7 @@ configureCCLs() {
   PORTMUX.TCBROUTEA = 0; // output on PA2
   TCB0.CCMP = 1; // two cycles
   TCB0.CNT = 1; // 
-  TCB0.EVCTRL = TCB_CAPTEI_bm ; // enable EVSYS input
+  TCB0.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
   TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby

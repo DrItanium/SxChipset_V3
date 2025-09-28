@@ -856,17 +856,20 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<0, compareWithPrevious>();
   }
-  template<uint32_t readyDelayTimer = 25>
+  template<uint32_t readyDelayTimer = 0>
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
-      digitalWriteFast(Pin::READY, LOW);
+      digitalToggleFast(Pin::READY);
+      //digitalWriteFast(Pin::READY, LOW);
       {
         while (!readyTriggered);
       }
       readyTriggered = false;
-      digitalWriteFast(Pin::READY, HIGH);
-      delayNanoseconds(readyDelayTimer);  // wait some amount of time
+      //digitalWriteFast(Pin::READY, HIGH);
+      if constexpr (readyDelayTimer > 0) {
+          delayNanoseconds(readyDelayTimer);  // wait some amount of time
+      }
   }
   static inline bool
   isReadOperation() noexcept {
