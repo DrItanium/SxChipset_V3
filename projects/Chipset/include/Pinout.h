@@ -69,6 +69,8 @@ enum class Pin : uint8_t {
   RPI_D39 = 1, // XBAR_INOUT17
   RPI_D40 = 24,
   RPI_D41 = 25,
+  SIDECOMM_SDA = RPI_D41,
+  SIDECOMM_SCL = RPI_D40,
   EBI_A5 = RPI_D0, // AD_B0_03
   EBI_A4 = RPI_D1, // AD_B0_02
   EBI_A3 = RPI_D2, // EMC_04

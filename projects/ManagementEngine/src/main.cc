@@ -60,11 +60,9 @@ setupSystemClocks() noexcept {
   
     // configure the CLKOUT function and which oscillator is used for Main
     // Clock
-#if 0
     CCP = 0xD8; 
     CLKCTRL.MCLKCTRLA = 0b1000'0000; 
     asm volatile("nop"); // then wait one cycle
-#endif
     // configure the high frequency oscillator
     CCP = 0xD8; 
     CLKCTRL.OSCHFCTRLA = 0b1'0'1001'0'0; 
