@@ -58,21 +58,6 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-constexpr auto AddressCaptureFlexIOPort = 0; // FLEXIO1
-                                             // Use the teensy 4.1 pin2:4,33,
-                                             // and 5 for this.
-                                             // p2,3,4, and 33 are the data
-                                             // input lines
-                                             //
-                                             // p5 is the clock signal
-struct AddressCaptureEngine {
-    AddressCaptureEngine();
-    void configure();
-    FlexIOHandler* _handler;
-    IMXRT_FLEXIO_t* _p;
-    const FlexIOHandler::FLEXIO_Hardware_t* _hw;
-};
-AddressCaptureEngine ace;
 RTC_DS3231 rtc;
 Adafruit_SSD1351 tft(OLEDScreenWidth, 
         OLEDScreenHeight, 
@@ -878,24 +863,6 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<uint8_t shift>
-  static uint32_t pullIn4BitPart() noexcept {
-      uint32_t part = GPIO9_PSR;
-      part >>= 4;
-      part &= 0b1111;
-      if constexpr (shift != 0) {
-        return part << (4*(shift & 0b111));
-      } else {
-        return part;
-      }
-  }
-  template<uint32_t pinDelay = 30>
-  static void pulseAddressCaptureNext() noexcept {
-    digitalToggleFast(Pin::ADR_CLK);
-    delayNanoseconds(pinDelay);
-    digitalToggleFast(Pin::ADR_CLK);
-    delayNanoseconds(pinDelay);
-  }
   static uint32_t 
   getAddress() noexcept {
       static constexpr uint32_t DelayAmount = 30;
@@ -1233,11 +1200,6 @@ initializeSystem(void*) noexcept {
     inputPin(Pin::ADS);
     inputPin(Pin::DEN);
     outputPin(Pin::INT960_0, HIGH);
-    inputPin(Pin::ADR_CH0);
-    inputPin(Pin::ADR_CH1);
-    inputPin(Pin::ADR_CH2);
-    inputPin(Pin::ADR_CH3);
-    outputPin(Pin::ADR_CLK, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::WR);
@@ -1329,76 +1291,3 @@ loop() {
 }
 
 
-AddressCaptureEngine::AddressCaptureEngine() {
-    _handler = FlexIOHandler::flexIOHandler_list[AddressCaptureFlexIOPort];
-    _p = &_handler->port();
-    _hw = &_handler->hardware();
-}
-
-void
-AddressCaptureEngine::configure() {
-    inputPin(Pin::ADR_CH0); // pin 2
-    inputPin(Pin::ADR_CH1); // pin 3
-    inputPin(Pin::ADR_CH2); // pin 4
-    inputPin(Pin::ADR_CH3); // pin 5
-    outputPin(Pin::ADR_CLK, HIGH); // pin 6
-    // high speed and high drive configuration
-    uint32_t pinConfig = IOMUXC_PAD_DSE(static_cast<uint8_t>(Pin::ADR_CLK)) | IOMUXC_PAD_SPEED(3) | ~IOMUXC_PAD_PKE | ~IOMUXC_PAD_SRE;
-    IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 |= pinConfig;
-    IOMUXC_SW_PAD_CTL_PAD_GPIO_EMC_08 &= ~pinConfig;
-    _hw->clock_gate_register &= ~(static_cast<uint32_t>(_hw->clock_gate_mask));
-    // clear the clock selector settings
-    CCM_CDCDR &= ~(CCM_CDCDR_FLEXIO1_CLK_SEL(3) | CCM_CDCDR_FLEXIO1_CLK_PRED(7) | CCM_CDCDR_FLEXIO1_CLK_PODF(7));
-    // use PLL3 PFD2 (508.24 MHz) and divide by 16
-    // Will tweak the values later on when I am ready to flatten it into a PCB
-    CCM_CDCDR |= (CCM_CDCDR_FLEXIO1_CLK_SEL(1) |
-                 CCM_CDCDR_FLEXIO1_CLK_PRED(4) |
-                 CCM_CDCDR_FLEXIO1_CLK_PODF(4)); 
-    
-    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH0));
-    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH1));
-    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH2));
-    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CH3));
-    _handler->mapIOPinToFlexPin(static_cast<uint8_t>(Pin::ADR_CLK));
-
-    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH0));
-    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH1));
-    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH2));
-    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CH3));
-    _handler->setIOPinToFlexMode(static_cast<uint8_t>(Pin::ADR_CLK));
-
-    // enable the clock
-    _hw->clock_gate_register |= _hw->clock_gate_mask;
-    // now we want to configure this for a four bit input per clock
-    // select pin offset pin 6
-    _p->SHIFTCTL[1] = 0b00000'000'1'00000'11'000'00010'0'0000'001;  // start at pin 2
-    _p->SHIFTCFG[1] = 0b00000000000'00011'000'0'00'0'0'00'00'00'00; // 4-bit wide
-    _p->TIMCMP[0] = 0x0000'3F03; // divide flexio clock by 4
-    _p->TIMCFG[0] = 0x0100'2222;
-
-    _p->TIMCTL[0] = 0x05c3'0601;
-    //_p->SHIFTBUF[1] contains the data to be received
-    // how do we trigger the read operation now?
-    // That is the next step
-
-}
-
-// XBAR1_OUT115 -> LPSPI1_TRG_INPUT (SPI2/MEMORY)
-// XBAR1_OUT117 -> LPSPI3_TRG_INPUT (SPI1)
-// XBAR1_OUT118 -> LPSPI4_TRG_INPUT (SPI)
-// XBAR1_OUT127 -> FLEXIO1_TRIGGER_IN0
-// XBAR1_OUT128 -> FLEXIO1_TRIGGER_IN1
-// XBAR1_OUT129 -> FLEXIO2_TRIGGER_IN0
-// XBAR1_OUT130 -> FLEXIO2_TRIGGER_IN1
-//
-// DEN is on pin 36 (XBAR_INOUT16)
-// ADS is on pin 8 (XBAR_INOUT14)
-// 
-// While ADS is going HIGH, DEN is going LOW at the same time. Once both are in
-// that state then it becomes possible to safely sample the address. After the
-// sample is done, we want to actually trigger the transaction process to
-// start. With the contents on FLEXIO1 we can safely also use DMA to stash the
-// result somewhere (or we can just read from the shifter).
-//
-// ADS -> RISING_EDGE -> TIMER_EDGE_ENABLE ??
-// What about reset?
