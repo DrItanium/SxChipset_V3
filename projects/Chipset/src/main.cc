@@ -55,7 +55,6 @@ constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
-constexpr auto UseEBI = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -901,32 +900,10 @@ struct i960Interface {
   getAddress() noexcept {
       static constexpr uint32_t DelayAmount = 30;
       uint32_t value = 0;
-      if constexpr (UseEBI) {
-        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      } else {
-#define X(index, c0, c1, c2, c3) { \
-    value |= pullIn4BitPart<index>(); \
-    delayNanoseconds(DelayAmount); \
-    pulseAddressCaptureNext<DelayAmount>(); \
-}
-        X(0, 0, 1, 2, 3);
-        X(1, 4, 5, 6, 7);
-        X(2, 8, 9, 10, 11);
-        X(3, 12, 13, 14, 15);
-        X(4, 16, 17, 18, 19);
-        X(5, 20, 21, 22, 23);
-        X(6, 24, 25, 26, 27);
-        X(7, 28, 29, 30, 31);
-#undef X
-      // I know this is inefficient but I want to see if it helps with access
-      // times
-      //
-      // According to my calculations, this should takes far less time to work
-      // with
-      }
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       return value;
 
   }
