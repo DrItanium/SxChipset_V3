@@ -890,7 +890,7 @@ struct i960Interface {
   writeDataLines(uint16_t value) noexcept {
       // This function will take at least 470ns worth of delay
       auto baseAddress = dataLines.getDataPortBaseAddress();
-      Serial.printf("\tData lines write: 0x%x\n", value);
+      //Serial.printf("\tData lines write: 0x%x\n", value);
       write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
   }
@@ -1228,10 +1228,6 @@ initializeSystem(void*) noexcept {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
-    while (true) {
-        digitalToggle(Pin::READY);
-        delay(10);
-    }
     taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
@@ -1258,7 +1254,7 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        Serial.printf("Target Address: 0x%x\n", targetAddress);
+        //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
