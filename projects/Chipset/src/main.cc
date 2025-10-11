@@ -874,6 +874,15 @@ struct i960Interface {
       return value;
 
   }
+  static uint32_t 
+  getAddress2() noexcept {
+    SPI.beginTransaction({40'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite(Pin::ADDR_LINES_CS, LOW);
+    uint32_t result = SPI.transfer32(0);
+    digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+    SPI.endTransaction();
+    return result;
+  }
   static inline bool
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
