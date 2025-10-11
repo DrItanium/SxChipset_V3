@@ -631,13 +631,36 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
+  template<bool accessViaSPI= false>
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      // This function will take at least 470ns worth of delay
-      auto baseAddress = dataLines.getDataPortBaseAddress();
-      //Serial.printf("\tData lines write: 0x%x\n", value);
-      write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
+      if constexpr (accessViaSPI) {
+        digitalWrite(Pin::DATA_LINES_CS, LOW);
+        (void)SPI.transfer16(value);
+        digitalWrite(Pin::DATA_LINES_CS, HIGH);
+      } else {
+          // This function will take at least 470ns worth of delay
+          auto baseAddress = dataLines.getDataPortBaseAddress();
+          //Serial.printf("\tData lines write: 0x%x\n", value);
+          write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
+          write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
+      }
+  }
+  template<bool accessViaSPI= false>
+  static inline uint16_t
+  readDataLines() noexcept {
+      if constexpr (accessViaSPI) {
+          digitalWrite(Pin::DATA_LINES_CS, LOW);
+          uint16_t result = SPI.transfer16(0);
+          digitalWrite(Pin::DATA_LINES_CS, HIGH);
+          return result;
+      } else {
+          auto baseAddress = dataLines.getDataPortBaseAddress();
+          // this will take at least 390ns to complete
+          uint16_t a = read8(baseAddress); // at least 195ns
+          uint16_t b = read8(baseAddress+1); // at least 195ns
+          return a| (b<< 8);
+      }
   }
 
   template<bool isReadTransaction>
@@ -666,14 +689,6 @@ struct i960Interface {
       }
       signalReady();
       // nothing to do on target end
-  }
-  static inline uint16_t
-  readDataLines() noexcept {
-      auto baseAddress = dataLines.getDataPortBaseAddress();
-      // this will take at least 390ns to complete
-      uint16_t a = read8(baseAddress); // at least 195ns
-      uint16_t b = read8(baseAddress+1); // at least 195ns
-      return a| (b<< 8);
   }
   template<MemoryCell MC>
   static inline void
@@ -947,6 +962,7 @@ initializeSystem(void*) noexcept {
     outputPin(Pin::SegmentStart, HIGH);
     outputPin(Pin::ReadySignalCheck, HIGH);
     outputPin(Pin::ADDR_LINES_CS, HIGH);
+    outputPin(Pin::DATA_LINES_CS, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
