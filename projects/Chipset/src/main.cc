@@ -613,7 +613,6 @@ struct i960Interface {
   static uint32_t 
   getAddress2() noexcept {
       static const SPISettings cfg{18'000'000, MSBFIRST, SPI_MODE0};
-      SPI.end();
       SPI.begin();
       SPI.beginTransaction(cfg);
       auto result = doSPITransfer32();
@@ -992,12 +991,16 @@ handleMemoryTransaction(void*) noexcept {
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
+#if 0
         auto targetAddress = i960Interface::getAddress();
         auto targetAddress2 = i960Interface::getAddress2();
         if (targetAddress != targetAddress2) {
             Serial.printf("Target Address: 0x%x\n", targetAddress);
             Serial.printf("Target Address2: 0x%x\n", targetAddress2);
         }
+#else
+        auto targetAddress = i960Interface::getAddress2();
+#endif
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
