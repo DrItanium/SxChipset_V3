@@ -36,8 +36,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LittleFS.h>
 #include <Metro.h>
 #include <RTClib.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1351.h>
 #include <FlexIO_t4.h>
 #include <arduino_freertos.h>
 #include <Adafruit_IS31FL3741.h>
@@ -59,13 +57,6 @@ volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 RTC_DS3231 rtc;
-Adafruit_SSD1351 tft(OLEDScreenWidth, 
-        OLEDScreenHeight, 
-        &SPI,
-        pinIndexConvert(Pin::EYESPI_TCS),
-        pinIndexConvert(Pin::EYESPI_DC),
-        pinIndexConvert(Pin::EYESPI_RST));
-
 Adafruit_IS31FL3741_QT ledmatrix;
 
 Metro systemCounterWatcher{25}; // every 25ms, do a toggle
@@ -456,268 +447,7 @@ constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 using EBIInterface = EBIWrapperInterface;
 // we want to make it as easy as possible to do display updates without having
 // to override everything, only the parts you need to do
-struct OLEDInterface final {
-    enum class ExecCodes : uint16_t {
-        Nothing,
-        DrawPixel,
-        FillScreen,
-        DrawLine,
-        DrawFastHLine,
-        DrawFastVLine,
-        DrawRect,
-        FillRect,
-        DrawCircle,
-        FillCircle,
-        DrawTriangle,
-        FillTriangle,
-        DrawRoundRect,
-        FillRoundRect,
-    };
-    enum class Fields : uint8_t {
-        Execute,
-        Opcode,
-        Argument0,
-        Argument1,
-        Argument2,
-        Argument3,
-        Argument4,
-        Argument5,
-        Argument6,
-        Argument7,
-        Argument8,
-        Argument9,
-        Argument10,
-        Argument11,
-        Argument12,
-        Argument13,
-        // then we start with the other fields
-        Rotation,
-        Brightness,
-        ScreenWidth,
-        ScreenHeight,
 
-        CursorX,
-        CursorY,
-
-        TextSize,
-
-    };
-    // this "MemoryBlock" reserves a 256 byte section of the 32-bit IO space
-    void update() noexcept {
-        // the lower 16 bits are the "enable" bits
-        // each time we access this information we make sure that it can't
-        // accidentally execute
-        clearExecStatus();
-    }
-    uint16_t getWord(uint8_t offset) const noexcept {
-        switch (static_cast<Fields>(offset)) {
-            case Fields::Execute:
-            case Fields::Opcode:
-            case Fields::Argument0:
-            case Fields::Argument1:
-            case Fields::Argument2:
-            case Fields::Argument3:
-            case Fields::Argument4:
-            case Fields::Argument5:
-            case Fields::Argument6:
-            case Fields::Argument7:
-            case Fields::Argument8:
-            case Fields::Argument9:
-            case Fields::Argument10:
-            case Fields::Argument11:
-            case Fields::Argument12:
-            case Fields::Argument13:
-                return _argumentStorage[offset];
-            case Fields::Rotation:
-                return tft.getRotation();
-            case Fields::ScreenWidth:
-                return tft.width();
-            case Fields::ScreenHeight:
-                return tft.height();
-            case Fields::CursorX:
-                return tft.getCursorX();
-            case Fields::CursorY:
-                return tft.getCursorY();
-            default:
-                return 0;
-        }
-    }
-    void setWord(uint8_t offset, uint16_t value, bool = true, bool = true) noexcept { 
-        switch (static_cast<Fields>(offset)) {
-            case Fields::Execute:
-            case Fields::Opcode:
-            case Fields::Argument0:
-            case Fields::Argument1:
-            case Fields::Argument2:
-            case Fields::Argument3:
-            case Fields::Argument4:
-            case Fields::Argument5:
-            case Fields::Argument6:
-            case Fields::Argument7:
-            case Fields::Argument8:
-            case Fields::Argument9:
-            case Fields::Argument10:
-            case Fields::Argument11:
-            case Fields::Argument12:
-            case Fields::Argument13:
-                _argumentStorage[offset] = value; 
-                break;
-            case Fields::Rotation:
-                tft.setRotation(value);
-                break;
-            case Fields::CursorX:
-                tft.setCursor(value, tft.getCursorY());
-                break;
-            case Fields::CursorY:
-                tft.setCursor(tft.getCursorX(), value);
-                break;
-            case Fields::TextSize: 
-                tft.setTextSize(
-                        static_cast<uint8_t>(value), 
-                        static_cast<uint8_t>(value >> 8));
-                break;
-            default:
-                break;
-        }
-    }
-    void onFinish() noexcept { 
-        if (shouldExecute()) {
-            switch (getExecCode()) {
-                case ExecCodes::DrawPixel:
-                    tft.drawPixel(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4]);
-                    break;
-                case ExecCodes::FillScreen:
-                    tft.fillScreen(_argumentStorage[2]);
-                    break;
-                case ExecCodes::DrawLine:
-                    tft.drawLine(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-                            _argumentStorage[6]);
-                    break;
-                case ExecCodes::DrawFastHLine:
-                    tft.drawFastHLine(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5]);
-                    break;
-                case ExecCodes::DrawFastVLine:
-                    tft.drawFastVLine(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5]);
-                    break;
-                case ExecCodes::DrawRect:
-                    tft.drawRect(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-                            _argumentStorage[6]);
-                    break;
-                case ExecCodes::FillRect:
-                    tft.fillRect(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-                            _argumentStorage[6]);
-                    break;
-                case ExecCodes::DrawCircle:
-                    tft.drawCircle(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5]);
-                    break;
-                case ExecCodes::FillCircle:
-                    tft.fillCircle(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-                            _argumentStorage[4],
-                            _argumentStorage[5]);
-                    break;
-                case ExecCodes::DrawTriangle:
-                    tft.drawTriangle(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-
-                            _argumentStorage[6],
-                            _argumentStorage[7],
-
-                            _argumentStorage[8]
-                            
-                            );
-                    break;
-                case ExecCodes::FillTriangle:
-                    tft.fillTriangle(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-
-                            _argumentStorage[6],
-                            _argumentStorage[7],
-
-                            _argumentStorage[8]
-                            
-                            );
-                    break;
-                case ExecCodes::DrawRoundRect:
-                    tft.drawRoundRect(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-
-                            _argumentStorage[6],
-                            _argumentStorage[7]
-                            );
-                    break;
-                case ExecCodes::FillRoundRect:
-                    tft.fillRoundRect(
-                            _argumentStorage[2],
-                            _argumentStorage[3],
-
-                            _argumentStorage[4],
-                            _argumentStorage[5],
-
-                            _argumentStorage[6],
-                            _argumentStorage[7]
-                            );
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-    private:
-        constexpr ExecCodes getExecCode() const noexcept {
-            return static_cast<ExecCodes>(_argumentStorage[1]);
-        }
-        constexpr bool shouldExecute() const noexcept {
-            return _argumentStorage[0] != 0;
-        }
-        void clearExecStatus() noexcept {
-            _argumentStorage[0] = 0;
-        }
-    private:
-        uint16_t _argumentStorage[16];
-};
-
-OLEDInterface oledDisplay;
 struct InterfaceTimingDescription {
     uint32_t addressWait;
     uint32_t setupTime;
@@ -874,21 +604,20 @@ struct i960Interface {
       return value;
 
   }
+  static uint32_t doSPITransfer32() noexcept {
+      digitalWrite(Pin::ADDR_LINES_CS, LOW);
+      uint32_t result = SPI.transfer32(0);
+      digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+      return result;
+  }
   static uint32_t 
   getAddress2() noexcept {
-      static const SPISettings cfg{10'000'000, MSBFIRST, SPI_MODE0};
-      uint32_t result = 0;
+      static const SPISettings cfg{18'000'000, MSBFIRST, SPI_MODE0};
       SPI.end();
-      SPI.setCS(static_cast<int>(Pin::ADDR_LINES_CS));
       SPI.begin();
       SPI.beginTransaction(cfg);
-      digitalWrite(Pin::ADDR_LINES_CS, LOW);
-      result = SPI.transfer32(0);
-      digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+      auto result = doSPITransfer32();
       SPI.endTransaction();
-      SPI.end();
-      SPI.setCS(static_cast<int>(Pin::EYESPI_TCS));
-      SPI.begin();
       return result;
   }
   static inline bool
@@ -1012,9 +741,9 @@ struct i960Interface {
           case 0x00'0000 ... 0x00'00FF:
               handleBuiltinDevices<isReadTransaction>(address & 0xFF);
               break;
-          case 0x00'0100 ... 0x00'01FF:
-              doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
-              break;
+          //case 0x00'0100 ... 0x00'01FF:
+          //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
+          //    break;
           case 0x00'0800 ... 0x00'0FFF: 
               doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
@@ -1063,14 +792,6 @@ private:
   static inline uint8_t EBIOutputStorage[256] = { 0 }; 
 };
 
-void
-setupTFTDisplay() noexcept {
-    tft.begin();
-    tft.setFont();
-    tft.fillScreen(Color_Black);
-    tft.setTextColor(Color_White, Color_Black);
-    Serial.printf("TFT Display (WxH): %d pixels by %d pixels\n", tft.width(), tft.height());
-}
 void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
@@ -1242,7 +963,7 @@ initializeSystem(void*) noexcept {
     setupMemory();
     setupRTC();
     setupSDCard();
-    setupTFTDisplay();
+    SPI.begin();
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
