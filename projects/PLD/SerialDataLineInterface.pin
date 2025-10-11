@@ -2,7 +2,7 @@
 
  Pin # | Name     | Pin Type
 -----------------------------
-   1   | CLK      | Clock/Input
+   1   | P1       | Clock/Input
    2   | ADS      | Input
    3   | DEN      | Input
    4   | WR       | Input
@@ -15,15 +15,15 @@
   11   | P11      | Input
   12   | GND      | GND
   13   | P13      | Input
-  14   | CLR0     | NC
-  15   | OE0      | NC
-  16   | PL0      | NC
+  14   | CLR0     | Output
+  15   | OE0      | Output
+  16   | PL0      | Output
   17   | P17      | NC
   18   | P18      | NC
   19   | P19      | NC
   20   | P20      | NC
-  21   | PL1      | NC
-  22   | OE1      | NC
-  23   | CLR1     | NC
+  21   | PL1      | Output
+  22   | OE1      | Output
+  23   | CLR1     | Output
   24   | VCC      | VCC
 

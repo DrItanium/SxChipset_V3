@@ -3,9 +3,9 @@
 AR
   0  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 23 = CLR1         S0 = 0   S1 = 0
-  1  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-  2  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 23 = CLR1         S0 = 1   S1 = 1
+  1  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+  2  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
   3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -14,9 +14,9 @@ Pin 23 = CLR1         S0 = 0   S1 = 0
   8  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   9  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 22 = OE1          S0 = 0   S1 = 0
- 10  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 11  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 22 = OE1          S0 = 0   S1 = 1
+ 10  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ 11  ---- ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ----
  12  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  13  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  14  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -27,9 +27,9 @@ Pin 22 = OE1          S0 = 0   S1 = 0
  19  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  20  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 21 = PL1          S0 = 0   S1 = 0
- 21  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 22  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 21 = PL1          S0 = 1   S1 = 1
+ 21  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ 22  ---- x--- ---- ---- ---- ---- ---- ---- ---- ---- ----
  23  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  25  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -114,9 +114,9 @@ Pin 17 = P17          S0 = 0   S1 = 0
  96  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  97  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 16 = PL0          S0 = 0   S1 = 0
- 98  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 99  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 16 = PL0          S0 = 1   S1 = 1
+ 98  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ 99  ---- x--- ---- ---- ---- ---- ---- ---- ---- ---- ----
 100  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 101  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 102  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -129,9 +129,9 @@ Pin 16 = PL0          S0 = 0   S1 = 0
 109  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 110  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 15 = OE0          S0 = 0   S1 = 0
-111  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-112  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 15 = OE0          S0 = 0   S1 = 1
+111  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+112  ---- ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ----
 113  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 114  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 115  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -142,9 +142,9 @@ Pin 15 = OE0          S0 = 0   S1 = 0
 120  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 121  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 14 = CLR0         S0 = 0   S1 = 0
-122  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-123  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 14 = CLR0         S0 = 1   S1 = 1
+122  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+123  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 124  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 125  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 126  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx

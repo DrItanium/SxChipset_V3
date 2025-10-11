@@ -1,8 +1,23 @@
 GAL22V10
 SerialDataLineInterface
 
-CLK ADS  DEN WR  CS  BE0 BE1 P8  P9  P10 P11  GND
+P1  ADS  DEN WR  CS  BE0 BE1 P8  P9  P10 P11  GND
 P13 CLR0 OE0 PL0 P17 P18 P19 P20 PL1 OE1 CLR1 VCC
 
+; use ADS to control the SH/LD (or /PL)
+; When ADS goes low, we want PL to also go low to make a snapshot
+PL0 = ADS
+PL1 = ADS
+CLR0 = VCC
+CLR1 = VCC
+; W/~R so we want OEx to be enabled when DEN is LOW and WR is LOW as well
+/OE0 = /DEN * /WR
+/OE1 = /DEN * /WR
 
 DESCRIPTION
+
+Controls the interface with the data lines that use an LVC595 and LVC165 combo
+
+The LVC165s are used for 16-bit data in
+
+The LVC595s are used for 16-bit data out
