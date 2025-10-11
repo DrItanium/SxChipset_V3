@@ -8,7 +8,8 @@ all: NewCPUCardDecoder.jed \
 	SerialEngineDecoderChip.jed \
 	ParallelDataCaptureMux.jed \
 	ParallelDataCaptureMuxClockChip.jed \
-	DenAndADSDetect.jed
+	DenAndADSDetect.jed \
+	SerialDataLineInterface.jed
 
 install_RPiCH351Interface: RPiCH351Interface.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $<
@@ -27,6 +28,9 @@ install_ParallelDataCaptureMuxClockChip: ParallelDataCaptureMuxClockChip.jed
 
 install_DenAndADSDetect: DenAndADSDetect.jed
 	minipro -p 'ATF22V10CQZ(UES)' --write $< 
+
+install_SerialDataLineInterface: SerialDataLineInterface.jed
+	minipro -p 'ATF22V10CQZ(UES)' --write $<
 
 clean:
 	@echo -n "Cleaning..."
