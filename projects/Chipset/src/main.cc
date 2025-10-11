@@ -876,12 +876,20 @@ struct i960Interface {
   }
   static uint32_t 
   getAddress2() noexcept {
-    SPI.beginTransaction({40'000'000, MSBFIRST, SPI_MODE0});
-    digitalWrite(Pin::ADDR_LINES_CS, LOW);
-    uint32_t result = SPI.transfer32(0);
-    digitalWrite(Pin::ADDR_LINES_CS, HIGH);
-    SPI.endTransaction();
-    return result;
+      static const SPISettings cfg{10'000'000, MSBFIRST, SPI_MODE0};
+      uint32_t result = 0;
+      SPI.end();
+      SPI.setCS(static_cast<int>(Pin::ADDR_LINES_CS));
+      SPI.begin();
+      SPI.beginTransaction(cfg);
+      digitalWrite(Pin::ADDR_LINES_CS, LOW);
+      result = SPI.transfer32(0);
+      digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+      SPI.endTransaction();
+      SPI.end();
+      SPI.setCS(static_cast<int>(Pin::EYESPI_TCS));
+      SPI.begin();
+      return result;
   }
   static inline bool
   isBurstLast() noexcept {
@@ -1218,6 +1226,7 @@ initializeSystem(void*) noexcept {
     inputPin(Pin::READY_SYNC);
     outputPin(Pin::SegmentStart, HIGH);
     outputPin(Pin::ReadySignalCheck, HIGH);
+    outputPin(Pin::ADDR_LINES_CS, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
@@ -1263,7 +1272,11 @@ handleMemoryTransaction(void*) noexcept {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        //Serial.printf("Target Address: 0x%x\n", targetAddress);
+        auto targetAddress2 = i960Interface::getAddress2();
+        if (targetAddress != targetAddress2) {
+            Serial.printf("Target Address: 0x%x\n", targetAddress);
+            Serial.printf("Target Address2: 0x%x\n", targetAddress2);
+        }
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
