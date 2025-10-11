@@ -55,10 +55,17 @@ enum class Pin : uint8_t {
   RPI_D25 = 4, // XBAR_INOUT8
   RPI_D26 = 33, // XBAR_INOUT9
   RPI_D27 = 5, // XBAR_INOUT17
+#if 0
   RPI_D28 = 28,
   RPI_D29 = 29,
   RPI_D30 = 30, // XBAR_INOUT23
   RPI_D31 = 31, // XBAR_INOUT22
+#else
+  RPI_D28 = 30, // XBAR_INOUT23
+  RPI_D29 = 31, // XBAR_INOUT22
+  RPI_D30 = 28,
+  RPI_D31 = 29,
+#endif
   RPI_D32 = 34,
   RPI_D33 = 35,
   RPI_D34 = 10,
