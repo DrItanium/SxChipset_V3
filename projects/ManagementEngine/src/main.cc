@@ -125,15 +125,17 @@ configureCCLs() {
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::ccl0_event_a); // route it to CCL0
   Event0.set_user(user::ccl1_event_a); // route it to CCL1
-  //Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
+  Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
 
   // PA5 is the ready signal from the teensy
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input 
   Event1.set_user(user::tcb0_capt);
+
   Event2.set_generator(gen::ccl0_out);
-  Event2.set_user(user::tcb0_cnt);
+  //Event2.set_user(user::tcb0_cnt);
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
-  updateClockFrequency(F_CPU / 2);
+  //updateClockFrequency(F_CPU / 2);
+  updateClockFrequency(F_CPU);
 
   // create a divide by two clock generator
   PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA

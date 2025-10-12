@@ -604,18 +604,18 @@ struct i960Interface {
       return value;
 
   }
-  static uint32_t doSPITransfer32() noexcept {
-      digitalWrite(Pin::ADDR_LINES_CS, LOW);
-      uint32_t result = SPI.transfer32(0);
-      digitalWrite(Pin::ADDR_LINES_CS, HIGH);
-      return result;
-  }
+  static inline const SPISettings cfg{18'000'000, MSBFIRST, SPI_MODE0};
   static uint32_t 
   getAddress2() noexcept {
-      static const SPISettings cfg{18'000'000, MSBFIRST, SPI_MODE0};
+      uint32_t result = 0;
       SPI.begin();
       SPI.beginTransaction(cfg);
-      auto result = doSPITransfer32();
+      {
+
+          digitalWrite(Pin::ADDR_LINES_CS, LOW);
+          result = SPI.transfer32(0);
+          digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+      }
       SPI.endTransaction();
       return result;
   }
@@ -631,13 +631,17 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  template<bool accessViaSPI= false>
+  template<bool accessViaSPI = false>
   static inline void
   writeDataLines(uint16_t value) noexcept {
       if constexpr (accessViaSPI) {
-        digitalWrite(Pin::DATA_LINES_CS, LOW);
-        (void)SPI.transfer16(value);
-        digitalWrite(Pin::DATA_LINES_CS, HIGH);
+          Serial.printf("Write to Data Lines: 0x%x\n", value);
+          SPI.begin();
+          SPI.beginTransaction(cfg);
+          digitalWrite(Pin::DATA_LINES_CS, LOW);
+          (void)SPI.transfer16(value);
+          digitalWrite(Pin::DATA_LINES_CS, HIGH);
+          SPI.endTransaction();
       } else {
           // This function will take at least 470ns worth of delay
           auto baseAddress = dataLines.getDataPortBaseAddress();
@@ -646,13 +650,17 @@ struct i960Interface {
           write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
       }
   }
-  template<bool accessViaSPI= false>
+  template<bool accessViaSPI = false>
   static inline uint16_t
   readDataLines() noexcept {
       if constexpr (accessViaSPI) {
+          SPI.begin();
+          SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
+          SPI.endTransaction();
+          Serial.printf("Read Data Lines Result: 0x%x\n", result);
           return result;
       } else {
           auto baseAddress = dataLines.getDataPortBaseAddress();
