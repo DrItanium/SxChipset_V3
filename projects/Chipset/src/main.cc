@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <FlexIO_t4.h>
 #include <Adafruit_IS31FL3741.h>
+#include <TimerOne.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -60,7 +61,6 @@ constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 
-Metro systemCounterWatcher{50}; // every 50ms, do a toggle
 
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -953,6 +953,8 @@ setup() {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
+    Timer1.initialize(50'000);
+    Timer1.attachInterrupt([]() { digitalToggleFast(Pin::INT960_0); });
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     displayClockSpeedInformation();
@@ -978,11 +980,6 @@ loop() {
         }
         SPI.endTransaction();
     } 
-    if (systemCounterWatcher.check()) {
-        if (systemCounterEnabled) {
-            digitalToggleFast(Pin::INT960_0);
-        }
-    }
 }
 
 
