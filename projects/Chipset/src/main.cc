@@ -37,7 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Metro.h>
 #include <RTClib.h>
 #include <FlexIO_t4.h>
-#include <arduino_freertos.h>
 #include <Adafruit_IS31FL3741.h>
 
 #include "Pinout.h"
@@ -56,23 +55,12 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-constexpr bool UseEBIForDataLines = false;
+constexpr bool UseEBIForAddressLines = false;
+constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 
 Metro systemCounterWatcher{25}; // every 25ms, do a toggle
-constexpr uint16_t color565(uint8_t r, uint8_t g, uint8_t b) noexcept {
-    // taken from the color565 routine in Adafruit GFX
-    return (static_cast<uint16_t>(r & 0xF8) << 8) |
-           (static_cast<uint16_t>(g & 0xFC) << 3) |
-           (static_cast<uint16_t>(b >> 3));
-}
-constexpr uint16_t Color_Black = color565(0, 0, 0);
-constexpr uint16_t Color_Blue = color565(0, 0, 255);
-constexpr uint16_t Color_Red = color565(255, 0, 0);
-constexpr uint16_t Color_Green = color565(0, 255, 0);
-constexpr uint16_t Color_Purple = color565(255, 0, 255);
-constexpr uint16_t Color_White = color565(255, 255, 255);
 
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -598,27 +586,18 @@ struct i960Interface {
   getAddress() noexcept {
       static constexpr uint32_t DelayAmount = 30;
       uint32_t value = 0;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      return value;
-
-  }
-  static inline const SPISettings cfg{15'000'000, MSBFIRST, SPI_MODE0};
-  static uint32_t 
-  getAddress2() noexcept {
-      uint32_t result = 0;
-      SPI.begin();
-      SPI.beginTransaction(cfg);
-      {
-
+      if constexpr (UseEBIForAddressLines) {
+          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      } else {
           digitalWrite(Pin::ADDR_LINES_CS, LOW);
-          result = SPI.transfer32(0);
+          value = SPI.transfer32(0);
           digitalWrite(Pin::ADDR_LINES_CS, HIGH);
       }
-      SPI.endTransaction();
-      return result;
+      return value;
+
   }
   static inline bool
   isBurstLast() noexcept {
@@ -640,13 +619,9 @@ struct i960Interface {
           write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
           write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
       } else {
-          Serial.printf("\tData lines write: 0x%x\n", value);
-          SPI.begin();
-          SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           (void)SPI.transfer16(value);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
-          SPI.endTransaction();
       }
   }
   static inline uint16_t
@@ -658,13 +633,9 @@ struct i960Interface {
           uint16_t b = read8(baseAddress+1); // at least 195ns
           return a| (b<< 8);
       } else {
-          SPI.begin();
-          SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
-          SPI.endTransaction();
-          Serial.printf("Read Data Lines Result: 0x%x\n", result);
           return result;
       }
   }
@@ -919,14 +890,8 @@ pullCPUOutOfReset() noexcept {
     Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
     Wire2.endTransmission();
 }
-//SemaphoreHandle_t adsTriggeredSemaphore;
-TaskHandle_t memoryTask = nullptr,
-             systemCounterTask = nullptr;
 void
 triggerADS() noexcept {
-    //BaseType_t higherPriorityTaskWoken = pdFALSE;
-    //vTaskNotifyGiveIndexedFromISR(memoryTask, 1, &higherPriorityTaskWoken);
-    //portYIELD_FROM_ISR(higherPriorityTaskWoken);
     adsTriggered = true;
 }
 void
@@ -950,8 +915,8 @@ setupLEDMatrix() noexcept {
         ledmatrix.setGlobalCurrent(5);
     }
 }
-void
-initializeSystem(void*) noexcept {
+void 
+setup() {
     Wire2.begin();
     inputPin(Pin::AVR_UP);
     while (digitalReadFast(Pin::AVR_UP) != HIGH) {
@@ -990,42 +955,26 @@ initializeSystem(void*) noexcept {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
-    taskDISABLE_INTERRUPTS();
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
-    taskENABLE_INTERRUPTS();
     displayClockSpeedInformation();
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
     Serial.println("Booted i960");
-    xTaskNotifyGiveIndexed(memoryTask, 0);
-    xTaskNotifyGiveIndexed(systemCounterTask, 0);
-    vTaskDelete(nullptr);
 }
-void
-handleMemoryTransaction(void*) noexcept {
-    ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
-    while (true) {
-        while (!adsTriggered) {
-            taskYIELD();
-        }
+void 
+loop() {
+    if (adsTriggered) {
+        SPI.begin();
+        SPI.beginTransaction(SPISettings{19'000'000, MSBFIRST, SPI_MODE0});
         digitalWriteFast(Pin::ReadySignalCheck, LOW);
         //digitalWriteFast(Pin::SegmentStart, LOW);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
-#if 0
         auto targetAddress = i960Interface::getAddress();
-        auto targetAddress2 = i960Interface::getAddress2();
-        if (targetAddress != targetAddress2) {
-            Serial.printf("Target Address: 0x%x\n", targetAddress);
-            Serial.printf("Target Address2: 0x%x\n", targetAddress2);
-        }
-#else
-        auto targetAddress = i960Interface::getAddress2();
         Serial.printf("Target Address:0x%x\n", targetAddress);
-#endif
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
@@ -1033,34 +982,13 @@ handleMemoryTransaction(void*) noexcept {
         }
         //digitalWriteFast(Pin::SegmentStart, HIGH);
         digitalWriteFast(Pin::ReadySignalCheck, HIGH);
-    }
-    vTaskDelete(nullptr);
-}
-void
-handleSystemCounterWatcher(void*) noexcept {
-    ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
-    while (true) {
-        if (systemCounterWatcher.check()) {
-            if (systemCounterEnabled) {
-                digitalToggleFast(Pin::INT960_0);
-            }
+        SPI.endTransaction();
+    } 
+    if (systemCounterWatcher.check()) {
+        if (systemCounterEnabled) {
+            digitalToggleFast(Pin::INT960_0);
         }
-        taskYIELD();
     }
-    vTaskDelete(nullptr);
-}
-void 
-setup() {
-    // we use multiple tasks to handle different fixed concepts
-    // syscount -> queries metro to see if we should trigger INT0 on the i960
-    // memory -> configures the i960 interface and then responds to requests, higher priority than other tasks
-    xTaskCreate(handleMemoryTransaction, "memory", 32768, nullptr, 3, &memoryTask);
-    xTaskCreate(handleSystemCounterWatcher, "syscount", 256, nullptr, 2, &systemCounterTask);
-    xTaskCreate(initializeSystem, "init", 4096, nullptr, 4, nullptr);
-    vTaskStartScheduler();
-}
-void 
-loop() {
 }
 
 
