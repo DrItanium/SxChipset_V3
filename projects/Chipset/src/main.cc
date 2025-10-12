@@ -56,6 +56,7 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 
@@ -631,43 +632,40 @@ struct i960Interface {
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  template<bool accessViaSPI = false>
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      if constexpr (accessViaSPI) {
-          Serial.printf("Write to Data Lines: 0x%x\n", value);
+      if constexpr (UseEBIForDataLines) {
+          // This function will take at least 470ns worth of delay
+          auto baseAddress = dataLines.getDataPortBaseAddress();
+          write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
+          write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
+      } else {
+          //Serial.printf("\tData lines write: 0x%x\n", value);
           SPI.begin();
           SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           (void)SPI.transfer16(value);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           SPI.endTransaction();
-      } else {
-          // This function will take at least 470ns worth of delay
-          auto baseAddress = dataLines.getDataPortBaseAddress();
-          //Serial.printf("\tData lines write: 0x%x\n", value);
-          write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
-          write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
       }
   }
-  template<bool accessViaSPI = false>
   static inline uint16_t
   readDataLines() noexcept {
-      if constexpr (accessViaSPI) {
+      if constexpr (UseEBIForDataLines) {
+          auto baseAddress = dataLines.getDataPortBaseAddress();
+          // this will take at least 390ns to complete
+          uint16_t a = read8(baseAddress); // at least 195ns
+          uint16_t b = read8(baseAddress+1); // at least 195ns
+          return a| (b<< 8);
+      } else {
           SPI.begin();
           SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           SPI.endTransaction();
-          Serial.printf("Read Data Lines Result: 0x%x\n", result);
+          //Serial.printf("Read Data Lines Result: 0x%x\n", result);
           return result;
-      } else {
-          auto baseAddress = dataLines.getDataPortBaseAddress();
-          // this will take at least 390ns to complete
-          uint16_t a = read8(baseAddress); // at least 195ns
-          uint16_t b = read8(baseAddress+1); // at least 195ns
-          return a| (b<< 8);
       }
   }
 
@@ -1024,6 +1022,7 @@ handleMemoryTransaction(void*) noexcept {
         }
 #else
         auto targetAddress = i960Interface::getAddress2();
+//        Serial.printf("Target Address:0x%x\n", targetAddress);
 #endif
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
