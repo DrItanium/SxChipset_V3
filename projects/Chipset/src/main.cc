@@ -56,7 +56,7 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-constexpr bool UseEBIForDataLines = true;
+constexpr bool UseEBIForDataLines = false;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 
@@ -605,7 +605,7 @@ struct i960Interface {
       return value;
 
   }
-  static inline const SPISettings cfg{18'000'000, MSBFIRST, SPI_MODE0};
+  static inline const SPISettings cfg{15'000'000, MSBFIRST, SPI_MODE0};
   static uint32_t 
   getAddress2() noexcept {
       uint32_t result = 0;
@@ -640,7 +640,7 @@ struct i960Interface {
           write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
           write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
       } else {
-          //Serial.printf("\tData lines write: 0x%x\n", value);
+          Serial.printf("\tData lines write: 0x%x\n", value);
           SPI.begin();
           SPI.beginTransaction(cfg);
           digitalWrite(Pin::DATA_LINES_CS, LOW);
@@ -664,7 +664,7 @@ struct i960Interface {
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           SPI.endTransaction();
-          //Serial.printf("Read Data Lines Result: 0x%x\n", result);
+          Serial.printf("Read Data Lines Result: 0x%x\n", result);
           return result;
       }
   }
@@ -780,10 +780,12 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (isReadTransaction) {
-          configureDataLinesForRead();
-      } else {
-          configureDataLinesForWrite();
+      if constexpr (UseEBIForDataLines) {
+          if constexpr (isReadTransaction) {
+              configureDataLinesForRead();
+          } else {
+              configureDataLinesForWrite();
+          }
       }
       switch (static_cast<uint8_t>(address >> 24)) {
           case 0x00: // PSRAM
@@ -1022,7 +1024,7 @@ handleMemoryTransaction(void*) noexcept {
         }
 #else
         auto targetAddress = i960Interface::getAddress2();
-//        Serial.printf("Target Address:0x%x\n", targetAddress);
+        Serial.printf("Target Address:0x%x\n", targetAddress);
 #endif
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
