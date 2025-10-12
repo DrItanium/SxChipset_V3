@@ -103,15 +103,14 @@ enum class Pin : uint8_t {
   INT960_0 = RPI_D22,  
   DATA_LINES_CS = RPI_D23,
   ADDR_LINES_CS = RPI_D24,
-  EYESPI_RST = RPI_D25,
-  EYESPI_DC = RPI_D26,
-  //ADR_CLK = RPI_D27,
-  SegmentStart = RPI_D28,
+  // RPI_D25
+  // RPI_D26
+  // RPI_D27
+  // RPI_D28
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
-  ReadySignalCheck = RPI_D32,
-  EYESPI_TCS = RPI_D34,
+  // RPI_D32
 #define X(index) DAT ## index = RPI_D ## index
   X(0),
   X(1),

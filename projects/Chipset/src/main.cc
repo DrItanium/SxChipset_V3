@@ -60,7 +60,7 @@ constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 
-Metro systemCounterWatcher{25}; // every 25ms, do a toggle
+Metro systemCounterWatcher{50}; // every 50ms, do a toggle
 
 struct EEPROMWrapper {
     constexpr EEPROMWrapper(uint16_t baseAddress) : _baseOffset(baseAddress) { }
@@ -932,8 +932,6 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    outputPin(Pin::SegmentStart, HIGH);
-    outputPin(Pin::ReadySignalCheck, HIGH);
     outputPin(Pin::ADDR_LINES_CS, HIGH);
     outputPin(Pin::DATA_LINES_CS, HIGH);
 
@@ -965,23 +963,19 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        SPI.begin();
-        SPI.beginTransaction(SPISettings{19'000'000, MSBFIRST, SPI_MODE0});
-        digitalWriteFast(Pin::ReadySignalCheck, LOW);
-        //digitalWriteFast(Pin::SegmentStart, LOW);
+        SPI.begin(); // why do I need to do this?
+        SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        Serial.printf("Target Address:0x%x\n", targetAddress);
+        //Serial.printf("Target Address:0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        //digitalWriteFast(Pin::SegmentStart, HIGH);
-        digitalWriteFast(Pin::ReadySignalCheck, HIGH);
         SPI.endTransaction();
     } 
     if (systemCounterWatcher.check()) {
