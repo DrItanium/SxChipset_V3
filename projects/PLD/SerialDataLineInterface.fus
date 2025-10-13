@@ -16,7 +16,7 @@ Pin 23 = CLR1         S0 = 1   S1 = 1
 
 Pin 22 = OE1          S0 = 0   S1 = 1
  10  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 11  ---- ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ----
+ 11  ---- ---- ---- -x-- ---- ---- ---- ---- ---- ---- ----
  12  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  13  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  14  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -131,7 +131,7 @@ Pin 16 = PL0          S0 = 1   S1 = 1
 
 Pin 15 = OE0          S0 = 0   S1 = 1
 111  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-112  ---- ---- -x-- -x-- ---- ---- ---- ---- ---- ---- ----
+112  ---- ---- ---- -x-- ---- ---- ---- ---- ---- ---- ----
 113  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 114  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 115  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
