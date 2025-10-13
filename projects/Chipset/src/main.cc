@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <FlexIO_t4.h>
 #include <Adafruit_IS31FL3741.h>
-#include <TimerOne.h>
+#include <IntervalTimer.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -60,6 +60,7 @@ constexpr bool UseEBIForAddressLines = false;
 constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
+IntervalTimer systemTimer;
 
 
 struct EEPROMWrapper {
@@ -953,8 +954,7 @@ setup() {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
-    Timer1.initialize(50'000);
-    Timer1.attachInterrupt([]() { digitalToggleFast(Pin::INT960_0); });
+    systemTimer.begin( []() { digitalToggleFast(Pin::INT960_0); }, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     displayClockSpeedInformation();
@@ -966,7 +966,7 @@ void
 loop() {
     if (adsTriggered) {
         SPI.begin(); // why do I need to do this?
-        SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
+        SPI.beginTransaction(SPISettings{19'000'000, MSBFIRST, SPI_MODE0});
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
