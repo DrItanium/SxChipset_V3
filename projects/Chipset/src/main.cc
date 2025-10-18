@@ -56,8 +56,15 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-constexpr bool UseEBIForAddressLines = true;
-constexpr bool UseEBIForDataLines = true;
+enum class ConnectionType : uint8_t {
+    EBI,
+    SPI,
+    Direct,
+};
+constexpr ConnectionType AddressLines = ConnectionType::EBI;
+constexpr ConnectionType DataLines = ConnectionType::EBI;
+constexpr bool UseEBIForAddressLines = (AddressLines == ConnectionType::EBI);
+constexpr bool UseEBIForDataLines = (DataLines == ConnectionType::EBI);
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
