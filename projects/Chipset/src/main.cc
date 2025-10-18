@@ -63,7 +63,25 @@ enum class ConnectionType : uint8_t {
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
 constexpr ConnectionType DataLines = ConnectionType::EBI;
-constexpr bool UseEBIForAddressLines = (AddressLines == ConnectionType::EBI);
+constexpr bool isValidAddressLinesKind() noexcept {
+    switch (AddressLines) {
+        case ConnectionType::EBI:
+        case ConnectionType::SPI:
+            return true;
+        default:
+            return false;
+    }
+}
+
+constexpr bool isValidDataLinesKind() noexcept {
+    switch (AddressLines) {
+        case ConnectionType::EBI:
+        case ConnectionType::SPI:
+            return true;
+        default:
+            return false;
+    }
+}
 constexpr bool UseEBIForDataLines = (DataLines == ConnectionType::EBI);
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
@@ -594,15 +612,17 @@ struct i960Interface {
   getAddress() noexcept {
       static constexpr uint32_t DelayAmount = 30;
       uint32_t value = 0;
-      if constexpr (UseEBIForAddressLines) {
+      if constexpr (AddressLines == ConnectionType::EBI) {
           value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
           value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
           value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
           value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      } else {
+      } else if constexpr (AddressLines == ConnectionType::SPI) {
           digitalWrite(Pin::ADDR_LINES_CS, LOW);
           value = SPI.transfer32(0);
           digitalWrite(Pin::ADDR_LINES_CS, HIGH);
+      } else {
+          static_assert(isValidAddressLinesKind(), "Invalid Address Lines Connection Type!");
       }
       return value;
 
@@ -972,7 +992,7 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        if constexpr (!UseEBIForDataLines || !UseEBIForAddressLines) {
+        if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.begin(); // why do I need to do this?
             SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
         }
@@ -987,7 +1007,7 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        if constexpr (!UseEBIForDataLines || !UseEBIForAddressLines) {
+        if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.endTransaction();
         }
     } 
