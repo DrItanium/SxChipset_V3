@@ -56,7 +56,7 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-constexpr bool UseEBIForAddressLines = false;
+constexpr bool UseEBIForAddressLines = true;
 constexpr bool UseEBIForDataLines = true;
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
@@ -965,8 +965,10 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        SPI.begin(); // why do I need to do this?
-        SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
+        if constexpr (!UseEBIForDataLines || !UseEBIForAddressLines) {
+            SPI.begin(); // why do I need to do this?
+            SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
+        }
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
@@ -978,7 +980,9 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        SPI.endTransaction();
+        if constexpr (!UseEBIForDataLines || !UseEBIForAddressLines) {
+            SPI.endTransaction();
+        }
     } 
 }
 
