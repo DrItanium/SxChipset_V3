@@ -966,7 +966,7 @@ void
 loop() {
     if (adsTriggered) {
         SPI.begin(); // why do I need to do this?
-        SPI.beginTransaction(SPISettings{19'000'000, MSBFIRST, SPI_MODE0});
+        SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         readyTriggered = false;
