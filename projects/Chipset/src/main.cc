@@ -615,9 +615,7 @@ struct i960Interface {
       readyTriggered = false;
 
       //digitalWriteFast(Pin::READY, HIGH);
-      if constexpr (readyDelayTimer > 0) {
-          delayNanoseconds(readyDelayTimer);  // wait some amount of time
-      }
+      fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
   isReadOperation() noexcept {
