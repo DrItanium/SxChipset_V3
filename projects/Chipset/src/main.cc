@@ -430,15 +430,17 @@ public:
   static void
   setDataLinesDirection() noexcept {
       if (_currentDirection != direction) {
+#if 0
           if constexpr (directPortManipulation) {
               uint32_t originalDirection = GPIO6_GDIR;
-              originalDirection &= 0x00FF'FFFF;
               if constexpr (direction == INPUT) {
-                GPIO6_GDIR = originalDirection;
+                  originalDirection &= 0x00FF'FFFF;
               } else {
-                GPIO6_GDIR = (originalDirection | 0xFF00'0000);
+                  originalDirection |= 0xFF00'0000;
               }
+              GPIO6_GDIR = originalDirection;
           } else {
+#endif
 #define X(p) pinMode(p, direction)
               X(Pin::EBI_D0);
               X(Pin::EBI_D1);
@@ -449,7 +451,9 @@ public:
               X(Pin::EBI_D6);
               X(Pin::EBI_D7);
 #undef X
+#if 0
           }
+#endif
           _currentDirection = direction;
       }
 
@@ -481,14 +485,14 @@ static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
 static constexpr InterfaceTimingDescription customWrite8 {
-    20, 0, 30, 0
-}; // 50ns worth of delay
+    10, 0, 30, 0
+}; // 40ns worth of delay
 static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    20, 50, 0, 0 
-}; // 70ns worth of delay
+    10, 50, 0, 0 
+}; // 60ns worth of delay
 
 struct i960Interface {
   i960Interface() = delete;
