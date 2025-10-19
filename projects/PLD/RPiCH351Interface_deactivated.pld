@@ -1,0 +1,19 @@
+GAL22V10
+RPiCH351InterfaceDeactivated
+
+NC SA5 SA4 SA3 SA2  SA1  SA0 SOE SWE NC NC GND
+NC NC  NC  NC  DEV1 DEV0 RD  WR  A2  A1 A0 VCC
+
+A2 = GND
+A1 = GND 
+A0 = GND
+WR = VCC
+RD = VCC
+/DEV0 = VCC
+/DEV1 = VCC
+
+
+DESCRIPTION
+
+A version of the RPiCH351 interface that deactivates everything to allow the
+CH351 to act as a pullup only

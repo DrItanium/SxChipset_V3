@@ -5,6 +5,7 @@
 
 all: NewCPUCardDecoder.jed \
 	RPiCH351Interface.jed \
+	RPiCH351Interface_deactivated.jed \
 	SerialEngineDecoderChip.jed \
 	ParallelDataCaptureMux.jed \
 	ParallelDataCaptureMuxClockChip.jed \
@@ -12,6 +13,8 @@ all: NewCPUCardDecoder.jed \
 	SerialDataLineInterface.jed
 
 install_RPiCH351Interface: RPiCH351Interface.jed
+	minipro -p "ATF22V10CQZ(UES)" --write $<
+install_RPiCH351Interface_deactivated: RPiCH351Interface_deactivated.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $<
 install_NewCPUCardDecoder_C: NewCPUCardDecoder.jed
 	minipro -p ATF16V8C --write $< 
