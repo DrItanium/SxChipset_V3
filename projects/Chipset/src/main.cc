@@ -62,7 +62,7 @@ enum class ConnectionType : uint8_t {
     Direct,
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::SPI;
+constexpr ConnectionType DataLines = ConnectionType::EBI;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -82,7 +82,6 @@ constexpr bool isValidDataLinesKind() noexcept {
             return false;
     }
 }
-constexpr bool UseEBIForDataLines = (DataLines == ConnectionType::EBI);
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
@@ -532,6 +531,7 @@ struct i960Interface {
       EBIInterface::setDataLinesDirection<OUTPUT>();
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
+
       delayNanoseconds(decl.addressWait);
       //delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
       digitalWriteFast(Pin::EBI_WR, LOW);
@@ -561,19 +561,23 @@ struct i960Interface {
 
   static void
   begin() noexcept {
-      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
+      if constexpr (AddressLines == ConnectionType::EBI) {
+          write8<false>(addressLines.getConfigPortBaseAddress(), 0);
+          write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
+          write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
+          write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
+      }
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
-      // 470ns worth of delay
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
+      if constexpr (DataLines == ConnectionType::EBI) {
+          // 470ns worth of delay
+          write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
+          write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
+      }
   }
   template<bool compareWithPrevious = true>
   static inline void
@@ -783,7 +787,7 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (UseEBIForDataLines) {
+      if constexpr (DataLines == ConnectionType::EBI || DataLines == ConnectionType::Direct) {
           if constexpr (isReadTransaction) {
               configureDataLinesForRead();
           } else {
