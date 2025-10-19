@@ -485,8 +485,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    90, 80, 20, 50
-}; // 240ns worth of delay
+    80, 80, 20, 50
+}; // 230ns worth of delay
 
 struct i960Interface {
   i960Interface() = delete;
