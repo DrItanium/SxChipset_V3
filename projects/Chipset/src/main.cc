@@ -61,7 +61,7 @@ enum class ConnectionType : uint8_t {
     SPI,
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::SPI;
+constexpr ConnectionType DataLines = ConnectionType::EBI;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -597,7 +597,7 @@ struct i960Interface {
   configureDataLinesForWrite() noexcept {
     configureDataLinesDirection<0, compareWithPrevious>();
   }
-  template<uint32_t readyDelayTimer = 0>
+  template<uint32_t readyDelayTimer = 200>
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
@@ -607,6 +607,7 @@ struct i960Interface {
         while (!readyTriggered);
       }
       readyTriggered = false;
+
       //digitalWriteFast(Pin::READY, HIGH);
       if constexpr (readyDelayTimer > 0) {
           delayNanoseconds(readyDelayTimer);  // wait some amount of time
@@ -654,6 +655,7 @@ struct i960Interface {
   static inline void
   writeDataLines(uint16_t value) noexcept {
       static_assert(isValidDataLinesKind(), "Invalid Data Lines Kind specified");
+      Serial.printf("\tValue: 0x%x\n", value);
       if constexpr (DataLines == ConnectionType::EBI) {
           // This function will take at least 470ns worth of delay
           auto baseAddress = dataLines.getDataPortBaseAddress();
@@ -661,6 +663,7 @@ struct i960Interface {
           write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
       } else if constexpr (DataLines == ConnectionType::SPI) {
           digitalWrite(Pin::DATA_LINES_CS, LOW);
+          delayNanoseconds(50);
           (void)SPI.transfer16(value);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
       }
@@ -676,6 +679,7 @@ struct i960Interface {
           return a| (b<< 8);
       } else if constexpr (DataLines == ConnectionType::SPI) {
           digitalWrite(Pin::DATA_LINES_CS, LOW);
+          delayNanoseconds(50);
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           return result;
