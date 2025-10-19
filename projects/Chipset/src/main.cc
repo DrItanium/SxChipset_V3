@@ -485,8 +485,8 @@ static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
 static constexpr InterfaceTimingDescription customWrite8 {
-    50, 0, 90, 50
-}; // 190ns worth of delay
+    50, 0, 50, 50
+}; // 150ns worth of delay
 static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
