@@ -62,7 +62,7 @@ enum class ConnectionType : uint8_t {
     Direct,
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::EBI;
+constexpr ConnectionType DataLines = ConnectionType::Direct;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -1009,7 +1009,7 @@ loop() {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        //Serial.printf("Target Address:0x%x\n", targetAddress);
+        Serial.printf("Target Address:0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
