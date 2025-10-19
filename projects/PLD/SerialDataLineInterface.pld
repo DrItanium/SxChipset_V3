@@ -11,8 +11,8 @@ PL1 = ADS
 CLR0 = VCC
 CLR1 = VCC
 ; W/~R so we want OEx to be enabled when DEN is LOW and WR is LOW as well
-/OE0 = /WR
-/OE1 = /WR
+/OE0 = /WR * /DEN
+/OE1 = /WR * /DEN
 
 DESCRIPTION
 
