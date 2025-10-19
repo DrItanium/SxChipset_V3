@@ -475,6 +475,12 @@ struct InterfaceTimingDescription {
     uint32_t afterTime;
     constexpr InterfaceTimingDescription(uint32_t a, uint32_t b, uint32_t c, uint32_t d) : addressWait(a), setupTime(b), holdTime(c), afterTime(d) { }
 };
+template<uint32_t value>
+inline void fixedDelayNanoseconds() noexcept {
+    if constexpr (value > 0) {
+        delayNanoseconds(value);
+    }
+}
 static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
@@ -485,8 +491,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    50, 80, 0, 50
-}; // 180ns worth of delay
+    50, 70, 0, 50
+}; // 170ns worth of delay
 
 struct i960Interface {
   i960Interface() = delete;
@@ -538,14 +544,14 @@ struct i960Interface {
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
 
-      delayNanoseconds(decl.addressWait);
-      //delayNanoseconds(decl.setupTime); // setup time (tDS), normally 30
+      fixedDelayNanoseconds<decl.addressWait>();
+      fixedDelayNanoseconds<decl.setupTime>(); // setup time (tDS), normally 30
       digitalWriteFast(Pin::EBI_WR, LOW);
-      delayNanoseconds(decl.holdTime); // tWL hold for at least 80ns
+      fixedDelayNanoseconds<decl.holdTime>(); // tWL hold for at least 80ns
       digitalWriteFast(Pin::EBI_WR, HIGH);
       // update the address
       EBIOutputStorage[address] = value;
-      delayNanoseconds(decl.afterTime); // data hold after WR + tWH + breathe (50ns)
+      fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
   template<InterfaceTimingDescription decl = customRead8>
@@ -555,13 +561,13 @@ struct i960Interface {
       // This function will take at least 230 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
-      delayNanoseconds(decl.addressWait);
+      fixedDelayNanoseconds<decl.addressWait>();
       digitalWriteFast(Pin::EBI_RD, LOW);
-      delayNanoseconds(decl.setupTime); // wait for things to get selected properly
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
-      //delayNanoseconds(decl.holdTime);
+      fixedDelayNanoseconds<decl.holdTime>();
       digitalWriteFast(Pin::EBI_RD, HIGH);
-      delayNanoseconds(decl.afterTime);
+      fixedDelayNanoseconds<decl.afterTime>();
       return output;
   }
 
