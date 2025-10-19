@@ -425,22 +425,7 @@ public:
       }
       _currentOutputDataLines = value;
   }
-  static void
-  setDataLinesDirection(PinDirection direction) noexcept {
-    if (_currentDirection != direction) {
-#define X(p) pinMode(p, direction)
-      X(Pin::EBI_D0);
-      X(Pin::EBI_D1);
-      X(Pin::EBI_D2);
-      X(Pin::EBI_D3);
-      X(Pin::EBI_D4);
-      X(Pin::EBI_D5);
-      X(Pin::EBI_D6);
-      X(Pin::EBI_D7);
-#undef X
-      _currentDirection = direction;
-    }
-  }
+
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
