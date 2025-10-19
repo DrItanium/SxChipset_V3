@@ -491,8 +491,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    20, 50, 0, 20 
-}; // 90ns worth of delay
+    10, 50, 0, 20 
+}; // 80ns worth of delay
 
 struct i960Interface {
   i960Interface() = delete;
@@ -627,7 +627,6 @@ struct i960Interface {
   }
   static uint32_t 
   getAddress() noexcept {
-      static constexpr uint32_t DelayAmount = 30;
       uint32_t value = 0;
       if constexpr (AddressLines == ConnectionType::EBI) {
           value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
