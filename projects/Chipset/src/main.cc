@@ -538,8 +538,6 @@ struct i960Interface {
               return;
           }
       }
-      // defaultWrite8 will take 300ns since setuptime is ignored
-      // customWrite8 will take 290ns since setupTime is ignored
       EBIInterface::setDataLinesDirection<OUTPUT>();
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
