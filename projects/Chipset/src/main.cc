@@ -59,10 +59,9 @@ volatile bool systemCounterEnabled = false;
 enum class ConnectionType : uint8_t {
     EBI,
     SPI,
-    Direct,
 };
 constexpr ConnectionType AddressLines = ConnectionType::SPI;
-constexpr ConnectionType DataLines = ConnectionType::Direct;
+constexpr ConnectionType DataLines = ConnectionType::EBI;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -78,8 +77,6 @@ constexpr bool isValidDataLinesKind() noexcept {
         case ConnectionType::EBI:
         case ConnectionType::SPI:
             return true;
-        case ConnectionType::Direct:
-            return isValidAddressLinesKind() && (AddressLines != ConnectionType::EBI);
         default:
             return false;
     }
@@ -87,9 +84,6 @@ constexpr bool isValidDataLinesKind() noexcept {
 // ADDR   | DATA   | Outcome
 // EBI    | EBI    | true
 // SPI    | SPI    | true
-// Direct | XXX    | false
-// EBI    | Direct | false
-// SPI    | Direct | true
 // EBI    | SPI    | true
 // SPI    | EBI    | true
 
@@ -580,7 +574,9 @@ struct i960Interface {
           write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       }
       configureDataLinesForRead<false>();
-      EBIInterface::setDataLines(0);
+      if constexpr (AddressLines == ConnectionType::EBI || DataLines == ConnectionType::EBI) {
+        EBIInterface::setDataLines(0);
+      }
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
@@ -589,42 +585,6 @@ struct i960Interface {
           // 470ns worth of delay
           write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
           write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
-      } else if constexpr (DataLines == ConnectionType::Direct) {
-          if constexpr (value == 0xFFFF) {
-              pinMode(Pin::RPI_D0, OUTPUT);
-              pinMode(Pin::RPI_D1, OUTPUT);
-              pinMode(Pin::RPI_D2, OUTPUT);
-              pinMode(Pin::RPI_D3, OUTPUT);
-              pinMode(Pin::RPI_D4, OUTPUT);
-              pinMode(Pin::RPI_D5, OUTPUT);
-              pinMode(Pin::RPI_D6, OUTPUT);
-              pinMode(Pin::RPI_D7, OUTPUT);
-              pinMode(Pin::RPI_D8, OUTPUT);
-              pinMode(Pin::RPI_D9, OUTPUT);
-              pinMode(Pin::RPI_D10, OUTPUT);
-              pinMode(Pin::RPI_D11, OUTPUT);
-              pinMode(Pin::RPI_D12, OUTPUT);
-              pinMode(Pin::RPI_D13, OUTPUT);
-              pinMode(Pin::RPI_D14, OUTPUT);
-              pinMode(Pin::RPI_D15, OUTPUT);
-          } else {
-              pinMode(Pin::RPI_D0, INPUT);
-              pinMode(Pin::RPI_D1, INPUT);
-              pinMode(Pin::RPI_D2, INPUT);
-              pinMode(Pin::RPI_D3, INPUT);
-              pinMode(Pin::RPI_D4, INPUT);
-              pinMode(Pin::RPI_D5, INPUT);
-              pinMode(Pin::RPI_D6, INPUT);
-              pinMode(Pin::RPI_D7, INPUT);
-              pinMode(Pin::RPI_D8, INPUT);
-              pinMode(Pin::RPI_D9, INPUT);
-              pinMode(Pin::RPI_D10, INPUT);
-              pinMode(Pin::RPI_D11, INPUT);
-              pinMode(Pin::RPI_D12, INPUT);
-              pinMode(Pin::RPI_D13, INPUT);
-              pinMode(Pin::RPI_D14, INPUT);
-              pinMode(Pin::RPI_D15, INPUT);
-          }
       }
   }
   template<bool compareWithPrevious = true>
@@ -703,24 +663,6 @@ struct i960Interface {
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           (void)SPI.transfer16(value);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
-      } else if constexpr (DataLines == ConnectionType::Direct) {
-          // simplest design is to just update each pin individually
-          digitalWriteFast(Pin::RPI_D0, (value & 0b0000'0000'0000'0001) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D1, (value & 0b0000'0000'0000'0010) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D2, (value & 0b0000'0000'0000'0100) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D3, (value & 0b0000'0000'0000'1000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D4, (value & 0b0000'0000'0001'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D5, (value & 0b0000'0000'0010'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D6, (value & 0b0000'0000'0100'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D7, (value & 0b0000'0000'1000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D8, (value & 0b0000'0001'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D9, (value & 0b0000'0010'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D10, (value & 0b0000'0100'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D11, (value & 0b0000'1000'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D12, (value & 0b0001'0000'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D13, (value & 0b0010'0000'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D14, (value & 0b0100'0000'0000'0000) ? HIGH : LOW);
-          digitalWriteFast(Pin::RPI_D15, (value & 0b1000'0000'0000'0000) ? HIGH : LOW);
       }
   }
   static inline uint16_t
@@ -737,27 +679,6 @@ struct i960Interface {
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           return result;
-      } else if constexpr (DataLines == ConnectionType::Direct) {
-          uint16_t value = 0;
-#define X(ind) if (digitalReadFast(Pin::RPI_D ## ind ) ) value |= static_cast<uint16_t>(1 << ind )
-          X(0);
-          X(1);
-          X(2);
-          X(3);
-          X(4);
-          X(5);
-          X(6);
-          X(7);
-          X(8);
-          X(9);
-          X(10);
-          X(11);
-          X(12);
-          X(13);
-          X(14);
-          X(15);
-#undef X
-          return value;
       } else {
           return 0;
       }
@@ -874,7 +795,7 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (DataLines == ConnectionType::EBI || DataLines == ConnectionType::Direct) {
+      if constexpr (DataLines == ConnectionType::EBI) {
           if constexpr (isReadTransaction) {
               configureDataLinesForRead();
           } else {
@@ -1096,7 +1017,6 @@ loop() {
         readyTriggered = false;
         while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
-        Serial.printf("Target Address:0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
