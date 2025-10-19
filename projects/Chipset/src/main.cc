@@ -62,7 +62,7 @@ enum class ConnectionType : uint8_t {
     Direct,
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::Direct;
+constexpr ConnectionType DataLines = ConnectionType::SPI;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -77,7 +77,6 @@ constexpr bool isValidDataLinesKind() noexcept {
     switch (DataLines) {
         case ConnectionType::EBI:
         case ConnectionType::SPI:
-        case ConnectionType::Direct:
             return true;
         default:
             return false;
