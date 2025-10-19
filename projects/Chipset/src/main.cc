@@ -62,7 +62,7 @@ enum class ConnectionType : uint8_t {
     Direct,
 };
 constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::EBI;
+constexpr ConnectionType DataLines = ConnectionType::Direct;
 constexpr bool isValidAddressLinesKind() noexcept {
     switch (AddressLines) {
         case ConnectionType::EBI:
@@ -74,9 +74,10 @@ constexpr bool isValidAddressLinesKind() noexcept {
 }
 
 constexpr bool isValidDataLinesKind() noexcept {
-    switch (AddressLines) {
+    switch (DataLines) {
         case ConnectionType::EBI:
         case ConnectionType::SPI:
+        case ConnectionType::Direct:
             return true;
         default:
             return false;
@@ -641,12 +642,13 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      if constexpr (UseEBIForDataLines) {
+      static_assert(isValidDataLinesKind(), "Invalid Data Lines Kind specified");
+      if constexpr (DataLines == ConnectionType::EBI) {
           // This function will take at least 470ns worth of delay
           auto baseAddress = dataLines.getDataPortBaseAddress();
           write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
           write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
-      } else {
+      } else if constexpr (DataLines == ConnectionType::SPI) {
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           (void)SPI.transfer16(value);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
@@ -654,17 +656,20 @@ struct i960Interface {
   }
   static inline uint16_t
   readDataLines() noexcept {
-      if constexpr (UseEBIForDataLines) {
+      static_assert(isValidDataLinesKind(), "Invalid Data Lines Kind specified");
+      if constexpr (DataLines == ConnectionType::EBI) {
           auto baseAddress = dataLines.getDataPortBaseAddress();
           // this will take at least 390ns to complete
           uint16_t a = read8(baseAddress); // at least 195ns
           uint16_t b = read8(baseAddress+1); // at least 195ns
           return a| (b<< 8);
-      } else {
+      } else if constexpr (DataLines == ConnectionType::SPI) {
           digitalWrite(Pin::DATA_LINES_CS, LOW);
           uint16_t result = SPI.transfer16(0);
           digitalWrite(Pin::DATA_LINES_CS, HIGH);
           return result;
+      } else {
+          return 0;
       }
   }
 
