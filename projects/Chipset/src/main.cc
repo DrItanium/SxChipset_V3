@@ -933,6 +933,12 @@ setupLEDMatrix() noexcept {
     }
 }
 void 
+triggerSystemTimer() noexcept {
+    if (systemCounterEnabled) {
+        digitalToggleFast(Pin::INT960_0); 
+    }
+}
+void 
 setup() {
     Wire2.begin();
     inputPin(Pin::AVR_UP);
@@ -976,7 +982,7 @@ setup() {
         Serial.println("No Alphanumeric Display Found!");
     }
     GamepadQT::begin();
-    systemTimer.begin( []() { digitalToggleFast(Pin::INT960_0); }, 100'000);
+    systemTimer.begin(triggerSystemTimer, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     displayClockSpeedInformation();
