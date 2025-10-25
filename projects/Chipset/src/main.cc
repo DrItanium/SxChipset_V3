@@ -661,11 +661,9 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      //Serial.printf("\tValue: 0x%x\n", value);
-      // This function will take at least 470ns worth of delay
       auto baseAddress = dataLines.getDataPortBaseAddress();
-      write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
+      write8(baseAddress, static_cast<uint8_t>(value)); 
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
   static inline uint16_t
   readDataLines() noexcept {
@@ -696,11 +694,11 @@ struct i960Interface {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
-              signalReady();
               break;
           } 
           signalReady();
       }
+      signalReady();
   }
   template<MemoryCell MC>
   static void
