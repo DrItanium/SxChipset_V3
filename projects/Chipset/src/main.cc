@@ -626,7 +626,6 @@ struct i960Interface {
           {
               while (!readyTriggered);
           }
-          //readyTriggered = false;
           fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
       }
   }
@@ -692,7 +691,7 @@ struct i960Interface {
     signalReady();
   }
   template<MemoryCell MC>
-  static inline void
+  static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
@@ -704,7 +703,7 @@ struct i960Interface {
       signalReady();
   }
   template<MemoryCell MC>
-  static inline void
+  static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
@@ -1000,20 +999,23 @@ setup() {
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
 }
+
 void 
 loop() {
     if (adsTriggered) {
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
+        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         adsTriggered = false;
-        // we want nothing else to take over while this section is running
-        auto targetAddress = i960Interface::getAddress();
-        //Serial.printf("Target Address: 0x%x\n", targetAddress);
-        if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
-        } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
+        {
+            // we want nothing else to take over while this section is running
+            auto targetAddress = i960Interface::getAddress();
+            //Serial.printf("Target Address: 0x%x\n", targetAddress);
+            if (i960Interface::isReadOperation()) {
+                i960Interface::doMemoryTransaction<true>(targetAddress);
+            } else {
+                i960Interface::doMemoryTransaction<false>(targetAddress);
+            }
         }
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
+        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
