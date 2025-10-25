@@ -604,12 +604,13 @@ struct i960Interface {
   template<uint32_t readyDelayTimer = 0>
   static void
   signalReady() noexcept {
+      readyTriggered = false;
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       {
         while (!readyTriggered);
       }
-      readyTriggered = false;
+      //readyTriggered = false;
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
@@ -1007,16 +1008,14 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-InstantRestart:
-        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.begin(); // why do I need to do this?
             SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
         }
         adsTriggered = false;
         // we want nothing else to take over while this section is running
-        readyTriggered = false;
-        while (digitalReadFast(Pin::DEN) == HIGH) ;
+        //while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
@@ -1027,10 +1026,7 @@ InstantRestart:
         if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.endTransaction();
         }
-        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
-        if (adsTriggered) {
-            goto InstantRestart;
-        }
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
