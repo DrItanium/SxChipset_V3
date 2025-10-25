@@ -692,11 +692,11 @@ struct i960Interface {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
-              signalReady();
               break;
           } 
           signalReady();
       }
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
