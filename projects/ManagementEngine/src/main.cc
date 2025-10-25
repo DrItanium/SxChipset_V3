@@ -63,10 +63,12 @@ setupSystemClocks() noexcept {
     CCP = 0xD8; 
     CLKCTRL.MCLKCTRLA = 0b1000'0000; 
     asm volatile("nop"); // then wait one cycle
+#if (F_CPU == 24000000L) 
     // configure the high frequency oscillator
     CCP = 0xD8; 
     CLKCTRL.OSCHFCTRLA = 0b1'0'1001'0'0; 
     asm volatile("nop");
+#endif
 
     // configure the 32khz oscillator to run in standby
     CCP = 0xD8;
