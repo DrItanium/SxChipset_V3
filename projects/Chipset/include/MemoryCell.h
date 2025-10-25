@@ -45,8 +45,6 @@ private:
   uint8_t bytes[16];
   uint16_t shorts[8];
   uint32_t words[4];
-  float floats[4];
-  double doubles[2];
 public:
   void update() noexcept {
 
