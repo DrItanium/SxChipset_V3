@@ -650,7 +650,6 @@ struct i960Interface {
           signalReady();
       }
       signalReady();
-      // nothing to do on target end
   }
   template<MemoryCell MC>
   static inline void
@@ -945,10 +944,9 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
-        //while (digitalReadFast(Pin::DEN) == HIGH) ;
         auto targetAddress = i960Interface::getAddress();
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
@@ -956,7 +954,7 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
