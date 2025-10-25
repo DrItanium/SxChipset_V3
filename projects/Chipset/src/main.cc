@@ -984,7 +984,7 @@ setup() {
     GamepadQT::begin();
     systemTimer.begin(triggerSystemTimer, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
