@@ -452,17 +452,6 @@ public:
   static void
   setDataLinesDirection() noexcept {
       if (_currentDirection != direction) {
-#if 0
-          if constexpr (directPortManipulation) {
-              uint32_t originalDirection = GPIO6_GDIR;
-              if constexpr (direction == INPUT) {
-                  originalDirection &= 0x00FF'FFFF;
-              } else {
-                  originalDirection |= 0xFF00'0000;
-              }
-              GPIO6_GDIR = originalDirection;
-          } else {
-#endif
 #define X(p) pinMode(p, direction)
               X(Pin::EBI_D0);
               X(Pin::EBI_D1);
@@ -473,9 +462,6 @@ public:
               X(Pin::EBI_D6);
               X(Pin::EBI_D7);
 #undef X
-#if 0
-          }
-#endif
           _currentDirection = direction;
       }
 
