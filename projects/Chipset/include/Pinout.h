@@ -110,25 +110,7 @@ enum class Pin : uint8_t {
   AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
-  // RPI_D32
-#define X(index) DAT ## index = RPI_D ## index
-  X(0),
-  X(1),
-  X(2),
-  X(3),
-  X(4),
-  X(5),
-  X(6),
-  X(7),
-  X(8),
-  X(9),
-  X(10),
-  X(11),
-  X(12),
-  X(13),
-  X(14),
-  X(15),
-#undef X
+  INSPECT_TRIGGER = RPI_D32,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {

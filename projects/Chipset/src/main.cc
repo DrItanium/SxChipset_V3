@@ -605,14 +605,11 @@ struct i960Interface {
   static void
   signalReady() noexcept {
       // run and block until we get the completion pulse
-      digitalToggle(Pin::READY);
-      //digitalWriteFast(Pin::READY, LOW);
+      digitalToggleFast(Pin::READY);
       {
         while (!readyTriggered);
       }
       readyTriggered = false;
-
-      //digitalWriteFast(Pin::READY, HIGH);
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
@@ -981,6 +978,7 @@ setup() {
     inputPin(Pin::READY_SYNC);
     outputPin(Pin::ADDR_LINES_CS, HIGH);
     outputPin(Pin::DATA_LINES_CS, HIGH);
+    outputPin(Pin::INSPECT_TRIGGER, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
@@ -1009,6 +1007,8 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
+InstantRestart:
+        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.begin(); // why do I need to do this?
             SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
@@ -1026,6 +1026,10 @@ loop() {
         }
         if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
             SPI.endTransaction();
+        }
+        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
+        if (adsTriggered) {
+            goto InstantRestart;
         }
     } 
 }
