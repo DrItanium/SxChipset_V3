@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <FlexIO_t4.h>
 #include <Adafruit_IS31FL3741.h>
 #include <IntervalTimer.h>
+#include <SparkFun_Alphanumeric_Display.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -56,11 +57,13 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+volatile bool alphaDisplayAvailable = false;
 
 
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
+HT16K33 alphaDisplay;
 
 
 struct EEPROMWrapper {
@@ -934,6 +937,12 @@ setup() {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
+    if (alphaDisplay.begin()) {
+        alphaDisplayAvailable = true;
+        alphaDisplay.print("i960");
+    } else {
+        Serial.println("No Alphanumeric Display Found!");
+    }
     systemTimer.begin( []() { digitalToggleFast(Pin::INT960_0); }, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
