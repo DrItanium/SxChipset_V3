@@ -631,7 +631,6 @@ struct i960Interface {
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       return value;
-
   }
   static inline bool
   isBurstLast() noexcept {
@@ -769,12 +768,13 @@ struct i960Interface {
 
   template<bool isReadTransaction>
   static inline void
-  doMemoryTransaction(uint32_t address) noexcept {
+  doMemoryTransaction() noexcept {
       if constexpr (isReadTransaction) {
           configureDataLinesForRead();
       } else {
           configureDataLinesForWrite();
       }
+      auto address = i960Interface::getAddress();
       switch (static_cast<uint8_t>(address >> 24)) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
@@ -994,7 +994,7 @@ void
 loop() {
     if (adsTriggered) {
         adsTriggered = false;
-        if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
+        if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
