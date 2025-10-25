@@ -768,13 +768,12 @@ struct i960Interface {
 
   template<bool isReadTransaction>
   static inline void
-  doMemoryTransaction() noexcept {
+  doMemoryTransaction(uint32_t address) noexcept {
       if constexpr (isReadTransaction) {
           configureDataLinesForRead();
       } else {
           configureDataLinesForWrite();
       }
-      auto address = i960Interface::getAddress();
       switch (static_cast<uint8_t>(address >> 24)) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
@@ -994,7 +993,7 @@ void
 loop() {
     if (adsTriggered) {
         adsTriggered = false;
-        if (i960Interface::isReadOperation()) {
+        if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
