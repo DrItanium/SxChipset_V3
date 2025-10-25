@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_IS31FL3741.h>
 #include <IntervalTimer.h>
 #include <SparkFun_Alphanumeric_Display.h>
+#include <Adafruit_BLE.h>
+#include <Adafruit_BluefruitLE_SPI.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
