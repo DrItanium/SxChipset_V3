@@ -696,11 +696,11 @@ struct i960Interface {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
+              signalReady();
               break;
           } 
           signalReady();
       }
-      signalReady();
   }
   template<MemoryCell MC>
   static void
@@ -708,11 +708,11 @@ struct i960Interface {
       for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
+              signalReady();
               break;
           } 
           signalReady();
       }
-      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
@@ -1003,19 +1003,12 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         adsTriggered = false;
-        {
-            // we want nothing else to take over while this section is running
-            auto targetAddress = i960Interface::getAddress();
-            //Serial.printf("Target Address: 0x%x\n", targetAddress);
-            if (i960Interface::isReadOperation()) {
-                i960Interface::doMemoryTransaction<true>(targetAddress);
-            } else {
-                i960Interface::doMemoryTransaction<false>(targetAddress);
-            }
+        if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
