@@ -40,8 +40,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_IS31FL3741.h>
 #include <IntervalTimer.h>
 #include <SparkFun_Alphanumeric_Display.h>
+// taken from Adafruit bleuart_cmdmode
 #include <Adafruit_BLE.h>
 #include <Adafruit_BluefruitLE_SPI.h>
+// airlift support
+#include <WiFiNINA.h>
+// gamepad qt
+#include <Adafruit_seesaw.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
@@ -66,6 +71,47 @@ RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
 HT16K33 alphaDisplay;
+
+namespace PCJoystick {
+    Adafruit_seesaw device{&Wire2};
+    constexpr auto Button1 = 3;
+    constexpr auto Button2 = 13;
+    constexpr auto Button3 = 2;
+    constexpr auto Button4 = 14;
+    constexpr uint32_t ButtonMask = (1UL << Button1) | (1UL << Button2) | 
+                                    (1UL << Button3) | (1UL << Button4);
+    constexpr auto Joy1X = 1;
+    constexpr auto Joy1Y = 15;
+    constexpr auto Joy2X = 0;
+    constexpr auto Joy2Y = 16;
+
+    void begin() noexcept {
+        device.begin(0x49);
+    }
+} // end namespace PCJoystick 
+
+namespace GamepadQT {
+    Adafruit_seesaw device{&Wire2};
+    bool available = false;
+    constexpr auto ButtonX = 6;
+    constexpr auto ButtonY = 2;
+    constexpr auto ButtonA = 5;
+    constexpr auto ButtonB = 1;
+    constexpr auto ButtonSelect = 0;
+    constexpr auto ButtonStart = 16;
+    constexpr uint32_t ButtonMask = (1UL << ButtonX) | (1UL << ButtonY) | 
+        (1UL << ButtonA) | (1UL << ButtonB) | 
+        (1UL << ButtonSelect) | (1UL << ButtonStart);
+
+    void begin() {
+        available = device.begin(0x50);
+        if (!available) {
+            Serial.println("ERROR! seesaw not found (GamepadQT)");
+        } else {
+            Serial.println("GamepadQT found!");
+        }
+    }
+} // end namespace GamepadQT
 
 
 struct EEPROMWrapper {
@@ -253,6 +299,7 @@ struct RTCMemoryBlock {
         };
         bool _32kOutEn = false;
 };
+
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
@@ -945,6 +992,7 @@ setup() {
     } else {
         Serial.println("No Alphanumeric Display Found!");
     }
+    GamepadQT::begin();
     systemTimer.begin( []() { digitalToggleFast(Pin::INT960_0); }, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
