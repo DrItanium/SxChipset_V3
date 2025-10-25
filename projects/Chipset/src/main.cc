@@ -1003,7 +1003,7 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         adsTriggered = false;
         {
             // we want nothing else to take over while this section is running
@@ -1015,7 +1015,7 @@ loop() {
                 i960Interface::doMemoryTransaction<false>(targetAddress);
             }
         }
-        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
+        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
