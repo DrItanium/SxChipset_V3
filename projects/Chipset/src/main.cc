@@ -56,36 +56,6 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-enum class ConnectionType : uint8_t {
-    EBI,
-    SPI,
-};
-constexpr ConnectionType AddressLines = ConnectionType::EBI;
-constexpr ConnectionType DataLines = ConnectionType::EBI;
-constexpr bool isValidAddressLinesKind() noexcept {
-    switch (AddressLines) {
-        case ConnectionType::EBI:
-        case ConnectionType::SPI:
-            return true;
-        default:
-            return false;
-    }
-}
-
-constexpr bool isValidDataLinesKind() noexcept {
-    switch (DataLines) {
-        case ConnectionType::EBI:
-        case ConnectionType::SPI:
-            return true;
-        default:
-            return false;
-    }
-}
-// ADDR   | DATA   | Outcome
-// EBI    | EBI    | true
-// SPI    | SPI    | true
-// EBI    | SPI    | true
-// SPI    | EBI    | true
 
 
 RTC_DS3231 rtc;
@@ -571,25 +541,18 @@ struct i960Interface {
 
   static void
   begin() noexcept {
-      if constexpr (AddressLines == ConnectionType::EBI) {
-          write8<false>(addressLines.getConfigPortBaseAddress(), 0);
-          write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
-          write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
-          write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
-      }
+      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       configureDataLinesForRead<false>();
-      if constexpr (AddressLines == ConnectionType::EBI || DataLines == ConnectionType::EBI) {
-        EBIInterface::setDataLines(0);
-      }
+      EBIInterface::setDataLines(0);
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
-      if constexpr (DataLines == ConnectionType::EBI) {
-          // 470ns worth of delay
-          write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
-          write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
-      }
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
   }
   template<bool compareWithPrevious = true>
   static inline void
@@ -626,18 +589,10 @@ struct i960Interface {
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
-      if constexpr (AddressLines == ConnectionType::EBI) {
-          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      } else if constexpr (AddressLines == ConnectionType::SPI) {
-          digitalWrite(Pin::ADDR_LINES_CS, LOW);
-          value = SPI.transfer32(0);
-          digitalWrite(Pin::ADDR_LINES_CS, HIGH);
-      } else {
-          static_assert(isValidAddressLinesKind(), "Invalid Address Lines Connection Type!");
-      }
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       return value;
 
   }
@@ -655,36 +610,19 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      static_assert(isValidDataLinesKind(), "Invalid Data Lines Kind specified");
       //Serial.printf("\tValue: 0x%x\n", value);
-      if constexpr (DataLines == ConnectionType::EBI) {
-          // This function will take at least 470ns worth of delay
-          auto baseAddress = dataLines.getDataPortBaseAddress();
-          write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
-          write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
-      } else if constexpr (DataLines == ConnectionType::SPI) {
-          digitalWrite(Pin::DATA_LINES_CS, LOW);
-          (void)SPI.transfer16(value);
-          digitalWrite(Pin::DATA_LINES_CS, HIGH);
-      }
+      // This function will take at least 470ns worth of delay
+      auto baseAddress = dataLines.getDataPortBaseAddress();
+      write8(baseAddress, static_cast<uint8_t>(value)); // at least 235ns
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8)); // at least 235ns
   }
   static inline uint16_t
   readDataLines() noexcept {
-      static_assert(isValidDataLinesKind(), "Invalid Data Lines Kind specified");
-      if constexpr (DataLines == ConnectionType::EBI) {
-          auto baseAddress = dataLines.getDataPortBaseAddress();
-          // this will take at least 390ns to complete
-          uint16_t a = read8(baseAddress); // at least 195ns
-          uint16_t b = read8(baseAddress+1); // at least 195ns
-          return a| (b<< 8);
-      } else if constexpr (DataLines == ConnectionType::SPI) {
-          digitalWrite(Pin::DATA_LINES_CS, LOW);
-          uint16_t result = SPI.transfer16(0);
-          digitalWrite(Pin::DATA_LINES_CS, HIGH);
-          return result;
-      } else {
-          return 0;
-      }
+      auto baseAddress = dataLines.getDataPortBaseAddress();
+      // this will take at least 390ns to complete
+      uint16_t a = read8(baseAddress); // at least 195ns
+      uint16_t b = read8(baseAddress+1); // at least 195ns
+      return a| (b<< 8);
   }
 
   template<bool isReadTransaction>
@@ -798,12 +736,10 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (DataLines == ConnectionType::EBI) {
-          if constexpr (isReadTransaction) {
-              configureDataLinesForRead();
-          } else {
-              configureDataLinesForWrite();
-          }
+      if constexpr (isReadTransaction) {
+          configureDataLinesForRead();
+      } else {
+          configureDataLinesForWrite();
       }
       switch (static_cast<uint8_t>(address >> 24)) {
           case 0x00: // PSRAM
@@ -1005,16 +941,11 @@ setup() {
     displayClockSpeedInformation();
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
-    Serial.println("Booted i960");
 }
 void 
 loop() {
     if (adsTriggered) {
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
-        if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
-            SPI.begin(); // why do I need to do this?
-            SPI.beginTransaction(SPISettings{18'000'000, MSBFIRST, SPI_MODE0});
-        }
+        digitalWriteFast(Pin::INSPECT_TRIGGER, LOW);
         adsTriggered = false;
         // we want nothing else to take over while this section is running
         //while (digitalReadFast(Pin::DEN) == HIGH) ;
@@ -1025,10 +956,7 @@ loop() {
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        if constexpr (DataLines == ConnectionType::SPI || AddressLines == ConnectionType::SPI) {
-            SPI.endTransaction();
-        }
-        //digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
+        digitalWriteFast(Pin::INSPECT_TRIGGER, HIGH);
     } 
 }
 
