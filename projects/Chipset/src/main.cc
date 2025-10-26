@@ -66,6 +66,7 @@ IntervalTimer systemTimer;
 
 namespace PCJoystick {
     Adafruit_seesaw device{&Wire2};
+    bool available = false;
     constexpr auto Button1 = 3;
     constexpr auto Button2 = 13;
     constexpr auto Button3 = 2;
@@ -78,8 +79,30 @@ namespace PCJoystick {
     constexpr auto Joy2Y = 16;
 
     void begin() noexcept {
-        device.begin(0x49);
+        available = device.begin(0x49);
+        if (!available) {
+            Serial.println("PC Joystick port not found");
+        } else {
+            Serial.println("PC Joystick port found");
+            device.pinModeBulk(ButtonMask, INPUT_PULLUP);
+        }
     }
+    uint32_t readButtons() noexcept {
+        return device.digitalReadBulk(ButtonMask);
+    }
+    int readJoy1X() noexcept {
+        return device.analogRead(Joy1X);
+    }
+    int readJoy1Y() noexcept {
+        return device.analogRead(Joy1Y);
+    }
+    int readJoy2X() noexcept {
+        return device.analogRead(Joy2X);
+    }
+    int readJoy2Y() noexcept {
+        return device.analogRead(Joy2Y);
+    }
+
 } // end namespace PCJoystick 
 
 namespace GamepadQT {
@@ -95,13 +118,25 @@ namespace GamepadQT {
         (1UL << ButtonA) | (1UL << ButtonB) | 
         (1UL << ButtonSelect) | (1UL << ButtonStart);
 
+    constexpr auto JoyX = 14;
+    constexpr auto JoyY = 15;
     void begin() {
         available = device.begin(0x50);
         if (!available) {
             Serial.println("ERROR! seesaw not found (GamepadQT)");
         } else {
             Serial.println("GamepadQT found!");
+            device.pinModeBulk(ButtonMask, INPUT_PULLUP);
         }
+    }
+    uint32_t readButtons() noexcept {
+        return device.digitalReadBulk(ButtonMask);
+    }
+    int readX() noexcept {
+        return 1023 - device.analogRead(JoyX);
+    }
+    int readY() noexcept {
+        return 1023 - device.analogRead(JoyY);
     }
 } // end namespace GamepadQT
 
@@ -963,6 +998,7 @@ setup() {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
+    PCJoystick::begin();
     GamepadQT::begin();
     systemTimer.begin(triggerSystemTimer, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, RISING);
