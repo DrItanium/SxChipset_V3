@@ -21,9 +21,9 @@ constexpr auto CLKOUT = PIN_PA7;
 // PIN_PC2 -- Wire
 // PIN_PC3 -- Wire
 
-// PIN_PD1
-// PIN_PD2
-// PIN_PD3
+constexpr auto BE0 = PIN_PD1;
+constexpr auto BE1 = PIN_PD2;
+constexpr auto Full16 = PIN_PD3;
 constexpr auto RESET960 = PIN_PD4;
 constexpr auto HOLD960 = PIN_PD5;
 constexpr auto LOCK960 = PIN_PD6;
@@ -54,6 +54,10 @@ configurePins() noexcept {
     pinMode(CLK2Out, OUTPUT);
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
+    pinMode(BE0, INPUT);
+    pinMode(BE1, INPUT);
+    pinMode(Full16, OUTPUT);
+    digitalWrite(Full16, HIGH);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
@@ -120,6 +124,26 @@ configureDivideByTwoCCL(Logic& even, Logic& odd) {
   odd.init();
 }
 void
+configureFull16Detector(Logic& element) {
+    element.enable = true;
+    element.input0 = in::disable;
+    element.input1 = in::pin;
+    element.input2 = in::pin;
+    element.output = out::enable;
+    element.sequencer = sequencer::disable;
+    element.clocksource = clocksource::clk_per;
+    // in2 | in1 | in0 | result
+    // 0   | 0   | 0   | 0
+    // 0   | 0   | 1   | 0
+    // 0   | 1   | 0   | 1
+    // 0   | 1   | 1   | 1
+    // 1   | 0   | 0   | 1
+    // 1   | 0   | 1   | 1
+    // 1   | 1   | 0   | 1
+    // 1   | 1   | 1   | 1
+    element.truth = 0b11111100;
+}
+void
 updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
     CLKSpeeds[1] = frequency / 2;
@@ -156,6 +180,7 @@ configureCCLs() {
   Event2.set_generator(gen::ccl0_out);
   //Event2.set_user(user::tcb0_cnt);
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
+  configureFull16Detector(Logic2);
   //updateClockFrequency(F_CPU / 2);
   updateClockFrequency(F_CPU);
 
