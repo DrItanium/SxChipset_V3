@@ -13,6 +13,9 @@ enum class ManagementEngineRequestOpcode : uint8_t {
     CPUClockConfiguration,
     BusIsHeld,
     BusIsLocked,
+    RevID,
+    DevID,
+    SerialNumber,
 };
 constexpr bool valid(ManagementEngineReceiveOpcode code) noexcept {
     switch (code) {
@@ -31,6 +34,9 @@ constexpr bool valid(ManagementEngineRequestOpcode code) noexcept {
         case ManagementEngineRequestOpcode::CPUClockConfiguration:
         case ManagementEngineRequestOpcode::BusIsHeld:
         case ManagementEngineRequestOpcode::BusIsLocked:
+        case ManagementEngineRequestOpcode::RevID:
+        case ManagementEngineRequestOpcode::DevID:
+        case ManagementEngineRequestOpcode::SerialNumber:
             return true;
         default:
             return false;

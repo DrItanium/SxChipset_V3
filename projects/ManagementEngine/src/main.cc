@@ -36,6 +36,9 @@ constexpr auto HLDA960 = PIN_PD7;
 uint32_t CLKSpeeds [] {
     0, 0,
 };
+// make it really easy to transmit the serial number cache as fast as possible
+uint8_t serialNumberCache[16] = { 0 };
+uint8_t devidCache[3] = { 0 };
 
 void
 configurePins() noexcept {
@@ -187,6 +190,30 @@ void onReceiveHandler(int count);
 void onRequestHandler();
 void
 setup() {
+#define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
+    X(0);
+    X(1);
+    X(2);
+    X(3);
+    X(4);
+    X(5);
+    X(6);
+    X(7);
+    X(8);
+    X(9);
+    X(10);
+    X(11);
+    X(12);
+    X(13);
+    X(14);
+    X(15);
+#undef X
+#define X(index) devidCache[ index ] = SIGROW.DEVICEID ## index 
+    X(0);
+    X(1);
+    X(2);
+#undef X
+
     EEPROM.begin();
     pinMode(SystemUp, OUTPUT);
     digitalWrite(SystemUp, LOW);
@@ -254,6 +281,15 @@ onRequestHandler() {
             break;
         case ManagementEngineRequestOpcode::BusIsLocked: 
             Wire.write(isBusLocked()); 
+            break;
+        case ManagementEngineRequestOpcode::RevID:
+            Wire.write(SYSCFG.REVID);
+            break;
+        case ManagementEngineRequestOpcode::SerialNumber:
+            Wire.write(serialNumberCache, sizeof(serialNumberCache));
+            break;
+        case ManagementEngineRequestOpcode::DevID:
+            Wire.write(devidCache, sizeof(devidCache));
             break;
         default:
             break;
