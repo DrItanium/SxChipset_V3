@@ -177,8 +177,6 @@ configureCCLs() {
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input 
   Event1.set_user(user::tcb0_capt);
 
-  Event2.set_generator(gen::ccl0_out);
-  //Event2.set_user(user::tcb0_cnt);
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
   configureFull16Detector(Logic2);
   //updateClockFrequency(F_CPU / 2);
@@ -205,7 +203,6 @@ configureCCLs() {
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make it inverted
   Event0.start();
   Event1.start();
-  Event2.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
