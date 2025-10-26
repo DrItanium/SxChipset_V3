@@ -946,9 +946,6 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    outputPin(Pin::ADDR_LINES_CS, HIGH);
-    outputPin(Pin::DATA_LINES_CS, HIGH);
-    outputPin(Pin::INSPECT_TRIGGER, HIGH);
 
     Serial.begin(115200);
     while (!Serial) {
