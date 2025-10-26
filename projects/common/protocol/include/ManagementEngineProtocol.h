@@ -16,6 +16,7 @@ enum class ManagementEngineRequestOpcode : uint8_t {
     RevID,
     DevID,
     SerialNumber,
+    RandomSeed,
 };
 constexpr bool valid(ManagementEngineReceiveOpcode code) noexcept {
     switch (code) {
@@ -37,6 +38,7 @@ constexpr bool valid(ManagementEngineRequestOpcode code) noexcept {
         case ManagementEngineRequestOpcode::RevID:
         case ManagementEngineRequestOpcode::DevID:
         case ManagementEngineRequestOpcode::SerialNumber:
+        case ManagementEngineRequestOpcode::RandomSeed:
             return true;
         default:
             return false;

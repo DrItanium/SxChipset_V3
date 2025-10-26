@@ -39,6 +39,7 @@ uint32_t CLKSpeeds [] {
 // make it really easy to transmit the serial number cache as fast as possible
 uint8_t serialNumberCache[16] = { 0 };
 uint8_t devidCache[3] = { 0 };
+long rSeed = 0;
 
 void
 configurePins() noexcept {
@@ -183,11 +184,29 @@ configureCCLs() {
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm;
   Logic::start();
-
- 
 }
 void onReceiveHandler(int count);
 void onRequestHandler();
+void 
+setupRandomSeed() noexcept {
+    for (auto a : serialNumberCache) {
+        rSeed += a;
+    }
+    for (auto a : devidCache) {
+        rSeed += a;
+    }
+    rSeed += analogRead(A1);
+    rSeed += analogRead(A2);
+    rSeed += analogRead(A3);
+    rSeed += analogRead(A4);
+    rSeed += analogRead(A5);
+    rSeed += analogRead(A6);
+    rSeed += analogRead(A7);
+    rSeed += analogRead(A16);
+    rSeed += analogRead(A17);
+    rSeed += SIGROW.TEMPSENSE0;
+    rSeed += SIGROW.TEMPSENSE1;
+}
 void
 setup() {
 #define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
@@ -213,7 +232,8 @@ setup() {
     X(1);
     X(2);
 #undef X
-
+    setupRandomSeed();
+    randomSeed(rSeed);
     EEPROM.begin();
     pinMode(SystemUp, OUTPUT);
     digitalWrite(SystemUp, LOW);
@@ -290,6 +310,9 @@ onRequestHandler() {
             break;
         case ManagementEngineRequestOpcode::DevID:
             Wire.write(devidCache, sizeof(devidCache));
+            break;
+        case ManagementEngineRequestOpcode::RandomSeed:
+            Wire.write(reinterpret_cast<char*>(&rSeed), sizeof(rSeed));
             break;
         default:
             break;
