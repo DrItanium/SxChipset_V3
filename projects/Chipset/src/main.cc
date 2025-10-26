@@ -39,11 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <FlexIO_t4.h>
 #include <Adafruit_IS31FL3741.h>
 #include <IntervalTimer.h>
-// taken from Adafruit bleuart_cmdmode
-//#include <Adafruit_BLE.h>
-//#include <Adafruit_BluefruitLE_SPI.h>
-// airlift support
-//#include <WiFiNINA.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
 

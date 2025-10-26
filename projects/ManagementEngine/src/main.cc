@@ -2,21 +2,35 @@
 #include <Event.h>
 #include <Logic.h>
 #include <Wire.h>
+#include <EEPROM.h>
 #include "ManagementEngineProtocol.h"
 
 
 
 constexpr auto CLK2Out = PIN_PA0;
+// PIN_PA1
 constexpr auto READY_OUT = PIN_PA2;
 constexpr auto CLK1Out = PIN_PA3;
 constexpr auto SystemUp = PIN_PA4;
 constexpr auto READY_IN = PIN_PA5;
+// PIN_PA6
 constexpr auto CLKOUT = PIN_PA7;
 
+// PIN_PC0
+// PIN_PC1
+// PIN_PC2 -- Wire
+// PIN_PC3 -- Wire
+
+// PIN_PD1
+// PIN_PD2
+// PIN_PD3
 constexpr auto RESET960 = PIN_PD4;
 constexpr auto HOLD960 = PIN_PD5;
 constexpr auto LOCK960 = PIN_PD6;
 constexpr auto HLDA960 = PIN_PD7;
+
+// PIN_PF0
+// PIN_PF1
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -37,6 +51,8 @@ configurePins() noexcept {
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
 }
+uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
+uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
 void
 setupSystemClocks() noexcept {
     // Here is what we are doing:
@@ -171,6 +187,7 @@ void onReceiveHandler(int count);
 void onRequestHandler();
 void
 setup() {
+    EEPROM.begin();
     pinMode(SystemUp, OUTPUT);
     digitalWrite(SystemUp, LOW);
     setupSystemClocks();
@@ -198,7 +215,6 @@ sinkWire() {
         (void)Wire.read();
     }
 }
-
 void
 onReceiveHandler(int howMany) {
     if (howMany >= 1) {
@@ -214,6 +230,12 @@ onReceiveHandler(int howMany) {
             case ManagementEngineReceiveOpcode::PullOutOfReset: 
                 digitalWrite(RESET960, HIGH); 
                 break;
+            case ManagementEngineReceiveOpcode::HoldBus:
+                digitalWrite(HOLD960, HIGH);
+                break;
+            case ManagementEngineReceiveOpcode::ReleaseBus:
+                digitalWrite(HOLD960, LOW);
+                break;
             default:
                 break;
         }
@@ -226,6 +248,12 @@ onRequestHandler() {
     switch (currentMode) {
         case ManagementEngineRequestOpcode::CPUClockConfiguration:
             Wire.write(reinterpret_cast<char*>(CLKSpeeds), sizeof(CLKSpeeds));
+            break;
+        case ManagementEngineRequestOpcode::BusIsHeld: 
+            Wire.write(isBusHeld()); 
+            break;
+        case ManagementEngineRequestOpcode::BusIsLocked: 
+            Wire.write(isBusLocked()); 
             break;
         default:
             break;
