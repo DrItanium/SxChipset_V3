@@ -964,13 +964,40 @@ triggerSystemTimer() noexcept {
         digitalToggleFast(Pin::INT960_0); 
     }
 }
+namespace IOExpander0 {
+    Adafruit_seesaw device{&Wire2};
+    constexpr auto AVR_UP = 0;
+    constexpr auto BLINK_PIN = 10;
+    void 
+    begin() noexcept {
+        if (!device.begin(0x49)) {
+            pinMode(LED_BUILTIN, OUTPUT);
+            digitalWrite(LED_BUILTIN, LOW);
+            while (true) {
+                digitalWrite(LED_BUILTIN, LOW);
+                delay(1000);
+                digitalWrite(LED_BUILTIN, HIGH);
+                delay(1000);
+            }
+        }
+        device.pinMode(AVR_UP, INPUT);
+        device.pinMode(BLINK_PIN, OUTPUT);
+        device.digitalWrite(BLINK_PIN, LOW);
+    }
+    void
+    waitForMEToComeUp() noexcept {
+        device.digitalWrite(BLINK_PIN, HIGH);
+        while (device.digitalRead(AVR_UP) != HIGH) {
+            delay(10);
+        }
+        device.digitalWrite(BLINK_PIN, LOW);
+    }
+} // end namespace
 void 
 setup() {
     Wire2.begin();
-    inputPin(Pin::AVR_UP);
-    while (digitalReadFast(Pin::AVR_UP) != HIGH) {
-        delay(10);
-    }
+    IOExpander0::begin();
+    IOExpander0::waitForMEToComeUp();
     putCPUInReset();
     inputPin(Pin::ADS);
     inputPin(Pin::DEN);

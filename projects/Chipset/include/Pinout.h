@@ -107,11 +107,13 @@ enum class Pin : uint8_t {
   // RPI_D26
   // RPI_D27
   // RPI_D28
-  AVR_UP = RPI_D29,
+  // RPI_D29
+  //AVR_UP = RPI_D29,
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
   // RPI_D32
 };
+
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
   return static_cast<std::underlying_type_t<Pin>>(value);
