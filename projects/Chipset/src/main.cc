@@ -656,7 +656,13 @@ struct i960Interface {
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      if (digitalReadFast(Pin::MEM_SPACE) == LOW) {
+          return value;
+      } else if (digitalReadFast(Pin::IO_SPACE) == LOW) {
+          value |= 0xFE00'0000;
+      } else {
+          value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      }
       return value;
   }
   static inline bool
@@ -999,6 +1005,8 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
+    inputPin(Pin::IO_SPACE);
+    inputPin(Pin::MEM_SPACE);
 
     Serial.begin(115200);
     while (!Serial) {
