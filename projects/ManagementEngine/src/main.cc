@@ -11,6 +11,7 @@ constexpr auto CLK2Out = PIN_PA0;
 // PIN_PA1
 constexpr auto READY_OUT = PIN_PA2;
 constexpr auto CLK1Out = PIN_PA3;
+// PIN_PA4
 constexpr auto READY_IN = PIN_PA5;
 // PIN_PA6
 constexpr auto CLKOUT = PIN_PA7;
@@ -20,9 +21,9 @@ constexpr auto CLKOUT = PIN_PA7;
 // PIN_PC2 -- Wire
 // PIN_PC3 -- Wire
 
-constexpr auto BE0 = PIN_PD1;
-constexpr auto BE1 = PIN_PD2;
-constexpr auto Full16 = PIN_PD3;
+// PIN_PD1
+// PIN_PD2
+// PIN_PD3
 constexpr auto RESET960 = PIN_PD4;
 constexpr auto HOLD960 = PIN_PD5;
 constexpr auto LOCK960 = PIN_PD6;
@@ -54,10 +55,6 @@ configurePins() noexcept {
     pinMode(CLK2Out, OUTPUT);
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
-    pinMode(BE0, INPUT);
-    pinMode(BE1, INPUT);
-    pinMode(Full16, OUTPUT);
-    digitalWrite(Full16, HIGH);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
@@ -178,7 +175,6 @@ configureCCLs() {
   Event1.set_user(user::tcb0_capt);
 
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
-  configureFull16Detector(Logic2);
   //updateClockFrequency(F_CPU / 2);
   updateClockFrequency(F_CPU);
 
