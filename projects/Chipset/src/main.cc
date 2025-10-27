@@ -992,7 +992,6 @@ setup() {
     waitForAVRToComeUp();
     putCPUInReset();
     inputPin(Pin::ADS);
-    inputPin(Pin::DEN);
     outputPin(Pin::INT960_0, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
