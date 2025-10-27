@@ -922,11 +922,32 @@ displayClockSpeedInformation() noexcept {
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
 void
+waitForAVRToComeUp() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode));
+    Wire2.write(static_cast<uint8_t>(ManagementEngineRequestOpcode::ChipIsReady));
+    Wire2.endTransmission();
+
+    bool chipIsUp = false;
+    do {
+        auto count = Wire2.requestFrom(0x08, 1);
+        for (int i = 0; i < count; ) {
+            if (Wire2.available()) {
+                chipIsUp = Wire2.read() != 0;
+                ++i;
+            }
+        }
+    } while (!chipIsUp);
+
+
+}
+void
 putCPUInReset() noexcept {
     Wire2.beginTransmission(0x08);
     Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PutInReset));
     Wire2.endTransmission();
 }
+
 void
 pullCPUOutOfReset() noexcept {
     Wire2.beginTransmission(0x08);
@@ -964,40 +985,11 @@ triggerSystemTimer() noexcept {
         digitalToggleFast(Pin::INT960_0); 
     }
 }
-namespace IOExpander0 {
-    Adafruit_seesaw device{&Wire2};
-    constexpr auto AVR_UP = 0;
-    constexpr auto BLINK_PIN = 10;
-    void 
-    begin() noexcept {
-        if (!device.begin(0x49)) {
-            pinMode(LED_BUILTIN, OUTPUT);
-            digitalWrite(LED_BUILTIN, LOW);
-            while (true) {
-                digitalWrite(LED_BUILTIN, LOW);
-                delay(1000);
-                digitalWrite(LED_BUILTIN, HIGH);
-                delay(1000);
-            }
-        }
-        device.pinMode(AVR_UP, INPUT);
-        device.pinMode(BLINK_PIN, OUTPUT);
-        device.digitalWrite(BLINK_PIN, LOW);
-    }
-    void
-    waitForMEToComeUp() noexcept {
-        device.digitalWrite(BLINK_PIN, HIGH);
-        while (device.digitalRead(AVR_UP) != HIGH) {
-            delay(10);
-        }
-        device.digitalWrite(BLINK_PIN, LOW);
-    }
-} // end namespace
 void 
 setup() {
     Wire2.begin();
-    IOExpander0::begin();
-    IOExpander0::waitForMEToComeUp();
+    delay(1000);
+    waitForAVRToComeUp();
     putCPUInReset();
     inputPin(Pin::ADS);
     inputPin(Pin::DEN);
