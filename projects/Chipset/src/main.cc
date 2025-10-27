@@ -654,11 +654,8 @@ struct i960Interface {
   getAddress() noexcept {
       uint32_t value = 0;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-      asm volatile ("dsb");
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-      asm volatile ("dsb");
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      asm volatile ("dsb");
       {
           if (digitalReadFast(Pin::IO_SPACE) == LOW) {
               value |= 0xFE00'0000;
@@ -666,7 +663,6 @@ struct i960Interface {
               value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
           }
       }
-      asm volatile ("dsb");
       //Serial.printf("Address: 0x%x\n", value);
       return value;
   }
