@@ -11,7 +11,6 @@ constexpr auto CLK2Out = PIN_PA0;
 // PIN_PA1
 constexpr auto READY_OUT = PIN_PA2;
 constexpr auto CLK1Out = PIN_PA3;
-constexpr auto SystemUp = PIN_PA4;
 constexpr auto READY_IN = PIN_PA5;
 // PIN_PA6
 constexpr auto CLKOUT = PIN_PA7;
@@ -40,6 +39,7 @@ uint32_t CLKSpeeds [] {
 uint8_t serialNumberCache[16] = { 0 };
 uint8_t devidCache[3] = { 0 };
 long rSeed = 0;
+bool chipIsUp = false;
 
 void
 configurePins() noexcept {
@@ -231,6 +231,10 @@ setupRandomSeed() noexcept {
 }
 void
 setup() {
+    Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
+    Wire.begin(0x08);
+    Wire.onReceive(onReceiveHandler);
+    Wire.onRequest(onRequestHandler);
 #define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
     X(0);
     X(1);
@@ -257,17 +261,11 @@ setup() {
     setupRandomSeed();
     randomSeed(rSeed);
     EEPROM.begin();
-    pinMode(SystemUp, OUTPUT);
-    digitalWrite(SystemUp, LOW);
     setupSystemClocks();
     takeOverTCA0();
     configurePins();
     configureCCLs();
-    Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
-    Wire.begin(0x08);
-    Wire.onReceive(onReceiveHandler);
-    Wire.onRequest(onRequestHandler);
-    digitalWrite(SystemUp, HIGH);
+    chipIsUp = true;
 }
 void
 loop() {
@@ -335,6 +333,9 @@ onRequestHandler() {
             break;
         case ManagementEngineRequestOpcode::RandomSeed:
             Wire.write(reinterpret_cast<char*>(&rSeed), sizeof(rSeed));
+            break;
+        case ManagementEngineRequestOpcode::ChipIsReady:
+            Wire.write(chipIsUp ? 0xFF : 0x00);
             break;
         default:
             break;
