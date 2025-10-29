@@ -5,7 +5,7 @@ NC D0 D1 D2 D3 D4 D5 D6 D7 WR DEN GND
 BE NC NC NC NC NC NC NC NC F  Z   VCC
 
 /F = D0 * D1 * D2 * D3 * D4 * D5 * D6 * D7 * /BE * WR * /DEN
-/Z = /D0 * /D1 * /D2 * /D3 * /D4 * /D5 * /D6 * /D7 * /BE * WR * /DEN
+/Z = /D0 * /D1 * /D2 * /D3 * /D4 * /D5 * /D6 * /D7 * /BE * WR * /DEN + BE * WR * /DEN
 
 
 DESCRIPTION

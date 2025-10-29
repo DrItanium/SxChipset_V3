@@ -6,7 +6,7 @@ AR
 Pin 23 = Z            S0 = 0   S1 = 1
   1  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
   2  ---- -x-- -x-- -x-- -x-- -x-- -x-- -x-- -x-- x--- -x-x
-  3  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+  3  ---- ---- ---- ---- ---- ---- ---- ---- ---- x--- -xx-
   4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   6  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
