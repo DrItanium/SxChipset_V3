@@ -693,8 +693,10 @@ struct i960Interface {
       if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
           lo = read8(baseAddress);
       }
-      hi = read8(baseAddress+1); // at least 195ns
-      return lo | (hi<< 8);
+      if (digitalReadFast(Pin::DATA_HI_Zeros) != LOW) {
+          hi = read8(baseAddress+1);
+      }
+      return lo | (hi << 8);
   }
 
   template<bool isReadTransaction>
@@ -1012,8 +1014,9 @@ setup() {
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::IO_SPACE);
     inputPin(Pin::MEM_SPACE);
-    inputPin(Pin::DATA_LO_Ones);
     inputPin(Pin::DATA_LO_Zeros);
+    inputPin(Pin::DATA_HI_Zeros);
+
 
     Serial.begin(115200);
     while (!Serial) {
