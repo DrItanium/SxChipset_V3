@@ -696,6 +696,7 @@ struct i960Interface {
       if (digitalReadFast(Pin::DATA_HI_Zeros) != LOW) {
           hi = read8(baseAddress+1);
       }
+      asm volatile ("dsb");
       return lo | (hi << 8);
   }
 
