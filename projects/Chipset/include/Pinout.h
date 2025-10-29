@@ -101,8 +101,8 @@ enum class Pin : uint8_t {
   BE0 = RPI_D20,
   BE1 = RPI_D21,
   INT960_0 = RPI_D22,  
-  // RPI_D23
-  // RPI_D24
+  DATA_LO_Zeros = RPI_D23,
+  DATA_LO_Ones = RPI_D24,
   // RPI_D25
   // RPI_D26
   // RPI_D27

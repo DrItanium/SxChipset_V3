@@ -688,9 +688,17 @@ struct i960Interface {
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortBaseAddress();
       // this will take at least 390ns to complete
-      uint16_t a = read8(baseAddress); // at least 195ns
-      uint16_t b = read8(baseAddress+1); // at least 195ns
-      return a| (b<< 8);
+      uint16_t lo = 0, 
+               hi = 0;
+      if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
+          if (digitalReadFast(Pin::DATA_LO_Ones) != LOW) {
+              lo = read8(baseAddress);
+          } else {
+              lo = 0xFF;
+          }
+      }
+      hi = read8(baseAddress+1); // at least 195ns
+      return lo | (hi<< 8);
   }
 
   template<bool isReadTransaction>
@@ -1008,6 +1016,8 @@ setup() {
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::IO_SPACE);
     inputPin(Pin::MEM_SPACE);
+    inputPin(Pin::DATA_LO_Ones);
+    inputPin(Pin::DATA_LO_Zeros);
 
     Serial.begin(115200);
     while (!Serial) {
