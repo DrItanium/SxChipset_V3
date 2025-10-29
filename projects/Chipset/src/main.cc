@@ -690,9 +690,7 @@ struct i960Interface {
       // this will take at least 390ns to complete
       uint16_t lo = 0, 
                hi = 0;
-      if (digitalReadFast(Pin::DATA_LO_Ones) == LOW) {
-          lo = 0xFF;
-      } else if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
+      if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
           lo = read8(baseAddress);
       }
       hi = read8(baseAddress+1); // at least 195ns
