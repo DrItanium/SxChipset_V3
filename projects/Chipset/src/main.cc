@@ -705,17 +705,8 @@ struct i960Interface {
       // this will take at least 390ns to complete
       uint16_t lo = 0, 
                hi = 0;
-      if constexpr (dataLineAcceleration) {
-          if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
-              lo = read8(baseAddress);
-          }
-          if (digitalReadFast(Pin::DATA_HI_Zeros) != LOW) {
-              hi = read8(baseAddress+1);
-          }
-      } else {
-          lo = read8(baseAddress);
-          hi = read8(baseAddress+1);
-      }
+      lo = read8(baseAddress);
+      hi = read8(baseAddress+1);
       asm volatile ("dsb");
       return lo | (hi << 8);
   }
@@ -1035,8 +1026,6 @@ setup() {
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::IO_SPACE);
     inputPin(Pin::MEM_SPACE);
-    inputPin(Pin::DATA_LO_Zeros);
-    inputPin(Pin::DATA_HI_Zeros);
 
 
     Serial.begin(115200);
