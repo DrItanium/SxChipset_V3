@@ -661,7 +661,7 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<bool enableAddressAcceleration = false>
+  template<bool enableAddressAcceleration = true>
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
@@ -675,9 +675,9 @@ struct i960Interface {
               value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
           }
       } else {
-
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       }
+      asm volatile ("dsb");
       return value;
   }
   static inline bool
@@ -698,16 +698,22 @@ struct i960Interface {
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
+  template<bool dataLineAcceleration = false>
   static inline uint16_t
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortBaseAddress();
       // this will take at least 390ns to complete
       uint16_t lo = 0, 
                hi = 0;
-      if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
+      if constexpr (dataLineAcceleration) {
+          if (digitalReadFast(Pin::DATA_LO_Zeros) != LOW) {
+              lo = read8(baseAddress);
+          }
+          if (digitalReadFast(Pin::DATA_HI_Zeros) != LOW) {
+              hi = read8(baseAddress+1);
+          }
+      } else {
           lo = read8(baseAddress);
-      }
-      if (digitalReadFast(Pin::DATA_HI_Zeros) != LOW) {
           hi = read8(baseAddress+1);
       }
       asm volatile ("dsb");
