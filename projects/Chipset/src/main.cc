@@ -661,18 +661,22 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+  template<bool enableAddressAcceleration = false>
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      {
+      if constexpr (enableAddressAcceleration) {
           if (digitalReadFast(Pin::IO_SPACE) == LOW) {
               value |= 0xFE00'0000;
           } else if (digitalReadFast(Pin::MEM_SPACE) != LOW) {
               value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
           }
+      } else {
+
+        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       }
       return value;
   }
