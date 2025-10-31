@@ -480,10 +480,11 @@ public:
   setDataLinesDirection() noexcept {
       if (_currentDirection != direction) {
           if constexpr (directPortManipulation) {
+              auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
               if constexpr (direction == OUTPUT) {
-                  GPIO6_GDIR |= EBIOutputTransformation[0xFF];
+                  GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
               } else {
-                  GPIO6_GDIR &= ~EBIOutputTransformation[0xFF];
+                  GPIO6_GDIR = value;
               }
               asm volatile ("dsb");
 
