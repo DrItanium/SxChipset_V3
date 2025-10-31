@@ -674,7 +674,6 @@ struct i960Interface {
               value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
           }
       }
-      //Serial.printf("Address: 0x%x\n", value);
       return value;
   }
   static inline bool
