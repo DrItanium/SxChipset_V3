@@ -698,7 +698,6 @@ struct i960Interface {
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
-  template<bool dataLineAcceleration = false>
   static inline uint16_t
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortBaseAddress();
