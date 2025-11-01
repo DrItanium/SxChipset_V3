@@ -46,6 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryCell.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
+#define SynchronizeData asm volatile ("dsb")
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -486,7 +487,7 @@ public:
               } else {
                   GPIO6_GDIR = value;
               }
-              asm volatile ("dsb");
+              SynchronizeData;
 
           } else {
 #define X(p) pinMode(p, direction)
@@ -677,7 +678,7 @@ struct i960Interface {
       } else {
         value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       }
-      asm volatile ("dsb");
+      SynchronizeData;
       return value;
   }
   static inline bool
@@ -706,7 +707,7 @@ struct i960Interface {
                hi = 0;
       lo = read8(baseAddress);
       hi = read8(baseAddress+1);
-      asm volatile ("dsb");
+      SynchronizeData;
       return lo | (hi << 8);
   }
 
