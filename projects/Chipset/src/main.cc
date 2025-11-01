@@ -1083,9 +1083,8 @@ setup() {
     pullCPUOutOfReset();
     // so attaching the interrupt seems to not be functioning fully
 }
-
 void 
-loop() {
+tryDoTransaction() noexcept {
     if (adsTriggered) {
         adsTriggered = false;
         if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
@@ -1094,6 +1093,13 @@ loop() {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
     } 
+}
+void 
+loop() {
+    tryDoTransaction();
+    tryDoTransaction();
+    tryDoTransaction();
+    tryDoTransaction();
 }
 
 
