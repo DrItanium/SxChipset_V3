@@ -54,7 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Use sparingly because in some cases it will reduce performance if used
 // too often on the Cortex-M7.
-#define SynchronizeData asm volatile ("dsb")
+#define SynchronizeData asm volatile ("dsb" ::: "memory")
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
