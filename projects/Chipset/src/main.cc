@@ -1010,10 +1010,12 @@ pullCPUOutOfReset() noexcept {
 void
 triggerADS() noexcept {
     adsTriggered = true;
+    //SynchronizeData;
 }
 void
 triggerReadySync() noexcept {
     readyTriggered = true;
+    //SynchronizeData;
 }
 void
 setupLEDMatrix() noexcept {
