@@ -1096,6 +1096,7 @@ tryDoTransaction() noexcept {
 }
 void 
 loop() {
+    // should make it easier to catch an address transaction
     tryDoTransaction();
     tryDoTransaction();
     tryDoTransaction();
