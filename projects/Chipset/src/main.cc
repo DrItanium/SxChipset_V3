@@ -1056,7 +1056,6 @@ setup() {
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::IO_SPACE);
     inputPin(Pin::MEM_SPACE);
-    outputPin(Pin::Trigger0, HIGH);
 
 
     Serial.begin(115200);
@@ -1088,14 +1087,12 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
-        //digitalToggleFast(Pin::Trigger0);
         adsTriggered = false;
         if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
-        //digitalToggleFast(Pin::Trigger0);
     } 
 }
 
