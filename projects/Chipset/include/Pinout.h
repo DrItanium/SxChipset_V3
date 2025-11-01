@@ -111,6 +111,7 @@ enum class Pin : uint8_t {
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
   // RPI_D32
+  Trigger0 = RPI_D39,
 };
 
 

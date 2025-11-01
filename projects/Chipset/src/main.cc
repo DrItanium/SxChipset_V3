@@ -1054,6 +1054,7 @@ setup() {
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::IO_SPACE);
     inputPin(Pin::MEM_SPACE);
+    outputPin(Pin::Trigger0, HIGH);
 
 
     Serial.begin(115200);
@@ -1075,7 +1076,7 @@ setup() {
     PCJoystick::begin();
     GamepadQT::begin();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    attachInterrupt(Pin::ADS, triggerADS, RISING);
+    attachInterrupt(Pin::ADS, triggerADS, FALLING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
@@ -1085,12 +1086,14 @@ setup() {
 void 
 loop() {
     if (adsTriggered) {
+        //digitalToggleFast(Pin::Trigger0);
         adsTriggered = false;
         if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
         }
+        //digitalToggleFast(Pin::Trigger0);
     } 
 }
 
