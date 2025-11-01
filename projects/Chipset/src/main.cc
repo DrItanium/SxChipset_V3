@@ -253,13 +253,6 @@ private:
     uint32_t _currentMicros = 0;
     uint32_t _currentMillis = 0;
 };
-struct UnmappedSink final {
-    void update() noexcept { }
-    uint16_t getWord(uint8_t) const noexcept { return 0; }
-    void setWord(uint8_t, uint16_t) noexcept { }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
-    void onFinish() noexcept { }
-};
 struct RandomSourceRelatedThings {
     void update() noexcept {
         _currentRandomValue = random();
@@ -343,7 +336,6 @@ struct RTCMemoryBlock {
         bool _32kOutEn = false;
 };
 
-UnmappedSink unmappedSink; // used for handling unmapped sections of memory
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
@@ -747,6 +739,20 @@ struct i960Interface {
       return lo | (hi << 8);
   }
 
+  template<bool isReadTransaction>
+  static inline void
+  doNothingTransaction() noexcept {
+    if constexpr (isReadTransaction) {
+      writeDataLines(0);
+    }
+    while (true) {
+      if (isBurstLast()) {
+        break;
+      }
+      signalReady();
+    }
+    signalReady();
+  }
   template<MemoryCell MC>
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
@@ -788,7 +794,7 @@ struct i960Interface {
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(cell, offset);
       } else {
-          doMemoryCellWriteTransaction(unmappedSink, offset);
+          doNothingTransaction<isReadTransaction>();
       }
   }
   template<bool isReadTransaction>
@@ -813,7 +819,7 @@ struct i960Interface {
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
               break;
           default:
-              doMemoryCellTransaction<isReadTransaction>(unmappedSink, lineOffset);
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
@@ -835,7 +841,7 @@ struct i960Interface {
               doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
               break;
           default:
-              doMemoryCellTransaction<isReadTransaction>(unmappedSink, address & 0xF);
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
@@ -856,7 +862,7 @@ struct i960Interface {
               doIOTransaction<isReadTransaction>(address);
               break;
           default:
-              doMemoryCellTransaction<isReadTransaction>(unmappedSink, address & 0xF);
+              doNothingTransaction<isReadTransaction>();
               break;
       }
   }
