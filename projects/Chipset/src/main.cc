@@ -46,6 +46,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryCell.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
+
+// the dsb instruction makes sure that all instructions in the pipeline
+// complete before this instruction finishes. Very necessary to prevent reads
+// and writes to peripherals to complete when we want them to. Using this
+// instruction also seems to increase performance in some cases. 
+//
+// Use sparingly because in some cases it will reduce performance if used
+// too often on the Cortex-M7.
 #define SynchronizeData asm volatile ("dsb")
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
@@ -416,6 +424,18 @@ public:
   static void
   setAddress(uint8_t address) noexcept {
       if constexpr (directPortManipulation) {
+          // the address table lookup is necessary because the address bits are
+          // backwards compared to the GPIO index
+          // 0: A5
+          // 1: A4
+          // 2: A3
+          // 3: A2
+          // 4: A1
+          // 5: A0
+          //
+          // This layout is taken from the Raspberry pi 0-4's SMI alternate
+          // mode. It allows me to leverage a PCB I made with the two CH351s
+          // meant for a raspberry pi 4.
           GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
           GPIO6_DR_SET = EBIAddressTable[address];
       } else {
@@ -481,13 +501,18 @@ public:
   setDataLinesDirection() noexcept {
       if (_currentDirection != direction) {
           if constexpr (directPortManipulation) {
+              // I get a warning from the compiler if I do &= and |= directly
+              // on GPIO6_GDIR. It warning states that doing that with a
+              // volatile variable is deprecated. This form, however, is
+              // supported.
               auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
               if constexpr (direction == OUTPUT) {
                   GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
               } else {
                   GPIO6_GDIR = value;
               }
-              SynchronizeData;
+              SynchronizeData; // Make sure that the direction update is
+                               // happening
 
           } else {
 #define X(p) pinMode(p, direction)
@@ -501,7 +526,7 @@ public:
               X(Pin::EBI_D7);
 #undef X
           }
-          _currentDirection = direction;
+          _currentDirection = direction; 
       }
 
   }
@@ -532,7 +557,10 @@ static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
 static constexpr InterfaceTimingDescription customWrite8 {
-    10, 0, 30, 0
+    10, // address wait
+    0,  // setup time
+    30, // hold time
+    0   // after time / resting time
 }; // 40ns worth of delay
 static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
