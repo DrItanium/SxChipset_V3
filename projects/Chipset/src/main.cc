@@ -392,6 +392,9 @@ constexpr uint32_t EBIOutputTransformation[256] {
 #undef X
 };
 
+constexpr CH351 addressLines{ 0 }, 
+                dataLines{ 0b0000'1000 };
+
 struct EBIWrapperInterface {
 public:
   EBIWrapperInterface() = delete;
@@ -545,7 +548,6 @@ private:
   static inline PinDirection _currentDirection = OUTPUT;
   static inline uint8_t _currentOutputDataLines = 0;
 };
-constexpr CH351 addressLines{ 0 }, dataLines{ 0b0000'1000 };
 using EBIInterface = EBIWrapperInterface;
 // we want to make it as easy as possible to do display updates without having
 // to override everything, only the parts you need to do
