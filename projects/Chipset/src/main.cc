@@ -62,6 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto OLEDScreenWidth = 128;
 constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
+constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
@@ -155,6 +156,7 @@ struct EEPROMWrapper {
     void updateBaseAddress(uint16_t base) noexcept {
         _baseOffset = base & 0x0FF0;
     }
+    void clear() noexcept { }
     void update() noexcept { }
     uint16_t getWord(uint8_t offset) const noexcept {
         uint16_t value = 0;
@@ -177,6 +179,7 @@ struct EEPROMWrapper {
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
     void update() noexcept { }
+    void clear() noexcept { }
     void onFinish() noexcept { }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset & 0b11) {
@@ -218,6 +221,7 @@ struct USBSerialBlock {
     }
 };
 struct TimingRelatedThings {
+    void clear() noexcept { }
     void update() noexcept {
         _currentMillis = millis();
         _currentMicros = micros();
@@ -240,6 +244,10 @@ struct TimingRelatedThings {
                 return static_cast<uint16_t>(OnboardSRAMCacheSize);
             case 7:
                 return static_cast<uint16_t>(OnboardSRAMCacheSize >> 16);
+            case 8:
+                return static_cast<uint16_t>(OnboardSRAM2CacheSize);
+            case 9:
+                return static_cast<uint16_t>(OnboardSRAM2CacheSize >> 16);
             default:
                 return 0;
         }
@@ -254,6 +262,7 @@ private:
     uint32_t _currentMillis = 0;
 };
 struct RandomSourceRelatedThings {
+    void clear() noexcept { }
     void update() noexcept {
         _currentRandomValue = random();
     }
@@ -285,6 +294,7 @@ private:
 };
 struct RTCMemoryBlock {
     public:
+        void clear() noexcept { }
         void update() noexcept {
             _now = rtc.now();
             _inputTemperature = rtc.getTemperature();
@@ -652,6 +662,12 @@ struct i960Interface {
       write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
+      for (auto& cell : sramCache) {
+          cell.clear();
+      }
+      for (auto& cell : sramCache2) {
+          cell.clear();
+      }
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
@@ -840,6 +856,9 @@ struct i960Interface {
               eeprom.updateBaseAddress(address);
               doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
               break;
+          case 0x01'0000 ... 0x01'FFFF: // SRAM2
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], address & 0xF);
+              break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -874,6 +893,7 @@ struct i960Interface {
 private:
   // allocate a 2k memory cache like the avr did
   static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
+  static inline MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
   // use this to keep track of the output values that were sent to the EBI
   // useful when you don't want to waste time if the given output address

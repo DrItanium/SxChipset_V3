@@ -37,6 +37,7 @@ concept MemoryCell = requires(T a) {
     { a.setWord(0, 0) };
     { a.setWord(0, 0, true, true) };
     { a.onFinish() };
+    { a.clear() };
 };
 
 union MemoryCellBlock {
