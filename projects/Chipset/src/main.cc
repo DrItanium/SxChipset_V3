@@ -59,8 +59,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
 //
-constexpr auto OLEDScreenWidth = 128;
-constexpr auto OLEDScreenHeight = 128;
 constexpr uint32_t OnboardSRAMCacheSize = 2048;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
@@ -350,6 +348,8 @@ USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
+MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
+MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 struct CH351 {
@@ -662,12 +662,6 @@ struct i960Interface {
       write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       configureDataLinesForRead<false>();
       EBIInterface::setDataLines(0);
-      for (auto& cell : sramCache) {
-          cell.clear();
-      }
-      for (auto& cell : sramCache2) {
-          cell.clear();
-      }
   }
   template<uint16_t value, bool compareWithPrevious = true>
   static inline void
@@ -892,8 +886,6 @@ struct i960Interface {
   }
 private:
   // allocate a 2k memory cache like the avr did
-  static inline MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-  static inline MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
   // use this to keep track of the output values that were sent to the EBI
   // useful when you don't want to waste time if the given output address
@@ -956,6 +948,13 @@ void setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
   for (auto& a : memory960) {
       a.clear();
+  }
+  Serial.println("Clearing SRAM Caches");
+  for (auto& cell : sramCache) {
+      cell.clear();
+  }
+  for (auto& cell : sramCache2) {
+      cell.clear();
   }
 }
 void
