@@ -1093,6 +1093,7 @@ setup() {
     setupMemory();
     setupRTC();
     setupSDCard();
+    SPI.begin();
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
