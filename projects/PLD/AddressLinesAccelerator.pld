@@ -1,10 +1,9 @@
 GAL22V10
 AddressLinesAccelerator
 
-NC  A30 A28 A26 A24 A22 A20 A18 A16 NC  NC GND
-A31 A29 A27 A25 A23 A21 A19 A17 ZH  MEM IO VCC
+NC  A31 A30 A29 A28 A27 A26 A25 A24 NC  NC GND
+NC  NC  NC  NC  NC  NC  NC  NC  NC  MEM IO VCC
 
-/ZH = /A23 * /A22 * /A21 * /A20 * /A19 * /A18 * /A17 * /A16
 /IO = A31 *  A30 *  A29 *  A28 *  A27 *  A26 *  A25 * /A24 
 /MEM = /A31 *  /A30 *  /A29 *  /A28 *  /A27 *  /A26 *  /A25 * /A24 
 
@@ -13,6 +12,5 @@ DESCRIPTION
 Look at the upper most 16-bits of the address and give us some information
 about it. 
 
-ZH => means that A[23:16] are all zero
 IO => means that A[31:24] is 0xFE
 MEM => means that A[31:24] is 0x00
