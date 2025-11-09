@@ -1,11 +1,11 @@
 GAL22V10
 AddressLinesAccelerator
 
-NC  A31 A30 A29 A28 A27 A26 A25 A24 NC  NC GND
-NC  NC  NC  NC  NC  NC  NC  NC  NC  MEM IO VCC
+EN  A31 A29 A27 A25 A30 A28 A26 A24 NC NC GND
+NC  NC  NC  NC  NC  NC  NC  NC MS NC IO VCC 
 
-/IO = A31 *  A30 *  A29 *  A28 *  A27 *  A26 *  A25 * /A24 
-/MEM = /A31 *  /A30 *  /A29 *  /A28 *  /A27 *  /A26 *  /A25 * /A24 
+/IO =   A31 *   A30 *   A29 *   A28 *   A27 *   A26 *   A25 * /A24 
+/MS = /A31 *  /A30 *  /A29 *  /A28 *  /A27 *  /A26 *  /A25 * /A24 
 
 DESCRIPTION
 

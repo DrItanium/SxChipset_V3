@@ -2,14 +2,14 @@
 
  Pin # | Name     | Pin Type
 -----------------------------
-   1   | NC       | Clock/Input
+   1   | EN       | Clock/Input
    2   | A31      | Input
-   3   | A30      | Input
-   4   | A29      | Input
-   5   | A28      | Input
-   6   | A27      | Input
-   7   | A26      | Input
-   8   | A25      | Input
+   3   | A29      | Input
+   4   | A27      | Input
+   5   | A25      | Input
+   6   | A30      | Input
+   7   | A28      | Input
+   8   | A26      | Input
    9   | A24      | Input
   10   | NC       | Input
   11   | NC       | Input
@@ -22,8 +22,8 @@
   18   | NC       | NC
   19   | NC       | NC
   20   | NC       | NC
-  21   | NC       | NC
-  22   | MEM      | Output
+  21   | MS       | Output
+  22   | NC       | NC
   23   | IO       | Output
   24   | VCC      | VCC
 
