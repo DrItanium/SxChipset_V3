@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Use sparingly because in some cases it will reduce performance if used
 // too often on the Cortex-M7.
 #define SynchronizeData asm volatile ("dsb" ::: "memory")
+#define SynchronizeInstructions asm volatile ("isb" ::: "memory")
 // Thanks to an interactive session with copilot I am realizing that while the
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
@@ -704,23 +705,15 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<bool enableAddressAcceleration = true>
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      if constexpr (enableAddressAcceleration) {
-          if (digitalReadFast(Pin::IO_SPACE) == LOW) {
-              value |= 0xFE00'0000;
-          } else if (digitalReadFast(Pin::MEM_SPACE) != LOW) {
-              value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-          }
-      } else {
-        value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      }
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       SynchronizeData;
+     // Serial.printf("Address: 0x%x\n", value);
       return value;
   }
   static inline bool
@@ -866,10 +859,10 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (isReadTransaction) {
-          configureDataLinesForRead();
+      if constexpr (isReadTransaction) { 
+          i960Interface::configureDataLinesForRead();
       } else {
-          configureDataLinesForWrite();
+          i960Interface::configureDataLinesForWrite();
       }
       switch (static_cast<uint8_t>(address >> 24)) {
           case 0x00: // PSRAM
@@ -1077,8 +1070,6 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    inputPin(Pin::IO_SPACE);
-    inputPin(Pin::MEM_SPACE);
 
 
     Serial.begin(115200);

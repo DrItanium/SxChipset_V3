@@ -96,7 +96,7 @@ enum class Pin : uint8_t {
   EBI_D7 = RPI_D15, // AD_B1_03
   ADS = RPI_D16,
   BLAST = RPI_D17,
-  MEM_SPACE = RPI_D18,
+  // RPI_D18 ???
   WR = RPI_D19,
   BE0 = RPI_D20,
   BE1 = RPI_D21,
@@ -107,7 +107,7 @@ enum class Pin : uint8_t {
   // RPI_D26
   // RPI_D27
   // RPI_D28
-  IO_SPACE = RPI_D29,
+  // RPI_D29
   READY = RPI_D30,
   READY_SYNC = RPI_D31,
   // RPI_D32
