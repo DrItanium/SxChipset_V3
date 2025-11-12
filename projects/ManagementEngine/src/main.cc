@@ -82,18 +82,18 @@ setupSystemClocks() noexcept {
     // configure the CLKOUT function and which oscillator is used for Main
     // Clock
     CCP = 0xD8; 
-    CLKCTRL.MCLKCTRLA = 0b1000'0000; 
+    CLKCTRL.MCLKCTRLA = CLKCTRL_CLKOUT_bm;
     asm volatile("nop"); // then wait one cycle
 #if (F_CPU == 24000000L) 
     // configure the high frequency oscillator
     CCP = 0xD8; 
-    CLKCTRL.OSCHFCTRLA = 0b1'0'1001'0'0; 
+    CLKCTRL.OSCHFCTRLA = CLKCTRL_RUNSTDBY_bm | CLKCTRL_FREQSEL_24M_gc;
     asm volatile("nop");
 #endif
 
     // configure the 32khz oscillator to run in standby
     CCP = 0xD8;
-    CLKCTRL.OSC32KCTRLA = 0b1'0000000;
+    CLKCTRL.OSC32KCTRLA = CLKCTRL_RUNSTDBY_bm;
     asm volatile("nop");
 }
 template<bool useOutputPin = false>
@@ -147,23 +147,7 @@ updateClockFrequency(uint32_t frequency) noexcept {
 }
 void 
 configureCCLs() {
-  // CCL2 and CCL3 are used to create a divide by two clock signal in the exact
-  // way one would implement it using an 74AHC74. We divide the 24/20 MHz
-  // signal down to a 12/10MHz signal
-  //
-  // Then we take the output from that and feed it into a second divide by two
-  // circuit using CCLs 4 and 5 to create a divide by 4 circuit. 
-  // This will create a 6/5MHz signal
-  //
-  // I do know that I could either use an external chip or the timers but I
-  // find that to not be as easy because it feels like a waste. Those timers
-  // and extra board space can be better utilized in the future.
   
-  // Redirect the output of PA7 in CLKOUT mode to act as a way to send the
-  // clock signal to other sources. This makes the design of the clock dividers
-  // far simpler at the cost of wasting an event channel (although it isn't
-  // actually a waste).
-  //
   // PA0 uses TCA0 to generate a 12MHz clock source
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::ccl0_event_a); // route it to CCL0
@@ -172,16 +156,19 @@ configureCCLs() {
 
   // PA5 is the ready signal from the teensy
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input 
-  Event1.set_user(user::tcb0_capt);
+  Event1.set_user(user::tcb0_capt); // use PA5 as the trigger source for the
+                                    // single shot timer in TCB0
 
+  // CCL0 and CCL1 are used to generate a 5/6MHz clock
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
-  //updateClockFrequency(F_CPU / 2);
-  updateClockFrequency(F_CPU);
+  updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
 
   // create a divide by two clock generator
   PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
   TCA0.SINGLE.CMP0 = 0; // 12MHz compare
-  TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm | TCA_SINGLE_WGMODE_FRQ_gc; 
+
+  TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm |  // cmp0 enable
+      TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
 
   // okay, so start configuring the secondary single shot setup
   PORTMUX.TCBROUTEA = 0; // output on PA2
@@ -193,14 +180,15 @@ configureCCLs() {
   TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
-  TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | TCA_SINGLE_RUNSTDBY_bm;
+  TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
+      TCA_SINGLE_RUNSTDBY_bm; // run in standby
 
-  PORTA.PIN2CTRL |= PORT_INVEN_bm; // make a low pulse
-  PORTA.PIN5CTRL |= PORT_INVEN_bm; // make it inverted
+  PORTA.PIN2CTRL |= PORT_INVEN_bm; // invert the pulse automatically
+  PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
   Event0.start();
   Event1.start();
   // make sure that power 
-  CCL.CTRLA |= CCL_RUNSTDBY_bm;
+  CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
 }
 void onReceiveHandler(int count);
