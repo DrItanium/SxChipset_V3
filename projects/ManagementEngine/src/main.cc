@@ -13,7 +13,6 @@ constexpr auto READY_OUT = PIN_PA2;
 constexpr auto CLK1Out = PIN_PA3;
 // PIN_PA4
 constexpr auto READY_IN = PIN_PA5;
-// PIN_PA6
 constexpr auto CLKOUT = PIN_PA7;
 
 // PIN_PC0
@@ -21,16 +20,17 @@ constexpr auto CLKOUT = PIN_PA7;
 // PIN_PC2 -- Wire
 // PIN_PC3 -- Wire
 
-constexpr auto BE0 = PIN_PD1;
-constexpr auto BE1 = PIN_PD2;
+constexpr auto ByteEnable0 = PIN_PD1;
+constexpr auto ByteEnable1 = PIN_PD2;
 constexpr auto FAIL960 = PIN_PD3;
 constexpr auto RESET960 = PIN_PD4;
 constexpr auto HOLD960 = PIN_PD5;
 constexpr auto LOCK960 = PIN_PD6;
 constexpr auto HLDA960 = PIN_PD7;
 
-constexpr auto BLAST = PIN_PF0;
+constexpr auto BLAST960 = PIN_PF0;
 // PIN_PF1
+// PIN_PF6 (input only)
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -55,6 +55,10 @@ configurePins() noexcept {
     pinMode(CLK2Out, OUTPUT);
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
+    pinMode(ByteEnable0, INPUT_PULLUP);
+    pinMode(ByteEnable1, INPUT_PULLUP);
+    pinMode(BLAST960, INPUT_PULLUP);
+    pinMode(FAIL960, OUTPUT);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
@@ -99,9 +103,10 @@ setupSystemClocks() noexcept {
 bool genericBooleanFunction(bool in0, bool in1, bool in2) noexcept;
 using BooleanFunctionBody = decltype(genericBooleanFunction);
 constexpr bool isFailSignal(bool blast, bool be0, bool be1) noexcept {
-    return (!blast) && be0 && be1;
+    return (!blast) && (be0 && be1);
 }
 static_assert(isFailSignal(false, true, true));
+static_assert(!isFailSignal(true, true, true));
 constexpr bool generateOscillatingPattern(bool low, bool /* middle */, bool /* high */) noexcept {
         return !low;
 }
@@ -159,8 +164,8 @@ configureFailCircuit(Logic& even, Logic& odd) {
   constexpr uint8_t failCircuitTruthTable = computeCCLValueBasedOffOfFunction(isFailSignal);
   even.enable = true;
   even.input0 = in::event_a;
-  even.input1 = in::pin;
-  even.input2 = in::pin;
+  even.input1 = in::input_pullup;
+  even.input2 = in::input_pullup;
   even.clocksource = clocksource::clk_per; 
   even.output = out::enable;
   even.truth = failCircuitTruthTable;
@@ -172,18 +177,9 @@ configureFailCircuit(Logic& even, Logic& odd) {
   odd.output = out::disable;
   odd.sequencer = sequencer::disable;
   odd.clocksource = clocksource::in2;
-  // 0bzyx
-  // 0b000 => 1
-  // 0b001 => 0
-  // 0b010 => 1
-  // 0b011 => 0
-  // 0b100 => 1
-  // 0b101 => 0
-  // 0b110 => 1
-  // 0b111 => 0
   odd.truth = computeCCLValueBasedOffOfFunction(generateOscillatingPattern);
-  even.init();
   odd.init();
+  even.init();
 }
 void
 updateClockFrequency(uint32_t frequency) noexcept {
@@ -204,8 +200,8 @@ configureCCLs() {
   Event1.set_generator(gen1::pin_pa5); // use PA5 as the input 
   Event1.set_user(user::tcb0_capt); // use PA5 as the trigger source for the
                                     // single shot timer in TCB0
-  Event4.set_generator(gen4::pin_pf0); // use PF0 as input 0 on CCL2
-  Event4.set_user(user::ccl2_event_a); // Route BLAST to CCL2
+  Event5.set_generator(gen5::pin_pf0); // use PF6 as input 0 on CCL2
+  Event5.set_user(user::ccl2_event_a); // Route BLAST to CCL2
 
   // CCL0 and CCL1 are used to generate a 5/6MHz clock
   configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
@@ -236,7 +232,7 @@ configureCCLs() {
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
   Event0.start();
   Event1.start();
-  Event4.start();
+  Event5.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
