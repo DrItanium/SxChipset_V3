@@ -7,14 +7,14 @@
 
 
 
-constexpr auto CLK2Out = PIN_PA0;
+constexpr auto CLK1OUT = PIN_PA0;
 constexpr auto DTR = PIN_PA1;
 constexpr auto DTR_HI16 = PIN_PA2;
 constexpr auto READY_OUT = PIN_PA3;
 // PIN_PA4
 // PIN_PA5
 constexpr auto DTR_LO16 = PIN_PA6;
-constexpr auto CLKOUT = PIN_PA7;
+constexpr auto CLK2OUT = PIN_PA7;
 
 // PIN_PB0
 // PIN_PB1
@@ -87,8 +87,8 @@ configurePins() noexcept {
     pinMode(LOCK960, INPUT); // this is open drain
     pinMode(RESET960, OUTPUT);
     digitalWrite(RESET960, LOW);
-    pinMode(CLKOUT, OUTPUT);
-    pinMode(CLK2Out, OUTPUT);
+    pinMode(CLK1OUT, OUTPUT);
+    pinMode(CLK2OUT, OUTPUT);
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
     pinMode(ByteEnable0, INPUT_PULLUP);
@@ -257,6 +257,12 @@ configureCCLs() {
   Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
   Event2.set_user(user::tcb1_capt); // use PA5 as the trigger source for the
                                     // single shot timer in TCB0
+  // Event3
+
+  // Event4
+
+  // Event5
+  
   // route A1 into the EVSYS
   Event6.set_generator(gen7::pin_pg0);
   Event6.set_user(user::ccl0_event_a);
