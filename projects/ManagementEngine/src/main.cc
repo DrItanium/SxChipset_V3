@@ -9,28 +9,65 @@
 
 constexpr auto CLK2Out = PIN_PA0;
 // PIN_PA1
-constexpr auto READY_OUT = PIN_PA2;
-constexpr auto CLK1Out = PIN_PA3;
+// PIN_PA2
+constexpr auto READY_OUT = PIN_PA3;
 // PIN_PA4
-constexpr auto READY_IN = PIN_PA5;
+// PIN_PA5
+// PIN_PA6
 constexpr auto CLKOUT = PIN_PA7;
 
-// PIN_PC0
+// PIN_PB0
+// PIN_PB1
+// PIN_PB2
+// PIN_PB3
+// PIN_PB4
+// PIN_PB5
+// PIN_PB6
+// PIN_PB7
+
+constexpr auto READY_IN = PIN_PC0;
 // PIN_PC1
 // PIN_PC2 -- Wire
 // PIN_PC3 -- Wire
+// PIN_PC4
+// PIN_PC5
+// PIN_PC6
+// PIN_PC7
 
 constexpr auto ByteEnable0 = PIN_PD1;
 constexpr auto ByteEnable1 = PIN_PD2;
+constexpr auto BLAST960 = PIN_PD0;
 constexpr auto FAIL960 = PIN_PD3;
 constexpr auto RESET960 = PIN_PD4;
 constexpr auto HOLD960 = PIN_PD5;
 constexpr auto LOCK960 = PIN_PD6;
 constexpr auto HLDA960 = PIN_PD7;
 
-constexpr auto BLAST960 = PIN_PF0;
+// PIN_PE0
+// PIN_PE1
+// PIN_PE2
+// PIN_PE3
+// PIN_PE4
+// PIN_PE5
+// PIN_PE6
+// PIN_PE7
+
+// PIN_PF0
 // PIN_PF1
+// PIN_PF2
+// PIN_PF3
+// PIN_PF4
+// PIN_PF5
 // PIN_PF6 (input only)
+
+constexpr auto i960_A1 = PIN_PG0;
+constexpr auto DEN = PIN_PG1;
+constexpr auto DEN_HI16 = PIN_PG2;
+constexpr auto DEN_LO16 = PIN_PG3;
+// PIN_PG4
+// PIN_PG5
+// PIN_PG6
+// PIN_PG7
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -51,7 +88,6 @@ configurePins() noexcept {
     pinMode(RESET960, OUTPUT);
     digitalWrite(RESET960, LOW);
     pinMode(CLKOUT, OUTPUT);
-    pinMode(CLK1Out, OUTPUT);
     pinMode(CLK2Out, OUTPUT);
     pinMode(READY_IN, INPUT);
     pinMode(READY_OUT, OUTPUT);
@@ -102,11 +138,9 @@ setupSystemClocks() noexcept {
 }
 bool genericBooleanFunction(bool in0, bool in1, bool in2) noexcept;
 using BooleanFunctionBody = decltype(genericBooleanFunction);
-constexpr bool isFailSignal(bool blast, bool be0, bool be1) noexcept {
+constexpr bool isFailSignal(bool be0, bool be1, bool blast) noexcept {
     return (!blast) && (be0 && be1);
 }
-static_assert(isFailSignal(false, true, true));
-static_assert(!isFailSignal(true, true, true));
 constexpr bool generateOscillatingPattern(bool low, bool /* middle */, bool /* high */) noexcept {
         return !low;
 }
@@ -123,7 +157,7 @@ constexpr uint8_t computeCCLValueBasedOffOfFunction(BooleanFunctionBody fn) noex
     }
     return result;
 }
-static_assert(computeCCLValueBasedOffOfFunction(isFailSignal) == 0b0100'0000);
+static_assert(computeCCLValueBasedOffOfFunction(isFailSignal) == 0b0000'1000);
 static_assert(computeCCLValueBasedOffOfFunction(generateOscillatingPattern) == 0b01010101);
 template<bool useOutputPin = false>
 void
@@ -163,7 +197,7 @@ configureFailCircuit(Logic& even, Logic& odd) {
     // so 0b0100'0000
   constexpr uint8_t failCircuitTruthTable = computeCCLValueBasedOffOfFunction(isFailSignal);
   even.enable = true;
-  even.input0 = in::event_a;
+  even.input0 = in::input_pullup;
   even.input1 = in::input_pullup;
   even.input2 = in::input_pullup;
   even.clocksource = clocksource::clk_per; 
@@ -191,22 +225,24 @@ configureCCLs() {
   
   // PA0 uses TCA0 to generate a 12MHz clock source
   Event0.set_generator(gen0::pin_pa0);
-  Event0.set_user(user::ccl0_event_a); // route it to CCL0
-  Event0.set_user(user::ccl1_event_a); // route it to CCL1
-  Event0.set_user(user::tcb0_cnt); // route it to TCB0 as clock source
-  Event0.set_user(user::ccl3_event_a); // route it to CCL3
-
+  Event0.set_user(user::tcb1_cnt); // route it to TCB0 as clock source
+  Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
+                                       
+#ifdef ARDUINO_AVR_AVR128DB64
+  Event1.set_generator(gen1::pin_pa3); // take from TCB1's single shot
+  Event1.set_user(user::evoutc_pin_pc7);
+#endif
   // PA5 is the ready signal from the teensy
-  Event1.set_generator(gen1::pin_pa5); // use PA5 as the input 
-  Event1.set_user(user::tcb0_capt); // use PA5 as the trigger source for the
+  Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
+  Event2.set_user(user::tcb1_capt); // use PA5 as the trigger source for the
                                     // single shot timer in TCB0
-  Event5.set_generator(gen5::pin_pf0); // use PF6 as input 0 on CCL2
-  Event5.set_user(user::ccl2_event_a); // Route BLAST to CCL2
+  //Event5.set_generator(gen5::pin_pf0); // use PF6 as input 0 on CCL2
+  //Event5.set_user(user::ccl2_event_a); // Route BLAST to CCL2
 
   // CCL0 and CCL1 are used to generate a 5/6MHz clock
-  configureDivideByTwoCCL<true>(Logic0, Logic1); // divide by two (v2)
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
   configureFailCircuit(Logic2, Logic3);
+  
 
   // create a divide by two clock generator
   PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
@@ -216,23 +252,24 @@ configureCCLs() {
       TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
 
   // okay, so start configuring the secondary single shot setup
-  PORTMUX.TCBROUTEA = 0; // output on PA2
-  TCB0.CCMP = 1; // two cycles
-  TCB0.CNT = 1; // 
-  TCB0.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
-  TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+  PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & (~PORTMUX_TCB1_bm)) | PORTMUX_TCB1_bm; // enable output on PA3
+  TCB1.CCMP = 1; // two cycles
+  TCB1.CNT = 1; // 
+  TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB1.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
-  TCB0.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+  TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
   TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
       TCA_SINGLE_RUNSTDBY_bm; // run in standby
 
   PORTA.PIN2CTRL |= PORT_INVEN_bm; // invert the pulse automatically
-  PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
+  PORTC.PIN0CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
   Event0.start();
   Event1.start();
-  Event5.start();
+  Event2.start();
+  //Event5.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
