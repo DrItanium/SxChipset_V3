@@ -32,7 +32,7 @@ constexpr auto READY_IN = PIN_PC0;
 // PIN_PC4
 // PIN_PC5
 // PIN_PC6
-// PIN_PC7
+constexpr auto READY_SYNC = PIN_PC7;
 
 constexpr auto ByteEnable0 = PIN_PD1;
 constexpr auto ByteEnable1 = PIN_PD2;
@@ -102,6 +102,7 @@ configurePins() noexcept {
     pinMode(DEN_LO16, OUTPUT);
     pinMode(DTR_LO16, OUTPUT);
     pinMode(DTR_HI16, OUTPUT);
+    pinMode(READY_SYNC, OUTPUT);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
@@ -307,7 +308,7 @@ configureCCLs() {
       TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
 
   // okay, so start configuring the secondary single shot setup
-  PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & (~PORTMUX_TCB1_bm)) | PORTMUX_TCB1_bm; // enable output on PA3
+  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm));
   TCB1.CCMP = 1; // two cycles
   TCB1.CNT = 1; // 
   TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
