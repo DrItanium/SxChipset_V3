@@ -8,12 +8,12 @@
 
 
 constexpr auto CLK2Out = PIN_PA0;
-// PIN_PA1
-// PIN_PA2
+constexpr auto DTR = PIN_PA1;
+constexpr auto DTR_HI16 = PIN_PA2;
 constexpr auto READY_OUT = PIN_PA3;
 // PIN_PA4
 // PIN_PA5
-// PIN_PA6
+constexpr auto DTR_LO16 = PIN_PA6;
 constexpr auto CLKOUT = PIN_PA7;
 
 // PIN_PB0
@@ -95,6 +95,13 @@ configurePins() noexcept {
     pinMode(ByteEnable1, INPUT_PULLUP);
     pinMode(BLAST960, INPUT_PULLUP);
     pinMode(FAIL960, OUTPUT);
+    pinMode(i960_A1, INPUT_PULLUP);
+    pinMode(DEN, INPUT_PULLUP);
+    pinMode(DTR, INPUT_PULLUP);
+    pinMode(DEN_HI16, OUTPUT);
+    pinMode(DEN_LO16, OUTPUT);
+    pinMode(DTR_LO16, OUTPUT);
+    pinMode(DTR_HI16, OUTPUT);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
@@ -216,6 +223,22 @@ configureFailCircuit(Logic& even, Logic& odd) {
   even.init();
 }
 void
+configureDTRLogic(Logic& dtrHandler) noexcept {
+    dtrHandler.enable = true;
+    dtrHandler.input0 = in::disable;
+    dtrHandler.input1 = in::input_pullup;
+    dtrHandler.input2 = in::disable;
+    dtrHandler.clocksource = clocksource::clk_per;
+    dtrHandler.output = out::enable;
+    dtrHandler.sequencer = sequencer::disable;
+    dtrHandler.output_swap = out::pin_swap;
+    dtrHandler.truth = computeCCLValueBasedOffOfFunction([](bool, bool dtr, bool) { return dtr; });
+    dtrHandler.init();
+}
+void
+configureDENLogic(Logic& lo16, Logic& hi16) noexcept {
+}
+void
 updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
     CLKSpeeds[1] = frequency / 2;
@@ -228,21 +251,29 @@ configureCCLs() {
   Event0.set_user(user::tcb1_cnt); // route it to TCB0 as clock source
   Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
                                        
-#ifdef ARDUINO_AVR_AVR128DB64
   Event1.set_generator(gen1::pin_pa3); // take from TCB1's single shot
   Event1.set_user(user::evoutc_pin_pc7);
-#endif
   // PA5 is the ready signal from the teensy
   Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
   Event2.set_user(user::tcb1_capt); // use PA5 as the trigger source for the
                                     // single shot timer in TCB0
-  //Event5.set_generator(gen5::pin_pf0); // use PF6 as input 0 on CCL2
-  //Event5.set_user(user::ccl2_event_a); // Route BLAST to CCL2
+  // route A1 into the EVSYS
+  Event6.set_generator(gen7::pin_pg0);
+  Event6.set_user(user::ccl0_event_a);
+  // route DEN into the EVSYS
+  Event7.set_generator(gen7::pin_pg1);
+  Event7.set_user(user::ccl0_event_b);
+  // DEN_HI16 output handler
+  Event8.set_generator(gen::ccl4_out);
+  Event8.set_user(user::evoutg_pin_pg2);
+  // configure Event9 to do the DTR handler
+  Event9.set_generator(gen::ccl0_out);
+  Event9.set_user(user::evouta_pin_pa2);
 
-  // CCL0 and CCL1 are used to generate a 5/6MHz clock
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
+  configureDTRLogic(Logic0);
   configureFailCircuit(Logic2, Logic3);
-  
+  configureDENLogic(Logic5, Logic4);
 
   // create a divide by two clock generator
   PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
@@ -264,12 +295,16 @@ configureCCLs() {
   TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
       TCA_SINGLE_RUNSTDBY_bm; // run in standby
 
-  PORTA.PIN2CTRL |= PORT_INVEN_bm; // invert the pulse automatically
+  PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the pulse automatically
   PORTC.PIN0CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
+  PORTC.PIN7CTRL |= PORT_INVEN_bm; // output the invr
   Event0.start();
   Event1.start();
   Event2.start();
-  //Event5.start();
+  Event6.start();
+  Event7.start();
+  Event8.start();
+  Event9.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
