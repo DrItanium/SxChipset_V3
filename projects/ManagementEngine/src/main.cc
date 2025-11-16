@@ -269,9 +269,10 @@ configureCCLs() {
   // PA0 uses TCA0 to generate a 12MHz clock source
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::tcb1_cnt); // route it to TCB0 as clock source
-  Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
   Event0.set_user(user::tcb3_cnt); // route it to TCB3 as clock source
-  // PA5 is the ready signal from the teensy
+  Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
+  // Event 1
+                                       
   Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
   Event2.set_user(user::tcb1_capt); // use PC0 as the trigger source for the
                                     // single shot timer in TCB0
@@ -337,7 +338,6 @@ configureCCLs() {
   PORTC.PIN0CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
   PORTC.PIN1CTRL |= PORT_INVEN_bm; // output the invr
   Event0.start();
-  Event1.start();
   Event2.start();
   Event6.start();
   Event7.start();
