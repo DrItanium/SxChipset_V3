@@ -237,6 +237,25 @@ configureDTRLogic(Logic& dtrHandler) noexcept {
 }
 void
 configureDENLogic(Logic& lo16, Logic& hi16) noexcept {
+    lo16.enable = true;
+    lo16.input0 = in::input_pullup;
+    lo16.input1 = in::input_pullup;
+    lo16.input2 = in::disable;
+    lo16.clocksource = clocksource::clk_per;
+    lo16.output = out::enable;
+    lo16.sequencer = sequencer::disable;
+    lo16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((!a1) && (!den)); });
+    
+    hi16.enable = true;
+    hi16.input0 = in::event_a;
+    hi16.input1 = in::event_b;
+    hi16.input2 = in::disable;
+    hi16.clocksource = clocksource::clk_per;
+    hi16.output = out::disable;
+    hi16.sequencer = sequencer::disable;
+    hi16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((a1) && (!den)); });
+    hi16.init();
+    lo16.init();
 }
 void
 updateClockFrequency(uint32_t frequency) noexcept {
@@ -264,10 +283,10 @@ configureCCLs() {
   // Event5
   // route A1 into the EVSYS
   Event6.set_generator(gen7::pin_pg0);
-  Event6.set_user(user::ccl0_event_a);
+  Event6.set_user(user::ccl4_event_a);
   // route DEN into the EVSYS
   Event7.set_generator(gen7::pin_pg1);
-  Event7.set_user(user::ccl0_event_b);
+  Event7.set_user(user::ccl4_event_b);
   // DEN_HI16 output handler
   Event8.set_generator(gen::ccl4_out);
   Event8.set_user(user::evoutg_pin_pg2);
