@@ -262,7 +262,6 @@ configureCCLs() {
   // Event4
 
   // Event5
-  
   // route A1 into the EVSYS
   Event6.set_generator(gen7::pin_pg0);
   Event6.set_user(user::ccl0_event_a);
