@@ -19,7 +19,7 @@ constexpr auto CLK2OUT = PIN_PA7;
 // PIN_PB0
 // PIN_PB1
 // PIN_PB2
-// PIN_PB3
+constexpr auto DEN_HI16 = PIN_PB3;
 // PIN_PB4
 // PIN_PB5
 // PIN_PB6
@@ -62,7 +62,7 @@ constexpr auto HLDA960 = PIN_PD7;
 
 constexpr auto i960_A1 = PIN_PG0;
 constexpr auto DEN = PIN_PG1;
-constexpr auto DEN_HI16 = PIN_PG2;
+// PIN_PG2
 constexpr auto DEN_LO16 = PIN_PG3;
 // PIN_PG4
 // PIN_PG5
@@ -248,13 +248,13 @@ configureDENLogic(Logic& lo16, Logic& hi16) noexcept {
     lo16.output = out::enable;
     lo16.sequencer = sequencer::disable;
     lo16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((!a1) && (!den)); });
-    
+    // output to save an EVSYS channel
     hi16.enable = true;
     hi16.input0 = in::event_a;
     hi16.input1 = in::event_b;
     hi16.input2 = in::disable;
     hi16.clocksource = clocksource::clk_per;
-    hi16.output = out::disable;
+    hi16.output = out::enable;
     hi16.sequencer = sequencer::disable;
     hi16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((a1) && (!den)); });
     hi16.init();
@@ -274,31 +274,24 @@ configureCCLs() {
   Event0.set_user(user::tcb3_cnt); // route it to TCB3 as clock source
   Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
   // Event 1
-                                       
+  // Event 2: Route PC0 to TCB1 and TCB3 trigger source
+  // Cannot use pin routing from PA3 to PC7 so just use TCB3 that is tied to
+  // the same source. It works and is great
   Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
-  Event2.set_user(user::tcb1_capt); // use PC0 as the trigger source for the
-                                    // single shot timer in TCB0
-  Event2.set_user(user::tcb3_capt); // use PC0 as the trigger source for the
-                                    // single shot timer in TCB3
-                                    // 
-                                    // For some reason, I cannot get the evsys
-                                    // to route the output from PA3 to EVOUTC
-                                    // so we shall do this instead
+  Event2.set_user(user::tcb1_capt); // use PC0 as the trigger source for the single shot timer in TCB0
+  Event2.set_user(user::tcb3_capt); // use PC0 as the trigger source for the single shot timer in TCB3
+                                    
   // Event3
-
   // Event4
-
   // Event5
-  // route A1 into the EVSYS
+  // Event6: A1 -> CCL4.EVTA
   Event6.set_generator(gen7::pin_pg0);
   Event6.set_user(user::ccl4_event_a);
-  // route DEN into the EVSYS
+  // Event7: DEN -> CCL4.EVTB
   Event7.set_generator(gen7::pin_pg1);
   Event7.set_user(user::ccl4_event_b);
-  // DEN_HI16 output handler
-  Event8.set_generator(gen::ccl4_out);
-  Event8.set_user(user::evoutg_pin_pg2);
-  // configure Event9 to do the DTR handler
+  // Event8
+  // Event9: DTR_HI16 from CCL0.OUT
   Event9.set_generator(gen::ccl0_out);
   Event9.set_user(user::evouta_pin_pa2);
 
@@ -343,7 +336,6 @@ configureCCLs() {
   Event2.start();
   Event6.start();
   Event7.start();
-  Event8.start();
   Event9.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
