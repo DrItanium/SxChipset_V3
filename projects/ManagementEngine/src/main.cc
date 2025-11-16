@@ -26,13 +26,13 @@ constexpr auto CLK2OUT = PIN_PA7;
 // PIN_PB7
 
 constexpr auto READY_IN = PIN_PC0;
-// PIN_PC1
+constexpr auto READY_SYNC = PIN_PC1;
 // PIN_PC2 -- Wire
 // PIN_PC3 -- Wire
 // PIN_PC4
 // PIN_PC5
 // PIN_PC6
-constexpr auto READY_SYNC = PIN_PC7;
+// PIN_PC7
 
 constexpr auto ByteEnable0 = PIN_PD1;
 constexpr auto ByteEnable1 = PIN_PD2;
@@ -89,7 +89,7 @@ configurePins() noexcept {
     digitalWrite(RESET960, LOW);
     pinMode(CLK1OUT, OUTPUT);
     pinMode(CLK2OUT, OUTPUT);
-    pinMode(READY_IN, INPUT);
+    pinMode(READY_IN, INPUT_PULLUP);
     pinMode(READY_OUT, OUTPUT);
     pinMode(ByteEnable0, INPUT_PULLUP);
     pinMode(ByteEnable1, INPUT_PULLUP);
@@ -270,13 +270,17 @@ configureCCLs() {
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::tcb1_cnt); // route it to TCB0 as clock source
   Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
-                                       
-  Event1.set_generator(gen1::pin_pa3); // take from TCB1's single shot
-  Event1.set_user(user::evoutc_pin_pc7);
+  Event0.set_user(user::tcb3_cnt); // route it to TCB3 as clock source
   // PA5 is the ready signal from the teensy
   Event2.set_generator(gen2::pin_pc0); // use PC0 as the input 
-  Event2.set_user(user::tcb1_capt); // use PA5 as the trigger source for the
+  Event2.set_user(user::tcb1_capt); // use PC0 as the trigger source for the
                                     // single shot timer in TCB0
+  Event2.set_user(user::tcb3_capt); // use PC0 as the trigger source for the
+                                    // single shot timer in TCB3
+                                    // 
+                                    // For some reason, I cannot get the evsys
+                                    // to route the output from PA3 to EVOUTC
+                                    // so we shall do this instead
   // Event3
 
   // Event4
@@ -308,7 +312,7 @@ configureCCLs() {
       TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
 
   // okay, so start configuring the secondary single shot setup
-  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm));
+  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm | PORTMUX_TCB3_bm)) | PORTMUX_TCB3_bm;
   TCB1.CCMP = 1; // two cycles
   TCB1.CNT = 1; // 
   TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
@@ -317,12 +321,21 @@ configureCCLs() {
   TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
+  // synchronize ready signal into PortC
+  TCB3.CCMP = 1; // two cycles
+  TCB3.CNT = 1; // 
+  TCB3.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB3.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+               TCB_CCMPEN_bm; // enable output via GPIO
+  TCB3.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+               TCB_ENABLE_bm | // enable
+               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
   TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
       TCA_SINGLE_RUNSTDBY_bm; // run in standby
 
   PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the pulse automatically
   PORTC.PIN0CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
-  PORTC.PIN7CTRL |= PORT_INVEN_bm; // output the invr
+  PORTC.PIN1CTRL |= PORT_INVEN_bm; // output the invr
   Event0.start();
   Event1.start();
   Event2.start();
