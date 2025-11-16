@@ -11,8 +11,8 @@ constexpr auto CLK1OUT = PIN_PA0;
 constexpr auto DTR = PIN_PA1;
 constexpr auto DTR_HI16 = PIN_PA2;
 constexpr auto READY_OUT = PIN_PA3;
-// PIN_PA4
-// PIN_PA5
+constexpr auto CLK1DIR = PIN_PA4;
+constexpr auto CLK2DIR = PIN_PA5;
 constexpr auto DTR_LO16 = PIN_PA6;
 constexpr auto CLK2OUT = PIN_PA7;
 
@@ -103,6 +103,8 @@ configurePins() noexcept {
     pinMode(DTR_LO16, OUTPUT);
     pinMode(DTR_HI16, OUTPUT);
     pinMode(READY_SYNC, OUTPUT);
+    pinMode(CLK1DIR, INPUT);
+    pinMode(CLK2DIR, INPUT);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
