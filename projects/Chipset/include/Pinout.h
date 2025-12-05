@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHIPSET_PINOUT_H__
 #include <Arduino.h>
 #include <type_traits>
-enum class Pin : uint8_t {
+enum class PinOld : uint8_t {
   RPI_D0 = 19,
   RPI_D1 = 18,
   RPI_D2 = 14,
@@ -113,7 +113,97 @@ enum class Pin : uint8_t {
   // RPI_D32
 };
 
+enum class PinNew {
+#define X(index, value) RPI_D ## index = value 
+    X(0, 19),
+    X(1, 18),
+    X(2, 14),
+    X(3, 15),
+    X(4, 40),
+    X(5, 41),
+    X(6, 17),
+    X(7, 16),
+    X(8, 22),
+    X(9, 23),
+    X(10, 20),
+    X(11, 21),
+    X(12, 38),
+    X(13, 39),
+    X(14, 26),
+    X(15, 27),
+    X(16, 8),
+    X(17, 7),
+    X(18, 36),
+    X(19, 37),
+    X(20, 32),
+    X(21, 9),
+    X(22, 6),
+    X(23, 2),
+    X(24, 3),
+    X(25, 4),
+    X(26, 33),
+    X(27, 5),
+    X(28, 28),
+    X(29, 29),
+    X(30, 30),
+    X(31, 31),
+    X(32, 34),
+    X(33, 35),
+    X(34, 10),
+    X(35, 11),
+    X(36, 12),
+    X(37, 13),
+    X(38, 0),
+    X(39, 1),
+    X(40, 24),
+    X(41, 25),
+#undef X
+    EBI_A0 = RPI_D0,
+    EBI_A1 = RPI_D1,
+    EBI_A2 = RPI_D2,
+    EBI_A3 = RPI_D3,
+    EBI_A4 = RPI_D4,
+    EBI_A5 = RPI_D5,
+    EBI_RD = RPI_D6,
+    EBI_WR = RPI_D7,
+    EBI_D0 = RPI_D8,
+    EBI_D1 = RPI_D9,
+    EBI_D2 = RPI_D10,
+    EBI_D3 = RPI_D11,
+    EBI_D4 = RPI_D12,
+    EBI_D5 = RPI_D13,
+    EBI_D6 = RPI_D14,
+    EBI_D7 = RPI_D15,
+    ADS = RPI_D16,
+    BLAST = RPI_D17,
+    WR = RPI_D18,
+    BE0 = RPI_D19,
+    BE1 = RPI_D20,
+    INT960_0 = RPI_D21,  
+    INT960_1 = RPI_D22,  
+    // RPI_D23
+    // RPI_D24
+    // RPI_D25
+    // RPI_D26
+    // RPI_D27
+    // RPI_D28
+    // RPI_D29
+    READY = RPI_D30,
+    READY_SYNC = RPI_D31,
+    INT960_2 = RPI_D32,
+    INT960_3 = RPI_D33,
+    // RPI_D34
+    // RPI_D35
+    // RPI_D36
+    // RPI_D37
+    TEENSY_AVR_RX = RPI_D38,
+    TEENSY_AVR_TX = RPI_D39,
+    TEENSY_AVR_SCL = RPI_D40,
+    TEENSY_AVR_SDA = RPI_D41,
 
+};
+
+using Pin = PinNew;
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
   return static_cast<std::underlying_type_t<Pin>>(value);
 }
