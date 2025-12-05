@@ -360,6 +360,7 @@ void
 setup() {
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
     Wire.begin(0x08);
+    Serial1.begin(9600);
     Wire.onReceive(onReceiveHandler);
     Wire.onRequest(onRequestHandler);
 #define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
