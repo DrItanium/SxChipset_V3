@@ -372,15 +372,25 @@ private:
   uint8_t _cfgPortBaseAddress;
 };
 constexpr uint32_t makeAddress(uint8_t value) noexcept {
+#ifdef OLD_STYLE
     return static_cast<uint32_t>(((value & 0b100000) >> 5) |
         ((value & 0b000001) << 5) |
         ((value & 0b010000) >> 3) |
         ((value & 0b000010) << 3) |
         ((value & 0b001000) >> 1) |
         ((value & 0b000100) << 1)) << 16;
+#else
+    return static_cast<uint32_t>(value & 0b111111) << 16;
+#endif
 }
+#ifdef OLD_STYLE
 static_assert(makeAddress(0b00'01'00'11) == 0b00'11'00'10'0000'0000'0000'0000);
 static_assert(makeAddress(0b00'00'00'01) == 0b00'10'00'00'0000'0000'0000'0000);
+#else
+static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
+static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
+#endif
+
 constexpr uint32_t EBIAddressTable[256] {
 #define X(value) makeAddress(value), 
 #include "Entry255.def"
@@ -1063,6 +1073,9 @@ setup() {
     putCPUInReset();
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
+    outputPin(Pin::INT960_1, LOW);
+    outputPin(Pin::INT960_2, LOW);
+    outputPin(Pin::INT960_3, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::WR);
@@ -1072,6 +1085,7 @@ setup() {
 
 
     Serial.begin(115200);
+    Serial1.begin(9600); // connection to the AVR
     while (!Serial) {
         delay(10);
     }
