@@ -8,48 +8,48 @@
 
 
 constexpr auto CLK1OUT = PIN_PA0;
-constexpr auto DTR = PIN_PA1;
-constexpr auto DTR_HI16 = PIN_PA2;
+constexpr auto INT1_IN = PIN_PA1;
+constexpr auto INT1_OUT = PIN_PA2;
 // gets logic level converted as well to save a timer and VDDIO2 pins
 constexpr auto READY_OUT = PIN_PA3;
-constexpr auto LOCK960 = PIN_PA4;
+// PIN_PA4
 constexpr auto READY_IN = PIN_PA5;
-constexpr auto DTR_LO16 = PIN_PA6;
+// PIN_PA6
 constexpr auto CLK2OUT = PIN_PA7;
 
-// PIN_PB0
+constexpr auto INT3_IN = PIN_PB0;
 // PIN_PB1
 // PIN_PB2
-constexpr auto DEN_HI16 = PIN_PB3;
+constexpr auto INT3_OUT = PIN_PB3;
 // PIN_PB4
-// PIN_PB5
+constexpr auto INT2_OUT = PIN_PB5;
 // PIN_PB6
-constexpr auto HOLD960 = PIN_PB7;
+// PIN_PB7
 
-// PIN_PC0
-// PIN_PC1
-// PIN_PC2 -- Wire
-// PIN_PC3 -- Wire
+constexpr auto TEENSY_SER_TX = PIN_PC0;
+constexpr auto TEENSY_SER_RX = PIN_PC1;
+constexpr auto WIRE_SDA = PIN_PC2;
+constexpr auto WIRE_SCL = PIN_PC3;
 // PIN_PC4
 // PIN_PC5
 // PIN_PC6
 // PIN_PC7
 
-constexpr auto ByteEnable0 = PIN_PD1;
-constexpr auto ByteEnable1 = PIN_PD2;
-constexpr auto BLAST960 = PIN_PD0;
-constexpr auto FAIL960 = PIN_PD3;
-constexpr auto POT0 = PIN_PD4; // connected to potentiometer
-constexpr auto POT1 = PIN_PD5; // connected to potentiometer
+// PIN_PD0
+// PIN_PD1
+// PIN_PD2
+// PIN_PD3
+constexpr auto ADS = PIN_PD4;
+constexpr auto BLAST = PIN_PD5;
 // PIN_PD6
-// PIN_PD7
+constexpr auto DEN = PIN_PD7;
 
 // PIN_PE0
 // PIN_PE1
 // PIN_PE2
-// PIN_PE3
-// PIN_PE4
-// PIN_PE5
+constexpr auto WR = PIN_PE3;
+constexpr auto BE0 = PIN_PE4;
+constexpr auto BE1 = PIN_PE5;
 // PIN_PE6
 // PIN_PE7
 
@@ -57,18 +57,18 @@ constexpr auto POT1 = PIN_PD5; // connected to potentiometer
 // PIN_PF1
 // PIN_PF2
 // PIN_PF3
-constexpr auto HLDA960 = PIN_PF4; 
-constexpr auto CLKSEL = PIN_PF5; 
+// PIN_PF4
+constexpr auto INT2_IN = PIN_PF5; 
 // PIN_PF6 (input only/Reset)
 
-constexpr auto i960_A1 = PIN_PG0;
-constexpr auto DEN = PIN_PG1;
+constexpr auto INT0_IN = PIN_PG0;
+// PIN_PG1
 // PIN_PG2
-constexpr auto DEN_LO16 = PIN_PG3;
-// PIN_PG4
-// PIN_PG5
-// PIN_PG6
-constexpr auto RESET960 = PIN_PG7;
+constexpr auto INT0_OUT = PIN_PG3;
+constexpr auto HLDA960 = PIN_PG4;
+constexpr auto RESET960 = PIN_PG5;
+constexpr auto HOLD960 = PIN_PG6;
+constexpr auto LOCK960 = PIN_PG7;
 
 // will be updated on startup
 uint32_t CLKSpeeds [] {
@@ -82,27 +82,35 @@ bool chipIsUp = false;
 
 void
 configurePins() noexcept {
+    pinMode(CLK1OUT, OUTPUT);
+    pinMode(INT1_IN, INPUT);
+    pinMode(INT1_OUT, OUTPUT);
+    digitalWrite(INT1_OUT, HIGH);
+    pinMode(READY_OUT, OUTPUT);
+    digitalWrite(READY_OUT, HIGH);
+    pinMode(READY_IN, INPUT);
+    pinMode(CLK2OUT, OUTPUT);
+    pinMode(RESET960, OUTPUT);
+    digitalWrite(RESET960, LOW);
+    pinMode(INT3_IN, INPUT);
+    pinMode(INT3_OUT, OUTPUT);
+    digitalWrite(INT3_OUT, HIGH);
+    pinMode(INT2_OUT, OUTPUT);
+    digitalWrite(INT2_OUT, LOW);
+    pinMode(ADS, INPUT);
+    pinMode(BLAST, INPUT);
+    pinMode(DEN, INPUT);
+    pinMode(WR, INPUT);
+    pinMode(BE0, INPUT);
+    pinMode(BE1, INPUT);
+    pinMode(INT2_IN, INPUT);
+    pinMode(INT0_IN, INPUT);
+    pinMode(INT0_OUT, OUTPUT);
+    digitalWrite(INT0_OUT, HIGH);
     pinMode(HLDA960, INPUT);
     pinMode(HOLD960, OUTPUT);
     digitalWrite(HOLD960, LOW);
-    pinMode(LOCK960, INPUT); // this is open drain
-    pinMode(RESET960, OUTPUT);
-    digitalWrite(RESET960, LOW);
-    pinMode(CLK1OUT, OUTPUT);
-    pinMode(CLK2OUT, OUTPUT);
-    //pinMode(READY_IN, INPUT_PULLUP);
-    pinMode(READY_OUT, OUTPUT);
-    pinMode(ByteEnable0, INPUT_PULLUP);
-    pinMode(ByteEnable1, INPUT_PULLUP);
-    pinMode(BLAST960, INPUT_PULLUP);
-    pinMode(FAIL960, OUTPUT);
-    pinMode(i960_A1, INPUT_PULLUP);
-    pinMode(DEN, INPUT_PULLUP);
-    pinMode(DTR, INPUT_PULLUP);
-    pinMode(DEN_HI16, OUTPUT);
-    pinMode(DEN_LO16, OUTPUT);
-    pinMode(DTR_LO16, OUTPUT);
-    pinMode(DTR_HI16, OUTPUT);
+    pinMode(LOCK960, INPUT);
 }
 uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
 uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
