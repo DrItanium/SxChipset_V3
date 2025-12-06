@@ -629,7 +629,7 @@ struct i960Interface {
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
 
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = defaultWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
       if constexpr (CompareWithPrevious) {
           if (EBIOutputStorage[address] == value) {
@@ -650,7 +650,7 @@ struct i960Interface {
       fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = defaultRead8>
+  template<InterfaceTimingDescription decl = customRead8>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
@@ -1115,7 +1115,7 @@ tryDoTransaction() noexcept {
     if (adsTriggered) {
         adsTriggered = false;
         auto targetAddress = i960Interface::getAddress();
-        Serial.printf("Target Address: 0x%x\n", targetAddress);
+        //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
