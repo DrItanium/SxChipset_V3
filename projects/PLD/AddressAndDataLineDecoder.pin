@@ -1,0 +1,29 @@
+
+
+ Pin # | Name     | Pin Type
+-----------------------------
+   1   | IA0      | Clock/Input
+   2   | IA1      | Input
+   3   | IRD      | Input
+   4   | IWR      | Input
+   5   | IA3      | Input
+   6   | IA2      | Input
+   7   | IA5      | Input
+   8   | IA4      | Input
+   9   | V0       | Input
+  10   | V1       | Input
+  11   | V2       | Input
+  12   | GND      | GND
+  13   | V3       | Input
+  14   | V4       | NC
+  15   | V5       | NC
+  16   | CS1      | NC
+  17   | UWR      | NC
+  18   | URD      | NC
+  19   | CS0      | NC
+  20   | UA3      | NC
+  21   | UA2      | NC
+  22   | UA1      | NC
+  23   | UA0      | NC
+  24   | VCC      | VCC
+
