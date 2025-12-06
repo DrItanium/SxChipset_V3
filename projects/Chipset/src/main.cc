@@ -402,9 +402,10 @@ constexpr uint32_t EBIOutputTransformation[256] {
 #include "Entry255.def"
 #undef X
 };
-
-constexpr CH351 addressLines{ 0 }, 
-                dataLines{ 0b0000'1000 };
+constexpr auto AddressLineAddress = 0b1000;
+constexpr auto DataLinesAddress = 0;
+constexpr CH351 addressLines{ AddressLineAddress }, 
+                dataLines{ DataLinesAddress };
 
 struct EBIWrapperInterface {
 public:
@@ -591,7 +592,6 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
-
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -629,7 +629,7 @@ struct i960Interface {
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
 
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = defaultWrite8>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
       if constexpr (CompareWithPrevious) {
           if (EBIOutputStorage[address] == value) {
@@ -650,7 +650,7 @@ struct i960Interface {
       fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = customRead8>
+  template<InterfaceTimingDescription decl = defaultRead8>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
@@ -1114,7 +1114,9 @@ void
 tryDoTransaction() noexcept {
     if (adsTriggered) {
         adsTriggered = false;
-        if (auto targetAddress = i960Interface::getAddress(); i960Interface::isReadOperation()) {
+        auto targetAddress = i960Interface::getAddress();
+        Serial.printf("Target Address: 0x%x\n", targetAddress);
+        if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>(targetAddress);
         } else {
             i960Interface::doMemoryTransaction<false>(targetAddress);
