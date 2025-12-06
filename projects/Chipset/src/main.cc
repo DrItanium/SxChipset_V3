@@ -586,12 +586,16 @@ static constexpr InterfaceTimingDescription customWrite8 {
     30, // hold time
     0   // after time / resting time
 }; // 40ns worth of delay
+   
+
 static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
+static constexpr auto WriteConfiguration = customWrite8;
+static constexpr auto ReadConfiguration = customRead8;
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -629,7 +633,7 @@ struct i960Interface {
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
 
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = customWrite8>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = WriteConfiguration>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
       if constexpr (CompareWithPrevious) {
           if (EBIOutputStorage[address] == value) {
@@ -650,7 +654,7 @@ struct i960Interface {
       fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = customRead8>
+  template<InterfaceTimingDescription decl = ReadConfiguration>
   static inline uint8_t
   read8(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
