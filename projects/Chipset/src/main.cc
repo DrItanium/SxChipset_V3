@@ -640,6 +640,8 @@ struct i960Interface {
               return;
           }
       }
+      /// @todo once new board comes in we can implement the fixed direction
+      /// design
       EBIInterface::setDataLinesDirection<OUTPUT>();
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
