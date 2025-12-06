@@ -4,5 +4,16 @@ AddressAndDataLineDecoder
 IA0 IA1 IRD IWR IA3 IA2 IA5 IA4 V0 V1 V2 GND
 V3 V4 V5 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 
+UA0 = IA0
+UA1 = IA1
+UA2 = IA2
+UA3 = IA3
+/CS0 = /IA3 * /IA4 * /IA5
+/CS1 = IA3 * /IA4 * /IA5
+UWR = IWR
+URD = IRD
 
 DESCRIPTION
+
+The new teensy base board has a different Address and Data Line decoder chip
+pinout.
