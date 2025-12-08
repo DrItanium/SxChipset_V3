@@ -267,6 +267,13 @@ startDivideByTwoClockGenerator() noexcept {
   PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the pulse automatically
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
 }
+void
+configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
+  clk1out.set_user(user::tcb3_cnt); // route it to TCB3 as clock source
+  router.set_generator(gen5::pin_pf5); // use PF5/INT2_IN as the generator source for Event5
+  router.set_user(user::tcb3_capt); // use PF5 to trigger TCB3 and generate the INT2 pulse
+  /// @todo 
+}
 void 
 configureCCLs() {
   
@@ -278,15 +285,15 @@ configureCCLs() {
   // Event 1: Route PA5 to TCB1 trigger source
   // setting this to gen1 causes problems (compiler bug?)
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
-  Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the
-                                    // READY pulse
-
+  Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the READY pulse
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
+  configureINT2PulseGenerator(Event0, Event5);
   configureDivideByTwoClockGenerator();
   configureReadyPulseGenerator();
   startDivideByTwoClockGenerator();
   Event0.start();
   Event1.start();
+  Event5.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
