@@ -154,9 +154,6 @@ setupSystemClocks() noexcept {
 }
 bool genericBooleanFunction(bool in0, bool in1, bool in2) noexcept;
 using BooleanFunctionBody = decltype(genericBooleanFunction);
-constexpr bool isFailSignal(bool be0, bool be1, bool blast) noexcept {
-    return (!blast) && (be0 && be1);
-}
 constexpr bool generateOscillatingPattern(bool low, bool /* middle */, bool /* high */) noexcept {
         return !low;
 }
@@ -173,8 +170,20 @@ constexpr uint8_t computeCCLValueBasedOffOfFunction(BooleanFunctionBody fn) noex
     }
     return result;
 }
-static_assert(computeCCLValueBasedOffOfFunction(isFailSignal) == 0b0000'1000);
 static_assert(computeCCLValueBasedOffOfFunction(generateOscillatingPattern) == 0b01010101);
+
+void
+setupInterrupt0Pins() noexcept {
+    // INT0 from the teensy is connected to INT0_IN 
+    // INT0_OUT is separated from the two
+    //
+    // There are different ways to do this but right now INT0_IN is connected
+    // to PG0 and INT0_OUT is connected to PG3. Thus I can either use:
+    // 1. CCL to act as a passthrough
+    // 2. CCL to enable edge detection (bleh)
+    // 3. Use EVSYS to hook INT0_IN to TCB4's trigger pulse
+    
+}
 template<bool useOutputPin = false>
 void
 configureDivideByTwoCCL(Logic& even, Logic& odd) {
@@ -200,73 +209,6 @@ configureDivideByTwoCCL(Logic& even, Logic& odd) {
   odd.init();
 }
 void
-configureFailCircuit(Logic& even, Logic& odd) {
-    // BE0 is high, BE1 is high, and BLAST is LOW for at least one CLK cycle
-    // 0b000 -> 0
-    // 0b001 -> 0
-    // 0b010 -> 0
-    // 0b011 -> 0
-    // 0b100 -> 0
-    // 0b101 -> 0
-    // 0b110 -> 1
-    // 0b111 -> 0
-    // so 0b0100'0000
-  constexpr uint8_t failCircuitTruthTable = computeCCLValueBasedOffOfFunction(isFailSignal);
-  even.enable = true;
-  even.input0 = in::input_pullup;
-  even.input1 = in::input_pullup;
-  even.input2 = in::input_pullup;
-  even.clocksource = clocksource::clk_per; 
-  even.output = out::enable;
-  even.truth = failCircuitTruthTable;
-  even.sequencer = sequencer::d_flip_flop;
-  odd.enable = true;
-  odd.input0 = in::event_a; // x
-  odd.input1 = in::disable; // y
-  odd.input2 = in::event_a; // z
-  odd.output = out::disable;
-  odd.sequencer = sequencer::disable;
-  odd.clocksource = clocksource::in2;
-  odd.truth = computeCCLValueBasedOffOfFunction(generateOscillatingPattern);
-  odd.init();
-  even.init();
-}
-void
-configureDTRLogic(Logic& dtrHandler) noexcept {
-    dtrHandler.enable = true;
-    dtrHandler.input0 = in::disable;
-    dtrHandler.input1 = in::input_pullup;
-    dtrHandler.input2 = in::disable;
-    dtrHandler.clocksource = clocksource::clk_per;
-    dtrHandler.output = out::enable;
-    dtrHandler.sequencer = sequencer::disable;
-    dtrHandler.output_swap = out::pin_swap;
-    dtrHandler.truth = computeCCLValueBasedOffOfFunction([](bool, bool dtr, bool) { return dtr; });
-    dtrHandler.init();
-}
-void
-configureDENLogic(Logic& lo16, Logic& hi16) noexcept {
-    lo16.enable = true;
-    lo16.input0 = in::input_pullup;
-    lo16.input1 = in::input_pullup;
-    lo16.input2 = in::disable;
-    lo16.clocksource = clocksource::clk_per;
-    lo16.output = out::enable;
-    lo16.sequencer = sequencer::disable;
-    lo16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((!a1) && (!den)); });
-    // output to save an EVSYS channel
-    hi16.enable = true;
-    hi16.input0 = in::event_a;
-    hi16.input1 = in::event_b;
-    hi16.input2 = in::disable;
-    hi16.clocksource = clocksource::clk_per;
-    hi16.output = out::enable;
-    hi16.sequencer = sequencer::disable;
-    hi16.truth = computeCCLValueBasedOffOfFunction([](bool a1, bool den, bool) { return !((a1) && (!den)); });
-    hi16.init();
-    lo16.init();
-}
-void
 updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
     CLKSpeeds[1] = frequency / 2;
@@ -278,31 +220,13 @@ configureCCLs() {
   // PA0 uses TCA0 to generate a 12MHz clock source
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::tcb1_cnt); // route it to TCB1 as clock source
-  Event0.set_user(user::ccl3_event_a); // route it to CCL3 for the fail circuit
   // Event 1: Route PA5 to TCB1 trigger source
   // setting this to gen1 causes problems (compiler bug?)
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
   Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the
                                     // READY pulse
-  // Event2                                  
-  // Event3
-  // Event4
-  // Event5
-  // Event6: A1 -> CCL4.EVTA
-  Event6.set_generator(gen7::pin_pg0);
-  Event6.set_user(user::ccl4_event_a);
-  // Event7: DEN -> CCL4.EVTB
-  Event7.set_generator(gen7::pin_pg1);
-  Event7.set_user(user::ccl4_event_b);
-  // Event8
-  // Event9: DTR_HI16 from CCL0.OUT
-  Event9.set_generator(gen::ccl0_out);
-  Event9.set_user(user::evouta_pin_pa2);
 
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
-  configureDTRLogic(Logic0);
-  configureFailCircuit(Logic2, Logic3);
-  configureDENLogic(Logic5, Logic4);
 
   // create a divide by two clock generator
   PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
