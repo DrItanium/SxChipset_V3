@@ -172,18 +172,6 @@ constexpr uint8_t computeCCLValueBasedOffOfFunction(BooleanFunctionBody fn) noex
 }
 static_assert(computeCCLValueBasedOffOfFunction(generateOscillatingPattern) == 0b01010101);
 
-void
-setupInterrupt0Pins() noexcept {
-    // INT0 from the teensy is connected to INT0_IN 
-    // INT0_OUT is separated from the two
-    //
-    // There are different ways to do this but right now INT0_IN is connected
-    // to PG0 and INT0_OUT is connected to PG3. Thus I can either use:
-    // 1. CCL to act as a passthrough
-    // 2. CCL to enable edge detection (bleh)
-    // 3. Use EVSYS to hook INT0_IN to TCB4's trigger pulse
-    
-}
 template<bool useOutputPin = false>
 void
 configureDivideByTwoCCL(Logic& even, Logic& odd) {
@@ -214,27 +202,20 @@ updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[1] = frequency / 2;
 }
 static_assert(gen0::pin_pa5 == gen1::pin_pa5);
-void 
-configureCCLs() {
-  
-  // PA0 uses TCA0 to generate a 12MHz clock source
-  Event0.set_generator(gen0::pin_pa0);
-  Event0.set_user(user::tcb1_cnt); // route it to TCB1 as clock source
-  // Event 1: Route PA5 to TCB1 trigger source
-  // setting this to gen1 causes problems (compiler bug?)
-  Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
-  Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the
-                                    // READY pulse
-
-  updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
-
-  // create a divide by two clock generator
-  PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
-  TCA0.SINGLE.CMP0 = 0; // 12MHz compare
-
-  TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm |  // cmp0 enable
-      TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
-
+void
+setupInterrupt0Pins() noexcept {
+    // INT0 from the teensy is connected to INT0_IN 
+    // INT0_OUT is separated from the two
+    //
+    // There are different ways to do this but right now INT0_IN is connected
+    // to PG0 and INT0_OUT is connected to PG3. Thus I can either use:
+    // 1. CCL to act as a passthrough
+    // 2. CCL to enable edge detection (bleh)
+    // 3. Use EVSYS to hook INT0_IN to TCB4's trigger pulse
+    // 4. Use CCL and EVSYS to route INT0_IN to TCB4's trigger pulse (allows for more flexible EVSYS usage)
+}
+void
+configureReadyPulseGenerator() noexcept {
   // okay, so start configuring the secondary single shot setup
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm));
   TCB1.CCMP = 1; // two cycles
@@ -245,10 +226,40 @@ configureCCLs() {
   TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
+}
+void
+configureDivideByTwoClockGenerator() noexcept {
+  // create a divide by two clock generator
+  PORTMUX.TCAROUTEA = (PORTMUX.TCAROUTEA & ~(PORTMUX_TCA0_gm)) | PORTMUX_TCA0_PORTA_gc; // enable TCA0 on PORTA
+  TCA0.SINGLE.CMP0 = 0; // 12MHz compare
+
+  TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm |  // cmp0 enable
+      TCA_SINGLE_WGMODE_FRQ_gc;  // frequency
+}
+void
+startDivideByTwoClockGenerator() noexcept {
   TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
       TCA_SINGLE_RUNSTDBY_bm; // run in standby
   PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the pulse automatically
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
+}
+void 
+configureCCLs() {
+  
+  // PA0 uses TCA0 to generate a 12MHz clock source
+  Event0.set_generator(gen0::pin_pa0);
+  Event0.set_user(user::tcb1_cnt); // route it to TCB1 as clock source
+  Event0.set_user(user::tcb4_cnt); // route it to TCB4 as clock source
+  // Event 1: Route PA5 to TCB1 trigger source
+  // setting this to gen1 causes problems (compiler bug?)
+  Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
+  Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the
+                                    // READY pulse
+
+  updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
+  configureDivideByTwoClockGenerator();
+  configureReadyPulseGenerator();
+  startDivideByTwoClockGenerator();
   Event0.start();
   Event1.start();
   Event6.start();
