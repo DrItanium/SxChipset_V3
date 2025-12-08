@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include <type_traits>
 #include <functional>
+#include <memory>
 
 #include <SPI.h>
 #include <Wire.h>
@@ -68,7 +69,8 @@ volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 
-
+// We can open up to 4096 files on the sd card simultaneously
+File sdcardFiles[4096];
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
@@ -235,18 +237,6 @@ struct TimingRelatedThings {
                 return static_cast<uint16_t>(_currentMicros);
             case 3:
                 return static_cast<uint16_t>(_currentMicros >> 16);
-            case 4: // eeprom
-                return static_cast<uint16_t>(4096);
-            case 5:
-                return 0;
-            case 6:
-                return static_cast<uint16_t>(OnboardSRAMCacheSize);
-            case 7:
-                return static_cast<uint16_t>(OnboardSRAMCacheSize >> 16);
-            case 8:
-                return static_cast<uint16_t>(OnboardSRAM2CacheSize);
-            case 9:
-                return static_cast<uint16_t>(OnboardSRAM2CacheSize >> 16);
             default:
                 return 0;
         }
@@ -259,6 +249,27 @@ private:
     // for temporary snapshot purposes
     uint32_t _currentMicros = 0;
     uint32_t _currentMillis = 0;
+};
+struct CapacityInformation {
+    void clear() noexcept { }
+    void update() noexcept { }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (offset) {
+#define X(idx, value) \
+            case idx: return static_cast<uint16_t>(value); \
+            case (idx+1): return static_cast<uint16_t>(value >> 16)
+            X(0, _eepromCapacity);
+            X(2, OnboardSRAMCacheSize);
+            X(4, OnboardSRAM2CacheSize);
+#undef X
+            default: return 0;
+        }
+    }
+    void setWord(uint8_t, uint16_t) noexcept { }
+    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+    void onFinish() noexcept { }
+private:
+    static constexpr uint32_t _eepromCapacity = 4096;
 };
 struct RandomSourceRelatedThings {
     void clear() noexcept { }
@@ -347,6 +358,7 @@ struct RTCMemoryBlock {
 
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
+CapacityInformation capacityInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
@@ -839,6 +851,9 @@ struct i960Interface {
           case 0x30 ... 0x3F:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
+              break;
+          case 0x40 ... 0x4F:
+              doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
