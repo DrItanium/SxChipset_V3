@@ -5,8 +5,32 @@
 #include <EEPROM.h>
 #include "ManagementEngineProtocol.h"
 
-
-
+// Mapped/Registered Peripherals
+// TCA0: CLK/2 generator (CLK1OUT)
+// TCA1:
+// TCB0: INT1 (potentially)
+// TCB1: Ready pulse generator
+// TCB2: micros/millis (reserved by DxCore)
+// TCB3: INT2 (potentially)
+// TCB4: INT0 (potentially)
+// TCD0: 
+// CCL0: 
+// CCL1: 
+// CCL2: 
+// CCL3: 
+// CCL4: INT3 (potentially)
+// CCL5: INT0 (potentially)
+// TWI0: Teensy Communication Channel
+// TWI1: 
+// USART0:
+// USART1: Teensy Communication Channel
+// USART2:
+// USART3:
+// USART4:
+// USART5:
+// SPI0:
+// SPI1:
+// registered pins
 constexpr auto CLK1OUT = PIN_PA0;
 constexpr auto INT1_IN = PIN_PA1;
 constexpr auto INT1_OUT = PIN_PA2;
@@ -247,6 +271,7 @@ void
 configureCCLs() {
   
   // PA0 uses TCA0 to generate a 12MHz clock source
+  // Useful for various triggers and such
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::tcb1_cnt); // route it to TCB1 as clock source
   Event0.set_user(user::tcb4_cnt); // route it to TCB4 as clock source
@@ -262,9 +287,6 @@ configureCCLs() {
   startDivideByTwoClockGenerator();
   Event0.start();
   Event1.start();
-  Event6.start();
-  Event7.start();
-  Event9.start();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
