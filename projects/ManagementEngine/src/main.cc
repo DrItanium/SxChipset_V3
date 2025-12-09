@@ -367,8 +367,31 @@ setup() {
     setupDisplay();
 }
 void
+fizzleFade(int w, int h, uint16_t color) noexcept {
+    tft.fillScreen(ILI9341_BLACK);
+    uint32_t rndval = 1;
+    do {
+        uint16_t y = rndval & 0x000FF;
+        uint16_t x = (rndval & 0x1FF00) >> 8;
+        unsigned lsb = rndval & 1;
+        rndval >>= 1;
+        if (lsb) {
+            rndval ^= 0x0001'2000;
+        }
+        if (x < w && y < h) {
+            tft.drawPixel(x, y, color);
+        }
+    } while (rndval != 1);
+}
+uint16_t
+randomColor() noexcept {
+    uint32_t baseColor = random();
+    return tft.color565(static_cast<uint8_t>(baseColor), static_cast<uint8_t>(baseColor >> 8), static_cast<uint8_t>(baseColor >> 16));
+}
+void
 loop() {
-    delay(10);
+    fizzleFade(tft.width(), tft.height(), randomColor());
+    delay(1000);
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
