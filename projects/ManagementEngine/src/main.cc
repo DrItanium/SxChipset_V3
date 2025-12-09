@@ -3,7 +3,10 @@
 #include <Logic.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <SPI.h>
 #include "ManagementEngineProtocol.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
 
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)
@@ -68,20 +71,20 @@ constexpr auto BLAST = PIN_PD5;
 // PIN_PD6
 constexpr auto DEN = PIN_PD7;
 
-// PIN_PE0
-// PIN_PE1
-// PIN_PE2
+constexpr auto DISPLAY_MOSI = PIN_PE0;
+constexpr auto DISPLAY_MISO = PIN_PE1;
+constexpr auto DISPLAY_SCK = PIN_PE2;
 constexpr auto WR = PIN_PE3;
 constexpr auto BE0 = PIN_PE4;
 constexpr auto BE1 = PIN_PE5;
-// PIN_PE6
-// PIN_PE7
+constexpr auto DISPLAY_DC = PIN_PE6;
+constexpr auto DISPLAY_RST = PIN_PE7;
 
 // PIN_PF0
 // PIN_PF1
 // PIN_PF2
 // PIN_PF3
-// PIN_PF4
+constexpr auto DISPLAY_CS = PIN_PF4;
 constexpr auto INT2_IN = PIN_PF5; 
 // PIN_PF6 (input only/Reset)
 
@@ -103,7 +106,8 @@ uint8_t serialNumberCache[16] = { 0 };
 uint8_t devidCache[3] = { 0 };
 long rSeed = 0;
 bool chipIsUp = false;
-
+Adafruit_ILI9341 tft{DISPLAY_CS, DISPLAY_DC, DISPLAY_RST};
+void setupDisplay() noexcept;
 void
 configurePins() noexcept {
     pinMode(CLK1OUT, OUTPUT);
@@ -324,6 +328,8 @@ void
 setup() {
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
     Wire.begin(0x08);
+    SPI.swap(SPI0_SWAP1); 
+    SPI.begin();
     Serial1.begin(9600);
     Wire.onReceive(onReceiveHandler);
     Wire.onRequest(onRequestHandler);
@@ -358,6 +364,7 @@ setup() {
     configurePins();
     configureCCLs();
     chipIsUp = true;
+    setupDisplay();
 }
 void
 loop() {
@@ -433,4 +440,10 @@ onRequestHandler() {
             break;
 
     }
+}
+
+void
+setupDisplay() noexcept {
+    tft.begin();
+    tft.fillScreen(ILI9341_BLACK);
 }
