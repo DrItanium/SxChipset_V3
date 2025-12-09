@@ -368,7 +368,6 @@ setup() {
 }
 void
 fizzleFade(int w, int h, uint16_t color) noexcept {
-    tft.fillScreen(ILI9341_BLACK);
     uint32_t rndval = 1;
     do {
         uint16_t y = rndval & 0x001FF;
