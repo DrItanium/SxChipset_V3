@@ -31,7 +31,7 @@
 // USART3:
 // USART4:
 // USART5:
-// SPI0:
+// SPI0: ILI9341 display
 // SPI1:
 // registered pins
 constexpr auto CLK1OUT = PIN_PA0;
@@ -390,7 +390,7 @@ randomColor() noexcept {
 void
 loop() {
     fizzleFade(tft.width(), tft.height(), randomColor());
-    delay(1000);
+//    delay(1000);
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
