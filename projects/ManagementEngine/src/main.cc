@@ -371,8 +371,8 @@ fizzleFade(int w, int h, uint16_t color) noexcept {
     tft.fillScreen(ILI9341_BLACK);
     uint32_t rndval = 1;
     do {
-        uint16_t y = rndval & 0x000FF;
-        uint16_t x = (rndval & 0x1FF00) >> 8;
+        uint16_t y = rndval & 0x001FF;
+        uint16_t x = (rndval & 0x3FE00) >> 9;
         unsigned lsb = rndval & 1;
         rndval >>= 1;
         if (lsb) {
