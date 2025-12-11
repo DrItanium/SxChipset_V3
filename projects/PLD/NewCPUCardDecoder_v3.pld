@@ -1,0 +1,15 @@
+GAL22V10
+NewCPUCardDecoderHardware_v2
+
+CLK XRDY BE0 BE1 A1 HLDA DTR DEN BLAST CFG0 CFG1 GND
+CFG2 DTRH DTRL DENH DENL OE0 OE1 FAIL NC NC READY VCC
+
+/FAIL.R = BE0 * BE1 * /BLAST
+READY = XRDY
+OE1 = HLDA
+OE0 = HLDA
+; start with a default 16-bit impl
+
+DESCRIPTION
+
+Third Generation CPU Card implementation

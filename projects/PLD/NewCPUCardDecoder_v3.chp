@@ -1,0 +1,29 @@
+
+
+                                GAL22V10
+
+                          -------\___/-------
+                      CLK |  1           24 | VCC
+                          |                 |
+                     XRDY |  2           23 | READY
+                          |                 |
+                      BE0 |  3           22 | NC
+                          |                 |
+                      BE1 |  4           21 | NC
+                          |                 |
+                       A1 |  5           20 | FAIL
+                          |                 |
+                     HLDA |  6           19 | OE1
+                          |                 |
+                      DTR |  7           18 | OE0
+                          |                 |
+                      DEN |  8           17 | DENL
+                          |                 |
+                    BLAST |  9           16 | DENH
+                          |                 |
+                     CFG0 | 10           15 | DTRL
+                          |                 |
+                     CFG1 | 11           14 | DTRH
+                          |                 |
+                      GND | 12           13 | CFG2
+                          -------------------
