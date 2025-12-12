@@ -15,10 +15,10 @@
   11   | CFG1     | Input
   12   | GND      | GND
   13   | CFG2     | Input
-  14   | DTRH     | NC
-  15   | DTRL     | NC
-  16   | DENH     | NC
-  17   | DENL     | NC
+  14   | DTRH     | Output
+  15   | DTRL     | Output
+  16   | DENH     | Output
+  17   | DENL     | Output
   18   | OE0      | Output
   19   | OE1      | Output
   20   | FAIL     | Output
