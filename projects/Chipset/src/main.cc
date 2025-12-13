@@ -75,17 +75,34 @@ RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
 
+/**
+ * @brief How the data bus lines are configured as seen on the CPU card. The
+ * Teensy has no way of knowing this configuration so it is a compile time
+ * constant
+ */
 enum class CPUDataBusConfiguration : uint8_t {
-    Fixed16,
+    /**
+     * @brief Dual16 means that there are two fixed direction 16-bit data
+     * channels connected to the CH351 IO Expander. Right now, the upper 16
+     * bits are for reads and the lower 16-bits are for writes.
+     */
+    Dual16,
+    /**
+     * @brief Use the two 16-bit data channels and a single 32-bit data
+     * channel. Very expensive
+     */
     Full32,
     Unused,
+    /**
+     * @brief Legacy 16-bit data bus that changes directions constantly
+     */
     Bidirectional16,
 };
 constexpr auto BusConfiguration = CPUDataBusConfiguration::Bidirectional16;
 constexpr bool valid(CPUDataBusConfiguration config) noexcept {
     switch (config) {
         case CPUDataBusConfiguration::Bidirectional16:
-        case CPUDataBusConfiguration::Fixed16:
+        case CPUDataBusConfiguration::Dual16:
             return true;
         default:
             return false;
@@ -708,7 +725,19 @@ struct i960Interface {
       write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
       write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
-      configureDataLinesForRead<false>();
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+          // lower 16-bits are for the i960 read port
+          write8<false>(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
+          // upper 16-bits are for the i960 write port
+          write8<false>(dataLines.getConfigPortBaseAddress() + 2, 0);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 3, 0);
+          // after this point, the code will no longer change directions since
+          // it is unnecessary
+      } else if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          // configure the data bus for a read operation (which is output to the i960)
+        configureDataLinesForRead<false>();
+      }
       EBIInterface::setDataLines(0);
   }
   template<uint16_t value, bool compareWithPrevious = true>
@@ -720,12 +749,16 @@ struct i960Interface {
   template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForRead() noexcept {
-    configureDataLinesDirection<0xFFFF, compareWithPrevious>();
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          configureDataLinesDirection<0xFFFF, compareWithPrevious>();
+      }
   }
   template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForWrite() noexcept {
-    configureDataLinesDirection<0, compareWithPrevious>();
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          configureDataLinesDirection<0, compareWithPrevious>();
+      }
   }
   static void
   waitForReadySignal() noexcept {
@@ -781,6 +814,10 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortBaseAddress();
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+          // go to the fixed address base address for transmit operations
+          baseAddress += 2;
+      }
       // this will take at least 390ns to complete
       uint16_t lo = 0, 
                hi = 0;
