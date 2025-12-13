@@ -943,7 +943,7 @@ struct i960Interface {
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+      if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
           if constexpr (isReadTransaction) { 
               i960Interface::configureDataLinesForRead();
           } else {
