@@ -75,6 +75,23 @@ RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
 
+enum class CPUDataBusConfiguration : uint8_t {
+    Fixed16,
+    Full32,
+    Unused,
+    Bidirectional16,
+};
+constexpr auto BusConfiguration = CPUDataBusConfiguration::Bidirectional16;
+constexpr bool valid(CPUDataBusConfiguration config) noexcept {
+    switch (config) {
+        case CPUDataBusConfiguration::Bidirectional16:
+        case CPUDataBusConfiguration::Fixed16:
+            return true;
+        default:
+            return false;
+    }
+}
+static_assert(valid(BusConfiguration), "Unsupported bus configuration specified");
 namespace PCJoystick {
     Adafruit_seesaw device{&Wire2};
     bool available = false;
