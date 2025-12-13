@@ -98,7 +98,7 @@ enum class CPUDataBusConfiguration : uint8_t {
      */
     Bidirectional16,
 };
-constexpr auto BusConfiguration = CPUDataBusConfiguration::Bidirectional16;
+constexpr auto BusConfiguration = CPUDataBusConfiguration::Dual16;
 constexpr bool valid(CPUDataBusConfiguration config) noexcept {
     switch (config) {
         case CPUDataBusConfiguration::Bidirectional16:
