@@ -409,6 +409,16 @@ struct CH351 {
   constexpr auto getDataPortBaseAddress() const noexcept {
     return _dataPortBaseAddress;
   }
+  constexpr auto getDataPortReadAddressBase() const noexcept {
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+          return _dataPortBaseAddress + 2;
+      } else {
+          return _dataPortBaseAddress;
+      }
+  }
+  constexpr auto getDataPortWriteAddressBase() const noexcept {
+      return _dataPortBaseAddress;
+  }
   constexpr auto getConfigPortBaseAddress() const noexcept {
     return _cfgPortBaseAddress;
   }
@@ -807,17 +817,13 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      auto baseAddress = dataLines.getDataPortBaseAddress();
+      auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
   static inline uint16_t
   readDataLines() noexcept {
-      auto baseAddress = dataLines.getDataPortBaseAddress();
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
-          // go to the fixed address base address for transmit operations
-          baseAddress += 2;
-      }
+      auto baseAddress = dataLines.getDataPortReadAddressBase();
       // this will take at least 390ns to complete
       uint16_t lo = 0, 
                hi = 0;
