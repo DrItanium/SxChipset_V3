@@ -9,9 +9,10 @@ READY = XRDY
 OE1 = HLDA
 OE0 = HLDA
 
-/DENL =  DTR * /DEN * /CFG0 * /CFG1 + /A1 * /DEN * CFG0 * /CFG1 + /DEN * CFG0 * CFG1 
-/DENH = /DTR * /DEN * /CFG0 * /CFG1 +  A1 * /DEN * CFG0 * /CFG1
-DTRL =                 DTR * CFG0 * CFG1 + DTR * CFG0 * /CFG1
+
+/DENL = /DTR * /DEN * /CFG0 * /CFG1 + /DEN *  CFG0 * CFG1 + /A1 * /DEN * CFG0 * /CFG1
+/DENH = DTR * /DEN * /CFG0 * /CFG1 + A1 * /DEN * CFG0 * /CFG1
+DTRL = DTR * CFG0 * CFG1 + DTR * CFG0 * /CFG1
 DTRH = /CFG0 * /CFG1 + DTR * CFG0 * CFG1 + DTR * CFG0 * /CFG1
 
 DESCRIPTION
@@ -29,4 +30,5 @@ H 	 | H    | 16-bit Bus (Classic)
 L	 | H    | Unused
 H    | L    | 32-bit Bus
 L    | L    | 16-bit Fixed Bus
+
 

@@ -99,9 +99,9 @@ Pin 18 = OE0          S0 = 1   S1 = 1
 
 Pin 17 = DENL         S0 = 0   S1 = 1
  83  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 84  ---- ---- ---- ---- ---- ---- x--- -x-- ---- -x-- -x--
- 85  ---- ---- ---- ---- -x-- ---- ---- -x-- ---- x--- -x--
- 86  ---- ---- ---- ---- ---- ---- ---- -x-- ---- x--- x---
+ 84  ---- ---- ---- ---- ---- ---- -x-- -x-- ---- -x-- -x--
+ 85  ---- ---- ---- ---- ---- ---- ---- -x-- ---- x--- x---
+ 86  ---- ---- ---- ---- -x-- ---- ---- -x-- ---- x--- -x--
  87  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  88  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  89  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -116,7 +116,7 @@ Pin 17 = DENL         S0 = 0   S1 = 1
 
 Pin 16 = DENH         S0 = 0   S1 = 1
  98  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 99  ---- ---- ---- ---- ---- ---- -x-- -x-- ---- -x-- -x--
+ 99  ---- ---- ---- ---- ---- ---- x--- -x-- ---- -x-- -x--
 100  ---- ---- ---- ---- x--- ---- ---- -x-- ---- x--- -x--
 101  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 102  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
