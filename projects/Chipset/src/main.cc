@@ -428,24 +428,10 @@ private:
   uint8_t _cfgPortBaseAddress;
 };
 constexpr uint32_t makeAddress(uint8_t value) noexcept {
-#ifdef OLD_STYLE
-    return static_cast<uint32_t>(((value & 0b100000) >> 5) |
-        ((value & 0b000001) << 5) |
-        ((value & 0b010000) >> 3) |
-        ((value & 0b000010) << 3) |
-        ((value & 0b001000) >> 1) |
-        ((value & 0b000100) << 1)) << 16;
-#else
     return static_cast<uint32_t>(value & 0b111111) << 16;
-#endif
 }
-#ifdef OLD_STYLE
-static_assert(makeAddress(0b00'01'00'11) == 0b00'11'00'10'0000'0000'0000'0000);
-static_assert(makeAddress(0b00'00'00'01) == 0b00'10'00'00'0000'0000'0000'0000);
-#else
 static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
 static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
-#endif
 
 constexpr uint32_t EBIAddressTable[256] {
 #define X(value) makeAddress(value), 
@@ -824,11 +810,8 @@ struct i960Interface {
   static inline uint16_t
   readDataLines() noexcept {
       auto baseAddress = dataLines.getDataPortReadAddressBase();
-      // this will take at least 390ns to complete
-      uint16_t lo = 0, 
-               hi = 0;
-      lo = read8(baseAddress);
-      hi = read8(baseAddress+1);
+      uint16_t lo = read8(baseAddress);
+      uint16_t hi = read8(baseAddress+1);
       SynchronizeData;
       return lo | (hi << 8);
   }
