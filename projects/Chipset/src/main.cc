@@ -70,7 +70,6 @@ volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 
 // We can open up to 4096 files on the sd card simultaneously
-File sdcardFiles[4096];
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
@@ -400,7 +399,7 @@ MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 struct CH351 {
-  constexpr CH351(uint8_t baseAddress) noexcept
+  constexpr explicit CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
   }
   constexpr auto getBaseAddress() const noexcept {
