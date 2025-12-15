@@ -186,16 +186,16 @@ enum class PinNew {
     // RPI_D25
     // RPI_D26
     // RPI_D27
-    DISPLAY_RESET = RPI_D28,
-    DISPLAY_DC = RPI_D29,
+    // RPI_D28
+    // RPI_D29
     READY = RPI_D30,
     READY_SYNC = RPI_D31,
     INT960_2 = RPI_D32,
     INT960_3 = RPI_D33,
-    DISPLAY_CS = RPI_D34,
-    DISPLAY_MOSI = RPI_D35,
-    DISPLAY_MISO = RPI_D36,
-    DISPLAY_SCK = RPI_D37,
+    // RPI_D34 
+    // RPI_D35 (MOSI)
+    // RPI_D36 (MISO)
+    // RPI_D37 (SCK)
     TEENSY_AVR_RX = RPI_D38,
     TEENSY_AVR_TX = RPI_D39,
     TEENSY_AVR_SCL = RPI_D40,
