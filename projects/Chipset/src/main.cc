@@ -839,7 +839,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady();
+      signalReady<false>();
   }
   template<MemoryCell MC>
   static void
@@ -851,7 +851,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady();
+      signalReady<false>();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
