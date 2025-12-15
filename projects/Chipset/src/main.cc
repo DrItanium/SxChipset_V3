@@ -802,13 +802,13 @@ struct i960Interface {
   }
   static inline void
   writeDataLines(uint16_t value) noexcept {
-      auto baseAddress = dataLines.getDataPortWriteAddressBase();
+      constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
   static inline uint16_t
   readDataLines() noexcept {
-      auto baseAddress = dataLines.getDataPortReadAddressBase();
+      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
       uint16_t lo = read8(baseAddress);
       uint16_t hi = read8(baseAddress+1);
       SynchronizeData;
