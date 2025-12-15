@@ -395,7 +395,7 @@ CapacityInformation capacityInfo;
 RandomSourceRelatedThings randomSource;
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
+DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 struct CH351 {
