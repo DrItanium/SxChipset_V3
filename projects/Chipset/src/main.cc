@@ -627,13 +627,6 @@ static constexpr InterfaceTimingDescription customWrite8 {
     30, // hold time
     0   // after time / resting time
 }; // 40ns worth of delay
-   //
-static constexpr InterfaceTimingDescription customWrite8_slower {
-    10, // address wait
-    0,  // setup time
-    50, // hold time
-    0   // after time / resting time
-}; // 40ns worth of delay
    
 
 static constexpr InterfaceTimingDescription defaultRead8 {
@@ -642,11 +635,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
-static constexpr InterfaceTimingDescription customRead8_slower {
-    20, 50, 0, 0 
-}; // 60ns worth of delay
-static constexpr auto WriteConfiguration = customWrite8_slower;
-static constexpr auto ReadConfiguration = customRead8_slower;
+static constexpr auto WriteConfiguration = customWrite8;
+static constexpr auto ReadConfiguration = customRead8;
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
