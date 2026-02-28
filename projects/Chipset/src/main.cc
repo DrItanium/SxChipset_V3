@@ -1153,6 +1153,8 @@ setup() {
 
     Serial.begin(115200);
     Serial1.begin(9600); // connection to the AVR
+    SerialUSB1.begin(115200);
+    SerialUSB2.begin(115200);
     while (!Serial) {
         delay(10);
     }
@@ -1190,10 +1192,20 @@ tryDoTransaction() noexcept {
         }
     } 
 }
+void
+handleAVRSerialConnection() noexcept {
+    if (Serial1.available()) {
+        SerialUSB2.write(Serial1.read());
+    }
+    if (SerialUSB2.available()) {
+        Serial1.write(SerialUSB2.read());
+    }
+}
 void 
 loop() {
-    // should make it easier to catch an address transaction
     tryDoTransaction();
+    handleAVRSerialConnection();
+
 }
 
 
