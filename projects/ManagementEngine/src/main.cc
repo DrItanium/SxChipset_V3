@@ -325,6 +325,8 @@ setupRandomSeed() noexcept {
     rSeed += SIGROW.TEMPSENSE0;
     rSeed += SIGROW.TEMPSENSE1;
 }
+void configureMicroshellInterface();
+void serviceShell();
 void
 setup() {
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
@@ -366,6 +368,7 @@ setup() {
     configureCCLs();
     chipIsUp = true;
     setupDisplay();
+    configureMicroshellInterface();
 }
 uint16_t
 randomColor() noexcept {
@@ -404,7 +407,7 @@ FizzleFade ff(tft.width(), tft.height());
 void
 loop() {
     ff.cycle();
-//    delay(1000);
+    serviceShell();
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
@@ -482,4 +485,63 @@ void
 setupDisplay() noexcept {
     tft.begin();
     tft.fillScreen(ILI9341_BLACK);
+}
+
+int ushRead(struct ush_object* self, char* ch) {
+    if (Serial1.available()) {
+        *ch = Serial1.read();
+        return 1;
+    }
+    return 0;
+}
+
+int ushWrite(struct ush_object* self, char ch) {
+    return (Serial1.write(ch) == 1);
+}
+
+const ush_io_interface ioInterface = { .read = ushRead, .write = ushWrite };
+
+char ushInputBuffer[256];
+char ushOutputBuffer[256];
+
+constexpr auto PATH_MAX_SIZE = 256;
+
+struct ush_object ush;
+
+const ush_descriptor descriptor = {
+    .io = &ioInterface,
+    .input_buffer = ushInputBuffer,
+    .input_buffer_size = sizeof(ushInputBuffer),
+    .output_buffer = ushInputBuffer,
+    .output_buffer_size = sizeof(ushInputBuffer),
+    .path_max_length = PATH_MAX_SIZE,
+    .hostname = "management_engine",
+};
+
+size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+    static const char* message = "Teensy Chipset Realtime Console\r\n";
+    *data = (uint8_t*)message;
+    return strlen(message);
+}
+static const ush_file_descriptor rootFiles[] {
+    {
+        .name = "info.txt",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = infoGetDataCallback,
+    }
+};
+static ush_node_object root;
+
+void
+configureMicroshellInterface() noexcept {
+    ush_init(&ush, &descriptor);
+
+    ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
+}
+
+void
+serviceShell() noexcept {
+    ush_service(&ush);
 }
