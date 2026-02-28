@@ -67,6 +67,19 @@ namespace InterfaceEngine {
             return strlen((char*)(*data));
         }
     };
+    const ush_file_descriptor clockSpeedDevice = {
+        .name = "cpufreq",
+        .description = "print the clock speed of this device in Hz",
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", F_CPU);
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        }
+    };
 
     static const ush_file_descriptor commonCommands[] {
         {
@@ -87,7 +100,12 @@ namespace InterfaceEngine {
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", random()); }
         },
-
+        {
+            .name = "cpuclockspeed",
+            .description = "print the clock speed of the current device in hz",
+            .help = nullptr,
+            .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", F_CPU); }
+        },
     };
     ush_node_object cmds;
 

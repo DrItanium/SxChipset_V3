@@ -1257,9 +1257,7 @@ namespace RealtimeShell {
         }
     };
     static const ush_file_descriptor devFiles[] {
-        InterfaceEngine::microsDevice,
-        InterfaceEngine::millisDevice,
-        InterfaceEngine::urandomDevice,
+        INTERFACE_ENGINE_COMMON_DEVICES,
     };
     static ush_node_object root;
     static ush_node_object dev;

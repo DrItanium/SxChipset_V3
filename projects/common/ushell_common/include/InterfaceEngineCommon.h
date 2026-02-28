@@ -44,10 +44,22 @@ namespace InterfaceEngine {
     extern const struct ush_file_descriptor urandomDevice;
 
     /**
+     * @brief Expose the clock speed of this device!
+     */
+    extern const struct ush_file_descriptor clockSpeedDevice;
+
+
+    /**
      * @brief Install an interface to the EEPROM library to /dev/eeprom
      */
     void installEepromDeviceDirectory(struct ush_object* object) noexcept;
 
 } // end namespace InterfaceEngine
+
+#define INTERFACE_ENGINE_COMMON_DEVICES \
+    InterfaceEngine::millisDevice, \
+    InterfaceEngine::microsDevice, \
+    InterfaceEngine::urandomDevice, \
+    InterfaceEngine::clockSpeedDevice
 
 #endif

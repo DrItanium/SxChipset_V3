@@ -535,9 +535,7 @@ static const ush_file_descriptor rootFiles[] {
 };
 
     static const ush_file_descriptor devFiles[] {
-        InterfaceEngine::microsDevice,
-        InterfaceEngine::millisDevice,
-        InterfaceEngine::urandomDevice,
+        INTERFACE_ENGINE_COMMON_DEVICES,
     };
 
 static ush_node_object root;
