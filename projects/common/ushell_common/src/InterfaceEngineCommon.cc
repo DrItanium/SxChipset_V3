@@ -53,6 +53,20 @@ namespace InterfaceEngine {
         }
     };
 
+    const ush_file_descriptor randomDevice = {
+        .name = "random",
+        .description = "arduino random function as a device",
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", random());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        }
+    };
+
     static const ush_file_descriptor commonCommands[] {
         {
             .name = "micros",

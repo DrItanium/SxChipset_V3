@@ -38,6 +38,11 @@ namespace InterfaceEngine {
      */
     extern const struct ush_file_descriptor microsDevice;
 
+    /**
+     * @brief Expose the arduino random function as a device
+     */
+    extern const struct ush_file_descriptor urandomDevice;
+
 } // end namespace InterfaceEngine
 
 #endif
