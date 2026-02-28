@@ -333,7 +333,7 @@ setup() {
     Wire.begin(0x08);
     SPI.swap(SPI0_SWAP1); 
     SPI.begin();
-    Serial1.begin(9600);
+    Serial1.begin(115200);
     Wire.onReceive(onReceiveHandler);
     Wire.onRequest(onRequestHandler);
 #define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
@@ -512,8 +512,8 @@ const ush_descriptor descriptor = {
     .io = &ioInterface,
     .input_buffer = ushInputBuffer,
     .input_buffer_size = sizeof(ushInputBuffer),
-    .output_buffer = ushInputBuffer,
-    .output_buffer_size = sizeof(ushInputBuffer),
+    .output_buffer = ushOutputBuffer,
+    .output_buffer_size = sizeof(ushOutputBuffer),
     .path_max_length = PATH_MAX_SIZE,
     .hostname = "management_engine",
 };

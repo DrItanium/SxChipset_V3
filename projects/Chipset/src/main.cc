@@ -1156,7 +1156,7 @@ setup() {
 
 
     Serial.begin(115200);
-    Serial1.begin(9600); // connection to the AVR
+    Serial1.begin(115200); // connection to the AVR
     SerialUSB1.begin(115200);
     SerialUSB2.begin(115200);
     while (!Serial) {
