@@ -80,6 +80,13 @@ namespace InterfaceEngine {
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", millis()); }
         },
+        {
+            .name = "rand",
+            .description = "get a random number",
+            .help = nullptr,
+            .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", random()); }
+        },
+
     };
     ush_node_object cmds;
     void 
