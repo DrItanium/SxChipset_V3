@@ -1132,6 +1132,10 @@ triggerSystemTimer() noexcept {
         digitalToggleFast(Pin::INT960_0); 
     }
 }
+
+void configureShells();
+void processBootLoaderShell() noexcept;
+void processRealtimeShell() noexcept;
 void 
 setup() {
     Wire2.begin();
@@ -1158,6 +1162,7 @@ setup() {
     while (!Serial) {
         delay(10);
     }
+    configureShells();
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
@@ -1205,7 +1210,66 @@ void
 loop() {
     tryDoTransaction();
     handleAVRSerialConnection();
-
+    // @todo processBootLoaderShell needs to be 
+    processRealtimeShell();
 }
 
+namespace RealtimeShell {
+    static int ioRead(ush_object* self, char* ch) {
+        if (SerialUSB1.available() > 0) {
+            *ch = SerialUSB1.read();
+            return 1;
+        }
+        return 0;
+    }
 
+    static int ioWrite(ush_object* self, char ch) {
+        return (SerialUSB1.write(ch) == 1);
+    }
+
+    const ush_io_interface ioInterface = { .read = ioRead, .write = ioWrite, };
+    char inputBuffer[256];
+    char outputBuffer[256];
+    constexpr auto PATH_MAX_SIZE = 256;
+    ush_object ush;
+    const ush_descriptor descriptor = {
+        .io = &ioInterface,
+        .input_buffer = inputBuffer,
+        .input_buffer_size = sizeof(inputBuffer),
+        .output_buffer = outputBuffer,
+        .output_buffer_size = sizeof(outputBuffer),
+        .path_max_length = PATH_MAX_SIZE,
+        .hostname = "chipset_realtime",
+    };
+    size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+        static const char* message = "Teensy Chipset Realtime Console\r\n";
+        *data = (uint8_t*)message;
+        return strlen(message);
+    }
+    static const ush_file_descriptor rootFiles[] {
+        {
+            .name = "info.txt",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = infoGetDataCallback,
+        }
+    };
+    static ush_node_object root;
+    void begin() {
+        ush_init(&ush, &descriptor);
+
+        ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
+    }
+    void runService() noexcept { ush_service(&ush); }
+}
+
+void
+processRealtimeShell() noexcept {
+    RealtimeShell::runService();
+}
+
+void
+configureShells() noexcept {
+    RealtimeShell::begin();
+}
