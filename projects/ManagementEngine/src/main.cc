@@ -7,6 +7,7 @@
 #include "ManagementEngineProtocol.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
+#include <microshell.h>
 
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)

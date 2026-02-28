@@ -43,6 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // gamepad qt
 #include <Adafruit_seesaw.h>
 
+#include <microshell.h>
+
 #include "Pinout.h"
 #include "MemoryCell.h"
 #include "Core.h"
