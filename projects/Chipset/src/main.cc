@@ -1255,10 +1255,39 @@ namespace RealtimeShell {
             .get_data = infoGetDataCallback,
         }
     };
+    static const ush_file_descriptor commands[] {
+        {
+            .name = "micros",
+            .description = "microseconds since boot (can easily overflow!)",
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", micros());
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)(*data));
+            }
+        },
+        {
+            .name = "millis",
+            .description = "milliseconds since boot",
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", millis());
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)(*data));
+            }
+        },
+    };
     static ush_node_object root;
+    static ush_node_object cmds;
     void begin() {
         ush_init(&ush, &descriptor);
-
+        ush_commands_add(&ush, &cmds, commands, sizeof(commands) / sizeof(commands[0]));
         ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
     }
     void runService() noexcept { ush_service(&ush); }
