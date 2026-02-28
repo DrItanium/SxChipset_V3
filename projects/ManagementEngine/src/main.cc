@@ -519,7 +519,7 @@ const ush_descriptor descriptor = {
 };
 
 size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-    static const char* message = "Teensy Chipset Realtime Console\r\n";
+    static const char* message = "AVR Console\r\n";
     *data = (uint8_t*)message;
     return strlen(message);
 }
