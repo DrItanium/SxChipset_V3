@@ -23,6 +23,7 @@
 
 #include "InterfaceEngineCommon.h"
 #include <Arduino.h>
+#include <EEPROM.h>
 
 namespace InterfaceEngine {
 
@@ -89,8 +90,45 @@ namespace InterfaceEngine {
 
     };
     ush_node_object cmds;
+
+    static const ush_file_descriptor eepromFiles[] {
+        {
+            .name = "available",
+            .description = "do we have access to EEPROM?",
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", static_cast<long>(EEPROM.length() > 0 ? 1 : 0));
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)buffer);
+            }
+        },
+        {
+            .name = "size",
+            .description = "how much EEPROM do we have access to?",
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                long size = EEPROM.length();
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", size);
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)(*data));
+            }
+        }
+        /// @todo add the eeprom device itself
+    };
+    ush_node_object eeprom;
     void 
     installCommonCommands(struct ush_object* object) noexcept {
         ush_commands_add(object, &cmds, commonCommands, sizeof(commonCommands) / sizeof(commonCommands[0]));
+    }
+    
+    void 
+    installEepromDeviceDirectory(struct ush_object* object) noexcept {
+        ush_node_mount(object, "/dev/eeprom", &eeprom, eepromFiles, sizeof(eepromFiles)/sizeof(eepromFiles[0]));
     }
 }
