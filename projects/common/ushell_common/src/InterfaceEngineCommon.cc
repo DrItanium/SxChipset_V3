@@ -54,8 +54,8 @@ namespace InterfaceEngine {
         }
     };
 
-    const ush_file_descriptor randomDevice = {
-        .name = "random",
+    const ush_file_descriptor urandomDevice = {
+        .name = "urandom",
         .description = "arduino random function as a device",
         .help = nullptr,
         .exec = nullptr,

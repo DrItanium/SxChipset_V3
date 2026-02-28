@@ -43,6 +43,9 @@ namespace InterfaceEngine {
      */
     extern const struct ush_file_descriptor urandomDevice;
 
+    /**
+     * @brief Install an interface to the EEPROM library to /dev/eeprom
+     */
     void installEepromDeviceDirectory(struct ush_object* object) noexcept;
 
 } // end namespace InterfaceEngine

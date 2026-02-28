@@ -534,7 +534,14 @@ static const ush_file_descriptor rootFiles[] {
     }
 };
 
+    static const ush_file_descriptor devFiles[] {
+        InterfaceEngine::microsDevice,
+        InterfaceEngine::millisDevice,
+        InterfaceEngine::urandomDevice,
+    };
+
 static ush_node_object root;
+static ush_node_object dev;
 
 void
 configureMicroshellInterface() noexcept {
@@ -542,6 +549,8 @@ configureMicroshellInterface() noexcept {
 
     InterfaceEngine::installCommonCommands(&ush);
     ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
+    ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
+    InterfaceEngine::installEepromDeviceDirectory(&ush);
 
 }
 
