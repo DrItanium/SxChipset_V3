@@ -23,5 +23,21 @@
 #ifndef I960_COMMON_INTERFACE_H__ 
 #define I960_COMMON_INTERFACE_H__ 
 #include "InterfaceCommonConcepts.h"
+namespace InterfaceEngine::i960 {
+    // these are all routines that are common between the chipset and
+    // management engine. So we want to provide declarations that the
+    // implementations must provide for
+    void holdBus() noexcept;
+    void releaseBus() noexcept;
+    bool isBusHeld() noexcept;
+    bool isBusLocked() noexcept;
+    bool cpuRunning() noexcept;
+    void putCPUInReset() noexcept;
+    void pullCPUOutOfReset() noexcept;
+}
 
+namespace InterfaceEngine {
+    void installI960Commands(struct ush_object* object) noexcept;
+    void installI960Devices(struct ush_object* object) noexcept;
+}
 #endif

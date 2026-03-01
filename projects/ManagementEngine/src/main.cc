@@ -9,6 +9,7 @@
 #include <Adafruit_ILI9341.h>
 #include <microshell.h>
 #include "InterfaceEngineCommon.h"
+#include "i960CommonInterface.h"
 
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)
@@ -601,3 +602,4 @@ void
 serviceShell() noexcept {
     ush_service(&ush);
 }
+
