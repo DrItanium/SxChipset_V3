@@ -567,10 +567,10 @@ size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, ui
 const ush_file_descriptor PROGMEM_MAPPED rootFiles[] {
     {
         .name = "info.txt",
-            .description = nullptr,
-            .help = nullptr,
-            .exec = nullptr,
-            .get_data = infoGetDataCallback,
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = infoGetDataCallback,
     }
 };
 
