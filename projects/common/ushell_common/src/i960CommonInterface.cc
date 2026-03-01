@@ -24,9 +24,23 @@
 #include "i960CommonInterface.h"
 
 namespace InterfaceEngine {
+    static const ush_file_descriptor PROGMEM_MAPPED i960Commands[] {
+        {
+            .name = "lscpu",
+            .description = "print information about the CPU",
+            .help = nullptr,
+            .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { 
+                ush_printf(self, "CPU Execution Statistics\r\nRunning: %s\r\nBus Held: %s\r\nBus Locked: %s\r\n", 
+                        InterfaceEngine::i960::cpuRunning() ? "yes" : "no",
+                        InterfaceEngine::i960::isBusHeld() ? "yes" : "no",
+                        InterfaceEngine::i960::isBusLocked() ? "yes" : "no");
+            }
+        },
+    };
+    static ush_node_object i960cmds;
     void 
     installI960Commands(struct ush_object* object) noexcept {
-
+        ush_commands_add(object, &i960cmds, i960Commands, sizeof(i960Commands) / sizeof(i960Commands[0]));
     }
 
     void 

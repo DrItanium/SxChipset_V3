@@ -144,8 +144,42 @@ configurePins() noexcept {
     digitalWrite(HOLD960, LOW);
     pinMode(LOCK960, INPUT);
 }
-uint8_t isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH ? 0xFF : 0x00; }
-uint8_t isBusLocked() noexcept { return digitalRead(LOCK960) == LOW ? 0xFF : 0x00; }
+namespace InterfaceEngine::i960 {
+bool isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH; }
+bool isBusLocked() noexcept { return digitalRead(LOCK960) == LOW; }
+
+bool 
+cpuRunning() noexcept { 
+    return !cpuIsInReset; 
+}
+
+void 
+putCPUInReset() noexcept {
+    digitalWrite(RESET960, LOW); 
+    cpuIsInReset = true;
+}
+void
+pullCPUOutOfReset() noexcept {
+    digitalWrite(RESET960, HIGH); 
+    cpuIsInReset = false;
+}
+void
+holdBus() noexcept {
+    digitalWrite(HOLD960, HIGH);
+}
+void
+releaseBus() noexcept {
+    digitalWrite(HOLD960, LOW);
+}
+}
+using InterfaceEngine::i960::isBusHeld;
+using InterfaceEngine::i960::isBusLocked;
+using InterfaceEngine::i960::cpuRunning;
+using InterfaceEngine::i960::putCPUInReset;
+using InterfaceEngine::i960::pullCPUOutOfReset;
+using InterfaceEngine::i960::holdBus;
+using InterfaceEngine::i960::releaseBus;
+
 void
 setupSystemClocks() noexcept {
     // Here is what we are doing:
@@ -424,24 +458,6 @@ sinkWire() {
         (void)Wire.read();
     }
 }
-void 
-putCPUInReset() noexcept {
-    digitalWrite(RESET960, LOW); 
-    cpuIsInReset = true;
-}
-void
-pullCPUOutOfReset() noexcept {
-    digitalWrite(RESET960, HIGH); 
-    cpuIsInReset = false;
-}
-void
-holdBus() noexcept {
-    digitalWrite(HOLD960, HIGH);
-}
-void
-releaseBus() noexcept {
-    digitalWrite(HOLD960, LOW);
-}
 void
 onReceiveHandler(int howMany) {
     if (howMany >= 1) {
@@ -477,10 +493,10 @@ onRequestHandler() {
             Wire.write(reinterpret_cast<char*>(CLKSpeeds), sizeof(CLKSpeeds));
             break;
         case ManagementEngineRequestOpcode::BusIsHeld: 
-            Wire.write(isBusHeld()); 
+            Wire.write(isBusHeld() ? 0xFF : 0x00); 
             break;
         case ManagementEngineRequestOpcode::BusIsLocked: 
-            Wire.write(isBusLocked()); 
+            Wire.write(isBusLocked() ? 0xFF : 0x00); 
             break;
         case ManagementEngineRequestOpcode::RevID:
             Wire.write(SYSCFG.REVID);
@@ -498,7 +514,7 @@ onRequestHandler() {
             Wire.write(chipIsUp ? 0xFF : 0x00);
             break;
         case ManagementEngineRequestOpcode::CpuRunning:
-            Wire.write(cpuIsInReset ? 0x00 : 0xFF);
+            Wire.write(cpuRunning() ? 0xFF : 0x00);
             break;
         default:
             break;
@@ -592,10 +608,11 @@ configureMicroshellInterface() noexcept {
     ush_init(&ush, &descriptor);
 
     InterfaceEngine::installCommonCommands(&ush);
+    InterfaceEngine::installI960Commands(&ush);
     ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
     ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
     InterfaceEngine::installEepromDeviceDirectory(&ush);
-
+    InterfaceEngine::installI960Devices(&ush);
 }
 
 void

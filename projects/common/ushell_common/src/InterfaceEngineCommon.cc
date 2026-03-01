@@ -107,7 +107,7 @@ namespace InterfaceEngine {
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", F_CPU); }
         },
     };
-    ush_node_object cmds;
+    static ush_node_object cmds;
 
     static const ush_file_descriptor PROGMEM_MAPPED eepromFiles[] {
         {

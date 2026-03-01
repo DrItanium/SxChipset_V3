@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
 #include "InterfaceEngineCommon.h"
+#include "i960CommonInterface.h"
 
 // the dsb instruction makes sure that all instructions in the pipeline
 // complete before this instruction finishes. Very necessary to prevent reads
@@ -1264,9 +1265,11 @@ namespace RealtimeShell {
     void begin() {
         ush_init(&ush, &descriptor);
         InterfaceEngine::installCommonCommands(&ush);
+        InterfaceEngine::installI960Commands(&ush);
         ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
         ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
         InterfaceEngine::installEepromDeviceDirectory(&ush);
+        InterfaceEngine::installI960Devices(&ush);
     }
     void runService() noexcept { ush_service(&ush); }
 }

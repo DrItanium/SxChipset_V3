@@ -27,11 +27,11 @@ namespace InterfaceEngine::i960 {
     // these are all routines that are common between the chipset and
     // management engine. So we want to provide declarations that the
     // implementations must provide for
-    void holdBus() noexcept;
-    void releaseBus() noexcept;
     bool isBusHeld() noexcept;
     bool isBusLocked() noexcept;
     bool cpuRunning() noexcept;
+    void holdBus() noexcept;
+    void releaseBus() noexcept;
     void putCPUInReset() noexcept;
     void pullCPUOutOfReset() noexcept;
 }
