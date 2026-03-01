@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <IntervalTimer.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
+#include <Adafruit_I2CDevice.h>
 
 #include <microshell.h>
 
@@ -72,12 +73,13 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
+volatile bool cpuIsRunning = false;
 
 // We can open up to 4096 files on the sd card simultaneously
 RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
-
+Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
  * Teensy has no way of knowing this configuration so it is a compile time
@@ -1088,19 +1090,12 @@ waitForAVRToComeUp() noexcept {
 
 
 }
-void
-putCPUInReset() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PutInReset));
-    Wire2.endTransmission();
+namespace i960 {
+    void putCPUInReset() noexcept;
+    void pullCPUOutOfReset() noexcept;
 }
-
-void
-pullCPUOutOfReset() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
-    Wire2.endTransmission();
-}
+using i960::putCPUInReset;
+using i960::pullCPUOutOfReset;
 void
 triggerADS() noexcept {
     adsTriggered = true;
@@ -1140,7 +1135,9 @@ void processBootLoaderShell() noexcept;
 void processRealtimeShell() noexcept;
 void 
 setup() {
+    cpuIsRunning = false;
     Wire2.begin();
+    managementEngine.begin();
     delay(1000);
     waitForAVRToComeUp();
     putCPUInReset();
@@ -1265,11 +1262,11 @@ namespace RealtimeShell {
     void begin() {
         ush_init(&ush, &descriptor);
         InterfaceEngine::installCommonCommands(&ush);
-        InterfaceEngine::installI960Commands(&ush);
+        //InterfaceEngine::installI960Commands(&ush);
         ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
         ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
         InterfaceEngine::installEepromDeviceDirectory(&ush);
-        InterfaceEngine::installI960Devices(&ush);
+        //InterfaceEngine::installI960Devices(&ush);
     }
     void runService() noexcept { ush_service(&ush); }
 }
@@ -1282,4 +1279,57 @@ processRealtimeShell() noexcept {
 void
 configureShells() noexcept {
     RealtimeShell::begin();
+}
+
+namespace i960 {
+
+void
+putCPUInReset() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PutInReset));
+    Wire2.endTransmission();
+    cpuIsRunning = false;
+}
+
+void
+pullCPUOutOfReset() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
+    Wire2.endTransmission();
+    cpuIsRunning = true;
+}
+bool
+cpuRunning() noexcept {
+    return cpuIsRunning;
+}
+void
+holdBus() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::HoldBus));
+    Wire2.endTransmission();
+}
+void
+releaseBus() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::ReleaseBus));
+    Wire2.endTransmission();
+}
+
+bool
+isBusLocked() noexcept {
+    Wire2.beginTransmission(0x08);
+    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode));
+    Wire2.write(static_cast<uint8_t>(ManagementEngineRequestOpcode::BusIsLocked));
+    Wire2.endTransmission();
+    auto count = Wire2.requestFrom(0x08, 1);
+    bool outcome = false;
+    for (int i = 0; i < count;) {
+        if (Wire2.available()) {
+            outcome = Wire2.read() != 0;
+            ++i;
+        }
+    }
+    return outcome;
+}
+
 }
