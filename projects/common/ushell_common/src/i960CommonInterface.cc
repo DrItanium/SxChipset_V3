@@ -22,6 +22,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "i960CommonInterface.h"
+#include <Arduino.h>
 
 namespace InterfaceEngine {
     static const ush_file_descriptor PROGMEM_MAPPED i960Commands[] {
@@ -44,8 +45,51 @@ namespace InterfaceEngine {
         ush_commands_add(object, &i960cmds, i960Commands, sizeof(i960Commands) / sizeof(i960Commands[0]));
     }
 
+    static const ush_file_descriptor PROGMEM_MAPPED i960Files[] {
+        {
+            .name = "running",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::cpuRunning());
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)buffer);
+            }
+        },
+        {
+            .name = "held",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::isBusHeld());
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)buffer);
+            }
+        },
+        {
+            .name = "locked",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                static char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::isBusLocked());
+                buffer[sizeof(buffer) - 1] = 0;
+                *data = (uint8_t*)buffer;
+                return strlen((char*)buffer);
+            }
+        },
+    };
+    static ush_node_object i960Dir;
+
     void 
     installI960Devices(struct ush_object* object) noexcept {
-
+        ush_node_mount(object, "/dev/i960", &i960Dir, i960Files, sizeof(i960Files)/sizeof(i960Files[0]));
     }
 }
