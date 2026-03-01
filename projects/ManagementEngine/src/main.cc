@@ -238,30 +238,6 @@ constexpr uint8_t computeCCLValueBasedOffOfFunction(BooleanFunctionBody fn) noex
 }
 static_assert(computeCCLValueBasedOffOfFunction(generateOscillatingPattern) == 0b01010101);
 
-template<bool useOutputPin = false>
-void
-configureDivideByTwoCCL(Logic& even, Logic& odd) {
-  constexpr uint8_t truthTableValue = computeCCLValueBasedOffOfFunction(generateOscillatingPattern);
-  constexpr auto outSrc = useOutputPin ? out::enable : out::disable;
-  even.enable = true;
-  even.input0 = in::feedback;
-  even.input1 = in::disable;
-  even.input2 = in::event_a;
-  even.clocksource = clocksource::in2; 
-  even.output = outSrc;
-  even.truth = truthTableValue;
-  even.sequencer = sequencer::jk_flip_flop;
-  odd.enable = true;
-  odd.input0 = in::event_a;
-  odd.input1 = in::disable;
-  odd.input2 = in::event_a;
-  odd.output = out::disable;
-  odd.sequencer = sequencer::disable;
-  odd.clocksource = clocksource::in2;
-  odd.truth = truthTableValue;
-  even.init();
-  odd.init();
-}
 void
 updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
