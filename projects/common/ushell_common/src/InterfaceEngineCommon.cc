@@ -29,7 +29,7 @@ namespace InterfaceEngine {
 
     const ush_file_descriptor PROGMEM_MAPPED microsDevice = {
         .name = "micros",
-        .description = "microseconds since boot (can easily overflow!)",
+        .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -42,7 +42,7 @@ namespace InterfaceEngine {
     };
     const ush_file_descriptor PROGMEM_MAPPED millisDevice = {
         .name = "millis",
-        .description = "milliseconds since boot",
+        .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -56,7 +56,7 @@ namespace InterfaceEngine {
 
     const ush_file_descriptor PROGMEM_MAPPED urandomDevice = {
         .name = "urandom",
-        .description = "arduino random function as a device",
+        .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -69,7 +69,7 @@ namespace InterfaceEngine {
     };
     const ush_file_descriptor PROGMEM_MAPPED clockSpeedDevice = {
         .name = "cpufreq",
-        .description = "print the clock speed of this device in Hz",
+        .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -84,7 +84,7 @@ namespace InterfaceEngine {
     static const ush_file_descriptor PROGMEM_MAPPED commonCommands[] {
         {
             .name = "micros",
-            .description = "microseconds since boot (can easily overflow!)",
+            .description = "microseconds since boot",
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", micros()); }
         },
@@ -96,13 +96,13 @@ namespace InterfaceEngine {
         },
         {
             .name = "rand",
-            .description = "get a random number",
+            .description = nullptr,
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", random()); }
         },
         {
             .name = "cpufreq",
-            .description = "print the clock speed of the current device in hz",
+            .description = nullptr,
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", F_CPU); }
         },
@@ -112,7 +112,7 @@ namespace InterfaceEngine {
     static const ush_file_descriptor PROGMEM_MAPPED eepromFiles[] {
         {
             .name = "available",
-            .description = "do we have access to EEPROM?",
+            .description = nullptr,
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -125,7 +125,7 @@ namespace InterfaceEngine {
         },
         {
             .name = "size",
-            .description = "how much EEPROM do we have access to?",
+            .description = nullptr,
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {

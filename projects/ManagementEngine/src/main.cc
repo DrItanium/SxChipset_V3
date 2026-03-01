@@ -578,7 +578,7 @@ const ush_file_descriptor devFiles[] {
     INTERFACE_ENGINE_COMMON_DEVICES,
     {
         .name = "rseed",
-        .description = "random seed device",
+        .description = nullptr,
         .help = nullptr,
         .exec = nullptr,
         .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -665,6 +665,31 @@ const ush_file_descriptor displayFiles[] {
             return strlen((char*)(*data));
         },
     },
+#if 0
+    {
+        .name = "rseed",
+        .description = "random seed device",
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", rSeed);
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+            long value = 0;
+            if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                return;
+            }
+            rSeed = value;
+            randomSeed(rSeed);
+        },
+    },
+#endif
+
 };
 
 ush_node_object root;
