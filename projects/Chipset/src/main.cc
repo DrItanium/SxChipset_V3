@@ -1249,8 +1249,8 @@ namespace RealtimeShell {
         ush_init(&ush, &descriptor);
         InterfaceEngine::installCommonCommands(&ush);
         InterfaceEngine::installI960Commands(&ush);
-        ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
-        ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
+        ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
+        ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
         InterfaceEngine::installEepromDeviceDirectory(&ush);
         InterfaceEngine::installI960Devices(&ush);
     }
