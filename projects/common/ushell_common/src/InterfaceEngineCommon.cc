@@ -101,7 +101,7 @@ namespace InterfaceEngine {
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", random()); }
         },
         {
-            .name = "cpuclockspeed",
+            .name = "cpufreq",
             .description = "print the clock speed of the current device in hz",
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { ush_printf(self, "%ld\r\n", F_CPU); }
