@@ -1158,8 +1158,8 @@ setup() {
 
     Serial.begin(115200);
     Serial1.begin(115200); // connection to the AVR
-    SerialUSB1.begin(115200);
-    SerialUSB2.begin(115200);
+    SerialUSB1.begin(115200); // chipset_realtime interface
+    SerialUSB2.begin(115200); // propagation of management shell interface
     while (!Serial) {
         delay(10);
     }
