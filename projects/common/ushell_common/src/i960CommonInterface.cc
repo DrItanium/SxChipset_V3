@@ -27,8 +27,8 @@
 namespace InterfaceEngine {
     static const ush_file_descriptor PROGMEM_MAPPED i960Commands[] {
         {
-            .name = "lscpu",
-            .description = "print information about the CPU",
+            .name = "cpustat",
+            .description = nullptr,
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { 
                 ush_printf(self, "CPU Execution Statistics\r\nRunning: %s\r\nBus Held: %s\r\nBus Locked: %s\r\n", 
@@ -40,7 +40,7 @@ namespace InterfaceEngine {
         {
             .name = "cpu_reset",
             .description = "Put the i960 CPU into the reset state",
-            .help = "Hold the i960 CPU RESET line LOW until released",
+            .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
                 if (i960::cpuRunning()) {
                     i960::putCPUInReset();
@@ -53,13 +53,39 @@ namespace InterfaceEngine {
         {
             .name = "cpu_boot",
             .description = "Release the i960 CPU from the reset state",
-            .help = "Pull the i960 CPU Reset line HIGH (releasing it from the reset state)",
+            .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
                 if (!i960::cpuRunning()) {
                     i960::pullCPUOutOfReset();
                     ush_printf(self, "booting cpu...\r\n");
                 } else {
                     ush_printf(self, "cpu already booted...\r\n");
+                }
+            },
+        },
+        {
+            .name = "hold_bus",
+            .description = "Request the control of the bus from the i960 (not instant)",
+            .help = nullptr,
+            .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
+                i960::holdBus();
+                if (i960::isBusHeld()) {
+                    ush_printf(self, "bus is already held...\r\n");
+                } else {
+                    ush_printf(self, "requesting bus hold...\r\n");
+                }
+            },
+        },
+        {
+            .name = "release_bus",
+            .description = "Relinquish control of the i960 Bus",
+            .help = nullptr,
+            .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
+                if (i960::isBusHeld()) {
+                    i960::releaseBus();
+                    ush_printf(self, "released control of the bus...\r\n");
+                } else {
+                    ush_printf(self, "bus isn't currently being held...\r\n");
                 }
             },
         },
@@ -83,18 +109,8 @@ namespace InterfaceEngine {
             }
         },
         {
-            .name = "held",
+            .name = "lock",
             .description = nullptr,
-            .help = nullptr,
-            .exec = nullptr,
-            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-                *data = (i960::isBusHeld()) ? TrueBuffer : FalseBuffer;
-                return 3;
-            }
-        },
-        {
-            .name = "locked",
-            .description = "Status of the LOCK pin",
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -104,7 +120,7 @@ namespace InterfaceEngine {
         },
         {
             .name = "reset",
-            .description = "Status of the RESET line",
+            .description = nullptr,
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
@@ -121,6 +137,47 @@ namespace InterfaceEngine {
                     i960::pullCPUOutOfReset();
                 } else {
                     i960::putCPUInReset();
+                }
+            },
+        },
+        {
+            .name = "hlda",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                *data = (i960::isBusHeld()) ? TrueBuffer : FalseBuffer;
+                return 3;
+            },
+            .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+                long value = 0;
+                if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                    return;
+                }
+                if (value != 0) {
+                    i960::holdBus();
+                } else {
+                    i960::releaseBus();
+                }
+            },
+        },
+        {
+            .name = "hold",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = nullptr,
+            .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+                long value = 0;
+                if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                    return;
+                }
+                if (value != 0) {
+                    i960::holdBus();
+                } else {
+                    i960::releaseBus();
                 }
             },
         },
