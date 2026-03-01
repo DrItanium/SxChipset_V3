@@ -638,6 +638,14 @@ const ush_file_descriptor displayFiles[] {
             *data = (uint8_t*)buffer;
             return strlen((char*)(*data));
         },
+        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+            long value = 0;
+            if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                return;
+            }
+            tft.setRotation(static_cast<uint8_t>(value));
+        },
     },
     {
         .name = "cursor_x",
@@ -680,7 +688,6 @@ const ush_file_descriptor displayFiles[] {
             tft.invertDisplay(value != 0);
         },
     },
-
 };
 
 ush_node_object root;
