@@ -108,6 +108,7 @@ uint8_t serialNumberCache[16] = { 0 };
 uint8_t devidCache[3] = { 0 };
 long rSeed = 0;
 bool chipIsUp = false;
+bool cpuIsInReset = true;
 Adafruit_ILI9341 tft{DISPLAY_CS, DISPLAY_DC, DISPLAY_RST};
 void setupDisplay() noexcept;
 void
@@ -367,6 +368,7 @@ setup() {
     takeOverTCA0();
     configurePins();
     configureCCLs();
+    cpuIsInReset = true;
     chipIsUp = true;
     setupDisplay();
     configureMicroshellInterface();
@@ -421,6 +423,24 @@ sinkWire() {
         (void)Wire.read();
     }
 }
+void 
+putCPUInReset() noexcept {
+    digitalWrite(RESET960, LOW); 
+    cpuIsInReset = true;
+}
+void
+pullCPUOutOfReset() noexcept {
+    digitalWrite(RESET960, HIGH); 
+    cpuIsInReset = false;
+}
+void
+holdBus() noexcept {
+    digitalWrite(HOLD960, HIGH);
+}
+void
+releaseBus() noexcept {
+    digitalWrite(HOLD960, LOW);
+}
 void
 onReceiveHandler(int howMany) {
     if (howMany >= 1) {
@@ -431,16 +451,16 @@ onReceiveHandler(int howMany) {
                 }
                 break;
             case ManagementEngineReceiveOpcode::PutInReset: 
-                digitalWrite(RESET960, LOW); 
+                putCPUInReset();
                 break;
             case ManagementEngineReceiveOpcode::PullOutOfReset: 
-                digitalWrite(RESET960, HIGH); 
+                pullCPUOutOfReset();
                 break;
             case ManagementEngineReceiveOpcode::HoldBus:
-                digitalWrite(HOLD960, HIGH);
+                holdBus();
                 break;
             case ManagementEngineReceiveOpcode::ReleaseBus:
-                digitalWrite(HOLD960, LOW);
+                releaseBus();
                 break;
             default:
                 break;
@@ -475,6 +495,9 @@ onRequestHandler() {
             break;
         case ManagementEngineRequestOpcode::ChipIsReady:
             Wire.write(chipIsUp ? 0xFF : 0x00);
+            break;
+        case ManagementEngineRequestOpcode::CpuRunning:
+            Wire.write(cpuIsInReset ? 0x00 : 0xFF);
             break;
         default:
             break;

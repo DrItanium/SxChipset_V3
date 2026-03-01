@@ -40,6 +40,7 @@ enum class ManagementEngineRequestOpcode : uint8_t {
     SerialNumber,
     RandomSeed,
     ChipIsReady,
+    CpuRunning,
 };
 constexpr bool valid(ManagementEngineReceiveOpcode code) noexcept {
     switch (code) {
@@ -63,6 +64,7 @@ constexpr bool valid(ManagementEngineRequestOpcode code) noexcept {
         case ManagementEngineRequestOpcode::SerialNumber:
         case ManagementEngineRequestOpcode::RandomSeed:
         case ManagementEngineRequestOpcode::ChipIsReady:
+        case ManagementEngineRequestOpcode::CpuRunning:
             return true;
         default:
             return false;
