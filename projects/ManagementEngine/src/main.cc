@@ -144,7 +144,7 @@ configurePins() noexcept {
     digitalWrite(HOLD960, LOW);
     pinMode(LOCK960, INPUT);
 }
-namespace InterfaceEngine::i960 {
+namespace i960 {
 bool isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH; }
 bool isBusLocked() noexcept { return digitalRead(LOCK960) == LOW; }
 
@@ -172,13 +172,13 @@ releaseBus() noexcept {
     digitalWrite(HOLD960, LOW);
 }
 }
-using InterfaceEngine::i960::isBusHeld;
-using InterfaceEngine::i960::isBusLocked;
-using InterfaceEngine::i960::cpuRunning;
-using InterfaceEngine::i960::putCPUInReset;
-using InterfaceEngine::i960::pullCPUOutOfReset;
-using InterfaceEngine::i960::holdBus;
-using InterfaceEngine::i960::releaseBus;
+using i960::isBusHeld;
+using i960::isBusLocked;
+using i960::cpuRunning;
+using i960::putCPUInReset;
+using i960::pullCPUOutOfReset;
+using i960::holdBus;
+using i960::releaseBus;
 
 void
 setupSystemClocks() noexcept {

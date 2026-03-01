@@ -23,7 +23,7 @@
 #ifndef I960_COMMON_INTERFACE_H__ 
 #define I960_COMMON_INTERFACE_H__ 
 #include "InterfaceCommonConcepts.h"
-namespace InterfaceEngine::i960 {
+namespace i960 {
     // these are all routines that are common between the chipset and
     // management engine. So we want to provide declarations that the
     // implementations must provide for

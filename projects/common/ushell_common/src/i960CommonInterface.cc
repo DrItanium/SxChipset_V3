@@ -31,9 +31,9 @@ namespace InterfaceEngine {
             .help = nullptr,
             .exec = [](ush_object* self, ush_file_descriptor const* file, int argc, char* argv[]) { 
                 ush_printf(self, "CPU Execution Statistics\r\nRunning: %s\r\nBus Held: %s\r\nBus Locked: %s\r\n", 
-                        InterfaceEngine::i960::cpuRunning() ? "yes" : "no",
-                        InterfaceEngine::i960::isBusHeld() ? "yes" : "no",
-                        InterfaceEngine::i960::isBusLocked() ? "yes" : "no");
+                        i960::cpuRunning() ? "yes" : "no",
+                        i960::isBusHeld() ? "yes" : "no",
+                        i960::isBusLocked() ? "yes" : "no");
             }
         },
     };
