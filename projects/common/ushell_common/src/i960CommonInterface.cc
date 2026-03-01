@@ -44,9 +44,9 @@ namespace InterfaceEngine {
             .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
                 if (i960::cpuRunning()) {
                     i960::putCPUInReset();
-                    ush_printf(self, "CPU is now in reset\r\n");
+                    ush_printf(self, "cpu now in reset...\r\n");
                 } else {
-                    ush_printf(self, "CPU is already in reset\r\n");
+                    ush_printf(self, "cpu already in reset...\r\n");
                 }
             },
         },
@@ -57,9 +57,9 @@ namespace InterfaceEngine {
             .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
                 if (!i960::cpuRunning()) {
                     i960::pullCPUOutOfReset();
-                    ush_printf(self, "CPU is out of reset\r\n");
+                    ush_printf(self, "booting cpu...\r\n");
                 } else {
-                    ush_printf(self, "CPU is already running\r\n");
+                    ush_printf(self, "cpu already booted...\r\n");
                 }
             },
         },
