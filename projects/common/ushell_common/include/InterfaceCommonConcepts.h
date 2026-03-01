@@ -27,4 +27,6 @@
 #define PROGMEM_MAPPED
 #endif
 
+#define ComputeFileSize(list) (sizeof(list) / sizeof(list[0]))
+
 #endif

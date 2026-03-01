@@ -143,11 +143,11 @@ namespace InterfaceEngine {
     ush_node_object eeprom;
     void 
     installCommonCommands(struct ush_object* object) noexcept {
-        ush_commands_add(object, &cmds, commonCommands, sizeof(commonCommands) / sizeof(commonCommands[0]));
+        ush_commands_add(object, &cmds, commonCommands, ComputeFileSize(commonCommands));
     }
     
     void 
     installEepromDeviceDirectory(struct ush_object* object) noexcept {
-        ush_node_mount(object, "/dev/eeprom", &eeprom, eepromFiles, sizeof(eepromFiles)/sizeof(eepromFiles[0]));
+        ush_node_mount(object, "/dev/eeprom", &eeprom, eepromFiles, ComputeFileSize(eepromFiles));
     }
 }

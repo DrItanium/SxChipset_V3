@@ -599,9 +599,77 @@ const ush_file_descriptor devFiles[] {
         },
     },
 };
+const ush_file_descriptor displayFiles[] {
+    {
+        .name = "width",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[8];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.width());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "height",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[8];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.height());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "rotation",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[8];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getRotation());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "cursor_x",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[8];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getCursorX());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+    },
+    {
+        .name = "cursor_y",
+        .description = nullptr,
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[8];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getCursorY());
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+    },
+};
 
 ush_node_object root;
 ush_node_object dev;
+ush_node_object displayNode;
 
 void
 configureMicroshellInterface() noexcept {
@@ -609,10 +677,11 @@ configureMicroshellInterface() noexcept {
 
     InterfaceEngine::installCommonCommands(&ush);
     InterfaceEngine::installI960Commands(&ush);
-    ush_node_mount(&ush, "/", &root, rootFiles, sizeof(rootFiles) / sizeof(rootFiles[0]));
-    ush_node_mount(&ush, "/dev", &dev, devFiles, sizeof(devFiles) / sizeof(devFiles[0]));
+    ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
+    ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
     InterfaceEngine::installEepromDeviceDirectory(&ush);
     InterfaceEngine::installI960Devices(&ush);
+    ush_node_mount(&ush, "/dev/display", &displayNode, displayFiles, ComputeFileSize(displayFiles));
 }
 
 void

@@ -42,7 +42,7 @@ namespace InterfaceEngine {
     static ush_node_object i960cmds;
     void 
     installI960Commands(struct ush_object* object) noexcept {
-        ush_commands_add(object, &i960cmds, i960Commands, sizeof(i960Commands) / sizeof(i960Commands[0]));
+        ush_commands_add(object, &i960cmds, i960Commands, ComputeFileSize(i960Commands));
     }
 
     static const ush_file_descriptor PROGMEM_MAPPED i960Files[] {
@@ -90,6 +90,6 @@ namespace InterfaceEngine {
 
     void 
     installI960Devices(struct ush_object* object) noexcept {
-        ush_node_mount(object, "/dev/i960", &i960Dir, i960Files, sizeof(i960Files)/sizeof(i960Files[0]));
+        ush_node_mount(object, "/dev/i960", &i960Dir, i960Files, ComputeFileSize(i960Files));
     }
 }
