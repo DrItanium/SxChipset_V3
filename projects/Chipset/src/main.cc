@@ -1268,20 +1268,39 @@ configureShells() noexcept {
 }
 
 namespace i960 {
-
+namespace {
+    template<ManagementEngineReceiveOpcode code>
+    constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
+    template<ManagementEngineReceiveOpcode code>
+    void
+    doFixedWriteOperation() noexcept {
+        managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
+    }
+    template<ManagementEngineRequestOpcode code>
+    int
+    requestByte() noexcept {
+        static constexpr uint8_t InstructionSequence[] {
+            static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
+            static_cast<uint8_t>(code),
+        };
+        uint8_t result = 0;
+        if (managementEngine.write_then_read(InstructionSequence, sizeof(InstructionSequence), 
+                                             &result, sizeof(uint8_t))) {
+            return result;
+        } else {
+            return -1;
+        }
+    }
+}
 void
 putCPUInReset() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PutInReset));
-    Wire2.endTransmission();
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
     cpuIsRunning = false;
 }
 
 void
 pullCPUOutOfReset() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::PullOutOfReset));
-    Wire2.endTransmission();
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
     cpuIsRunning = true;
 }
 bool
@@ -1290,32 +1309,21 @@ cpuRunning() noexcept {
 }
 void
 holdBus() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::HoldBus));
-    Wire2.endTransmission();
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
 }
 void
 releaseBus() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::ReleaseBus));
-    Wire2.endTransmission();
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
 }
 
 bool
 isBusLocked() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode));
-    Wire2.write(static_cast<uint8_t>(ManagementEngineRequestOpcode::BusIsLocked));
-    Wire2.endTransmission();
-    auto count = Wire2.requestFrom(0x08, 1);
-    bool outcome = false;
-    for (int i = 0; i < count;) {
-        if (Wire2.available()) {
-            outcome = Wire2.read() != 0;
-            ++i;
-        }
-    }
-    return outcome;
+    return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
+}
+
+bool
+isBusHeld() noexcept {
+    return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
 }
 
 }
