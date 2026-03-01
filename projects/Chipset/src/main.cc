@@ -1056,36 +1056,22 @@ const uint8_t setCPUClockMode_CLKAll [] { 0, 0 };
 void
 displayClockSpeedInformation() noexcept {
     SplitWord64 clk3;
-    Wire2.beginTransmission(0x08);
-    Wire2.write(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll));
-    Wire2.endTransmission();
-    auto count = Wire2.requestFrom(0x08, sizeof(clk3));
-
-    for (int i = 0; i < count;) {
-        if (Wire2.available()) {
-            clk3.bytes[i] = Wire2.read();
-            ++i;
-        }
-    }
+    managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
+            clk3.bytes, sizeof(clk3));
     Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
 void
 waitForAVRToComeUp() noexcept {
-    Wire2.beginTransmission(0x08);
-    Wire2.write(static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode));
-    Wire2.write(static_cast<uint8_t>(ManagementEngineRequestOpcode::ChipIsReady));
-    Wire2.endTransmission();
+    static const uint8_t InstructionSequence[] {
+        static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
+        static_cast<uint8_t>(ManagementEngineRequestOpcode::ChipIsReady),
+    };
+    managementEngine.write(InstructionSequence, sizeof(InstructionSequence));
 
     bool chipIsUp = false;
     do {
-        auto count = Wire2.requestFrom(0x08, 1);
-        for (int i = 0; i < count; ) {
-            if (Wire2.available()) {
-                chipIsUp = Wire2.read() != 0;
-                ++i;
-            }
-        }
+        managementEngine.read(reinterpret_cast<uint8_t*>(&chipIsUp), 1);
     } while (!chipIsUp);
 
 
