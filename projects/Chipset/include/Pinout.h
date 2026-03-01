@@ -26,94 +26,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHIPSET_PINOUT_H__
 #include <Arduino.h>
 #include <type_traits>
-enum class PinOld : uint8_t {
-  RPI_D0 = 19,
-  RPI_D1 = 18,
-  RPI_D2 = 14,
-  RPI_D3 = 15,
-  RPI_D4 = 40,
-  RPI_D5 = 41,
-  RPI_D6 = 17,
-  RPI_D7 = 16,
-  RPI_D8 = 22,
-  RPI_D9 = 23,
-  RPI_D10 = 20,
-  RPI_D11 = 21,
-  RPI_D12 = 38,
-  RPI_D13 = 39,
-  RPI_D14 = 26,
-  RPI_D15 = 27,
-  RPI_D16 = 8, // XBAR_INOUT14
-  RPI_D17 = 7, // XBOAR_INOUT15
-  RPI_D18 = 36, // XBAR_INOUT16
-  RPI_D19 = 37, // XBAR_INOUT17
-  RPI_D20 = 32, // XBAR_INOUT10
-  RPI_D21 = 9, 
-  RPI_D22 = 6,
-  RPI_D23 = 2, // XBAR_INOUT6
-  RPI_D24 = 3, // XBAR_INOUT7
-  RPI_D25 = 4, // XBAR_INOUT8
-  RPI_D26 = 33, // XBAR_INOUT9
-  RPI_D27 = 5, // XBAR_INOUT17
-#if 0
-  RPI_D28 = 28,
-  RPI_D29 = 29,
-  RPI_D30 = 30, // XBAR_INOUT23
-  RPI_D31 = 31, // XBAR_INOUT22
-#else
-  RPI_D28 = 30, // XBAR_INOUT23
-  RPI_D29 = 31, // XBAR_INOUT22
-  RPI_D30 = 28,
-  RPI_D31 = 29,
-#endif
-  RPI_D32 = 34,
-  RPI_D33 = 35,
-  RPI_D34 = 10,
-  RPI_D35 = 11,
-  RPI_D36 = 12,
-  RPI_D37 = 13,
-  RPI_D38 = 0, // XBAR_INOUT16
-  RPI_D39 = 1, // XBAR_INOUT17
-  RPI_D40 = 24,
-  RPI_D41 = 25,
-  SIDECOMM_SDA = RPI_D41,
-  SIDECOMM_SCL = RPI_D40,
-  EBI_A5 = RPI_D0, // AD_B0_03
-  EBI_A4 = RPI_D1, // AD_B0_02
-  EBI_A3 = RPI_D2, // EMC_04
-  EBI_A2 = RPI_D3, // EMC_05
-  EBI_A1 = RPI_D4, // EMC_06
-  EBI_A0 = RPI_D5, // EMC_08
-  EBI_RD = RPI_D6, // B0_10
-  EBI_WR = RPI_D7, // B1_01
-  EBI_D0 = RPI_D8, // B1_00
-  EBI_D1 = RPI_D9, // B0_11
-  EBI_D2 = RPI_D10, // B0_00
-  EBI_D3 = RPI_D11, // B0_02
-  EBI_D4 = RPI_D12, // B0_01
-  EBI_D5 = RPI_D13, // B0_03
-  EBI_D6 = RPI_D14, // AD_B1_02
-  EBI_D7 = RPI_D15, // AD_B1_03
-  ADS = RPI_D16,
-  BLAST = RPI_D17,
-  // RPI_D18 ???
-  WR = RPI_D19,
-  BE0 = RPI_D20,
-  BE1 = RPI_D21,
-  INT960_0 = RPI_D22,  
-  // RPI_D23
-  // RPI_D24
-  // RPI_D25
-  // RPI_D26
-  // RPI_D27
-  // RPI_D28
-  // RPI_D29
-  READY = RPI_D30,
-  READY_SYNC = RPI_D31,
-  // RPI_D32
-};
 
-enum class PinNew {
+enum class Pin {
 #define X(index, value) RPI_D ## index = value 
     X(0, 19),
     X(1, 18),
@@ -203,7 +117,6 @@ enum class PinNew {
 
 };
 
-using Pin = PinNew;
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
   return static_cast<std::underlying_type_t<Pin>>(value);
 }
