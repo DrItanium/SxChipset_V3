@@ -23,6 +23,9 @@
 #ifndef INTERFACE_ENGINE_COMMON_H__
 #define INTERFACE_ENGINE_COMMON_H__
 #include <microshell.h>
+#ifndef PROGMEM_MAPPED
+#define PROGMEM_MAPPED
+#endif
 namespace InterfaceEngine {
     /**
      * @brief Install common microshell commands like micros, millis, and more into the given microshell instance
@@ -32,21 +35,21 @@ namespace InterfaceEngine {
     /**
      * @brief A millis device that is meant to be cat'd; Add these to your dev directory
      */
-    extern const struct ush_file_descriptor millisDevice;
+    extern const struct ush_file_descriptor PROGMEM_MAPPED millisDevice;
     /**
      * @brief A millis device that is meant to be cat'd; Add these to your dev directory
      */
-    extern const struct ush_file_descriptor microsDevice;
+    extern const struct ush_file_descriptor PROGMEM_MAPPED microsDevice;
 
     /**
      * @brief Expose the arduino random function as a device
      */
-    extern const struct ush_file_descriptor urandomDevice;
+    extern const struct ush_file_descriptor PROGMEM_MAPPED urandomDevice;
 
     /**
      * @brief Expose the clock speed of this device!
      */
-    extern const struct ush_file_descriptor clockSpeedDevice;
+    extern const struct ush_file_descriptor PROGMEM_MAPPED clockSpeedDevice;
 
 
     /**

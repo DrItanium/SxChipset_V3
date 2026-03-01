@@ -27,7 +27,7 @@
 
 namespace InterfaceEngine {
 
-    const ush_file_descriptor microsDevice = {
+    const ush_file_descriptor PROGMEM_MAPPED microsDevice = {
         .name = "micros",
         .description = "microseconds since boot (can easily overflow!)",
         .help = nullptr,
@@ -40,7 +40,7 @@ namespace InterfaceEngine {
             return strlen((char*)(*data));
         }
     };
-    const ush_file_descriptor millisDevice = {
+    const ush_file_descriptor PROGMEM_MAPPED millisDevice = {
         .name = "millis",
         .description = "milliseconds since boot",
         .help = nullptr,
@@ -54,7 +54,7 @@ namespace InterfaceEngine {
         }
     };
 
-    const ush_file_descriptor urandomDevice = {
+    const ush_file_descriptor PROGMEM_MAPPED urandomDevice = {
         .name = "urandom",
         .description = "arduino random function as a device",
         .help = nullptr,
@@ -67,7 +67,7 @@ namespace InterfaceEngine {
             return strlen((char*)(*data));
         }
     };
-    const ush_file_descriptor clockSpeedDevice = {
+    const ush_file_descriptor PROGMEM_MAPPED clockSpeedDevice = {
         .name = "cpufreq",
         .description = "print the clock speed of this device in Hz",
         .help = nullptr,
@@ -81,7 +81,7 @@ namespace InterfaceEngine {
         }
     };
 
-    static const ush_file_descriptor commonCommands[] {
+    static const ush_file_descriptor PROGMEM_MAPPED commonCommands[] {
         {
             .name = "micros",
             .description = "microseconds since boot (can easily overflow!)",
@@ -109,7 +109,7 @@ namespace InterfaceEngine {
     };
     ush_node_object cmds;
 
-    static const ush_file_descriptor eepromFiles[] {
+    static const ush_file_descriptor PROGMEM_MAPPED eepromFiles[] {
         {
             .name = "available",
             .description = "do we have access to EEPROM?",
@@ -136,6 +136,7 @@ namespace InterfaceEngine {
                 *data = (uint8_t*)buffer;
                 return strlen((char*)(*data));
             }
+
         }
         /// @todo add the eeprom device itself
     };

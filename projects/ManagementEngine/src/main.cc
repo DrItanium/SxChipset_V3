@@ -509,7 +509,7 @@ constexpr auto PATH_MAX_SIZE = 256;
 
 struct ush_object ush;
 
-const ush_descriptor descriptor = {
+const ush_descriptor PROGMEM_MAPPED descriptor = {
     .io = &ioInterface,
     .input_buffer = ushInputBuffer,
     .input_buffer_size = sizeof(ushInputBuffer),
@@ -524,7 +524,7 @@ size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, ui
     *data = (uint8_t*)message;
     return strlen(message);
 }
-static const ush_file_descriptor rootFiles[] {
+const ush_file_descriptor PROGMEM_MAPPED rootFiles[] {
     {
         .name = "info.txt",
             .description = nullptr,
@@ -534,12 +534,34 @@ static const ush_file_descriptor rootFiles[] {
     }
 };
 
-    static const ush_file_descriptor devFiles[] {
-        INTERFACE_ENGINE_COMMON_DEVICES,
-    };
+const ush_file_descriptor devFiles[] {
+    INTERFACE_ENGINE_COMMON_DEVICES,
+    {
+        .name = "rseed",
+        .description = "random seed device",
+        .help = nullptr,
+        .exec = nullptr,
+        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+            static char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%ld\r\n", rSeed);
+            buffer[sizeof(buffer) - 1] = 0;
+            *data = (uint8_t*)buffer;
+            return strlen((char*)(*data));
+        },
+        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+            long value = 0;
+            if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                return;
+            }
+            rSeed = value;
+            randomSeed(rSeed);
+        },
+    },
+};
 
-static ush_node_object root;
-static ush_node_object dev;
+ush_node_object root;
+ush_node_object dev;
 
 void
 configureMicroshellInterface() noexcept {
