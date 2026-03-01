@@ -20,46 +20,11 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#ifndef INTERFACE_ENGINE_COMMON_H__
-#define INTERFACE_ENGINE_COMMON_H__
-#include "InterfaceCommonConcepts.h"
-namespace InterfaceEngine {
-    /**
-     * @brief Install common microshell commands like micros, millis, and more into the given microshell instance
-     */
-    void installCommonCommands(struct ush_object* object) noexcept;
-
-    /**
-     * @brief A millis device that is meant to be cat'd; Add these to your dev directory
-     */
-    extern const struct ush_file_descriptor PROGMEM_MAPPED millisDevice;
-    /**
-     * @brief A millis device that is meant to be cat'd; Add these to your dev directory
-     */
-    extern const struct ush_file_descriptor PROGMEM_MAPPED microsDevice;
-
-    /**
-     * @brief Expose the arduino random function as a device
-     */
-    extern const struct ush_file_descriptor PROGMEM_MAPPED urandomDevice;
-
-    /**
-     * @brief Expose the clock speed of this device!
-     */
-    extern const struct ush_file_descriptor PROGMEM_MAPPED clockSpeedDevice;
-
-
-    /**
-     * @brief Install an interface to the EEPROM library to /dev/eeprom
-     */
-    void installEepromDeviceDirectory(struct ush_object* object) noexcept;
-
-} // end namespace InterfaceEngine
-
-#define INTERFACE_ENGINE_COMMON_DEVICES \
-    InterfaceEngine::millisDevice, \
-    InterfaceEngine::microsDevice, \
-    InterfaceEngine::urandomDevice, \
-    InterfaceEngine::clockSpeedDevice
+#ifndef INTERFACE_COMMON_CONCEPTS_H__ 
+#define INTERFACE_COMMON_CONCEPTS_H__ 
+#include <microshell.h>
+#ifndef PROGMEM_MAPPED
+#define PROGMEM_MAPPED
+#endif
 
 #endif
