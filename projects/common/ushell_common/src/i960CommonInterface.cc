@@ -37,14 +37,40 @@ namespace InterfaceEngine {
                         i960::isBusLocked() ? "yes" : "no");
             }
         },
-
+        {
+            .name = "cpu_reset",
+            .description = "Put the i960 CPU into the reset state",
+            .help = "Hold the i960 CPU RESET line LOW until released",
+            .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
+                if (i960::cpuRunning()) {
+                    i960::putCPUInReset();
+                    ush_printf(self, "CPU is now in reset\r\n");
+                } else {
+                    ush_printf(self, "CPU is already in reset\r\n");
+                }
+            },
+        },
+        {
+            .name = "cpu_boot",
+            .description = "Release the i960 CPU from the reset state",
+            .help = "Pull the i960 CPU Reset line HIGH (releasing it from the reset state)",
+            .exec = [](ush_object* self, ush_file_descriptor const*, int argc, char* argv[]) {
+                if (!i960::cpuRunning()) {
+                    i960::pullCPUOutOfReset();
+                    ush_printf(self, "CPU is out of reset\r\n");
+                } else {
+                    ush_printf(self, "CPU is already running\r\n");
+                }
+            },
+        },
     };
     static ush_node_object i960cmds;
     void 
     installI960Commands(struct ush_object* object) noexcept {
         ush_commands_add(object, &i960cmds, i960Commands, ComputeFileSize(i960Commands));
     }
-
+    static constexpr uint8_t PROGMEM_MAPPED TrueBuffer[4] { '1', '\r', '\n', 0, };
+    static constexpr uint8_t PROGMEM_MAPPED FalseBuffer[4] { '0', '\r', '\n', 0, };
     static const ush_file_descriptor PROGMEM_MAPPED i960Files[] {
         {
             .name = "running",
@@ -52,11 +78,8 @@ namespace InterfaceEngine {
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-                static char buffer[16];
-                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::cpuRunning());
-                buffer[sizeof(buffer) - 1] = 0;
-                *data = (uint8_t*)buffer;
-                return strlen((char*)buffer);
+                *data = (i960::cpuRunning()) ? TrueBuffer : FalseBuffer;
+                return 3;
             }
         },
         {
@@ -65,26 +88,43 @@ namespace InterfaceEngine {
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-                static char buffer[16];
-                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::isBusHeld());
-                buffer[sizeof(buffer) - 1] = 0;
-                *data = (uint8_t*)buffer;
-                return strlen((char*)buffer);
+                *data = (i960::isBusHeld()) ? TrueBuffer : FalseBuffer;
+                return 3;
             }
         },
         {
             .name = "locked",
-            .description = nullptr,
+            .description = "Status of the LOCK pin",
             .help = nullptr,
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-                static char buffer[16];
-                snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)i960::isBusLocked());
-                buffer[sizeof(buffer) - 1] = 0;
-                *data = (uint8_t*)buffer;
-                return strlen((char*)buffer);
+                *data = (i960::isBusLocked()) ? TrueBuffer : FalseBuffer;
+                return 3;
             }
         },
+        {
+            .name = "reset",
+            .description = "Status of the RESET line",
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+                *data = (i960::cpuRunning()) ? TrueBuffer : FalseBuffer;
+                return 3;
+            },
+            .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
+                long value = 0;
+                if (sscanf((const char*)data, "%lu", &value) == EOF) {
+                    ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
+                    return;
+                }
+                if (value != 0) {
+                    i960::pullCPUOutOfReset();
+                } else {
+                    i960::putCPUInReset();
+                }
+            },
+        },
+
     };
     static ush_node_object i960Dir;
 
