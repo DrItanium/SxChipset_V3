@@ -73,7 +73,7 @@ constexpr auto UseDirectPortManipulation = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
-volatile bool cpuIsRunning = false;
+bool cpuIsRunning = false;
 
 // We can open up to 4096 files on the sd card simultaneously
 RTC_DS3231 rtc;
@@ -970,6 +970,67 @@ private:
   static inline uint8_t EBIOutputStorage[256] = { 0 }; 
 };
 
+namespace i960 {
+namespace {
+    template<ManagementEngineReceiveOpcode code>
+    constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
+    template<ManagementEngineReceiveOpcode code>
+    void
+    doFixedWriteOperation() noexcept {
+        managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
+    }
+    template<ManagementEngineRequestOpcode code>
+    int
+    requestByte() noexcept {
+        static constexpr uint8_t InstructionSequence[] {
+            static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
+            static_cast<uint8_t>(code),
+        };
+        uint8_t result = 0;
+        if (managementEngine.write_then_read(InstructionSequence, sizeof(InstructionSequence), 
+                                             &result, sizeof(uint8_t))) {
+            return result;
+        } else {
+            return -1;
+        }
+    }
+}
+void
+putCPUInReset() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
+    cpuIsRunning = false;
+}
+
+void
+pullCPUOutOfReset() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
+    cpuIsRunning = true;
+}
+bool
+cpuRunning() noexcept {
+    return cpuIsRunning;
+}
+void
+holdBus() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
+}
+void
+releaseBus() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
+}
+
+bool
+isBusLocked() noexcept {
+    return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
+}
+
+bool
+isBusHeld() noexcept {
+    return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
+}
+
+}
+
 void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
@@ -1117,7 +1178,6 @@ triggerSystemTimer() noexcept {
 }
 
 void configureShells();
-void processBootLoaderShell() noexcept;
 void processRealtimeShell() noexcept;
 void 
 setup() {
@@ -1195,7 +1255,6 @@ void
 loop() {
     tryDoTransaction();
     handleAVRSerialConnection();
-    // @todo processBootLoaderShell needs to be 
     processRealtimeShell();
 }
 
@@ -1262,68 +1321,10 @@ processRealtimeShell() noexcept {
     RealtimeShell::runService();
 }
 
+
+
 void
 configureShells() noexcept {
     RealtimeShell::begin();
 }
 
-namespace i960 {
-namespace {
-    template<ManagementEngineReceiveOpcode code>
-    constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
-    template<ManagementEngineReceiveOpcode code>
-    void
-    doFixedWriteOperation() noexcept {
-        managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
-    }
-    template<ManagementEngineRequestOpcode code>
-    int
-    requestByte() noexcept {
-        static constexpr uint8_t InstructionSequence[] {
-            static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
-            static_cast<uint8_t>(code),
-        };
-        uint8_t result = 0;
-        if (managementEngine.write_then_read(InstructionSequence, sizeof(InstructionSequence), 
-                                             &result, sizeof(uint8_t))) {
-            return result;
-        } else {
-            return -1;
-        }
-    }
-}
-void
-putCPUInReset() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
-    cpuIsRunning = false;
-}
-
-void
-pullCPUOutOfReset() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
-    cpuIsRunning = true;
-}
-bool
-cpuRunning() noexcept {
-    return cpuIsRunning;
-}
-void
-holdBus() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
-}
-void
-releaseBus() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
-}
-
-bool
-isBusLocked() noexcept {
-    return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
-}
-
-bool
-isBusHeld() noexcept {
-    return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
-}
-
-}
