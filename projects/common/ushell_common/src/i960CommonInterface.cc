@@ -36,6 +36,7 @@ namespace InterfaceEngine {
                         i960::isBusLocked() ? "yes" : "no");
             }
         },
+
     };
     static ush_node_object i960cmds;
     void 
