@@ -95,8 +95,8 @@ namespace InterfaceEngine {
     installI960Commands(struct ush_object* object) noexcept {
         ush_commands_add(object, &i960cmds, i960Commands, ComputeFileSize(i960Commands));
     }
-    static constexpr uint8_t PROGMEM_MAPPED TrueBuffer[4] { '1', '\r', '\n', 0, };
-    static constexpr uint8_t PROGMEM_MAPPED FalseBuffer[4] { '0', '\r', '\n', 0, };
+    static constexpr const uint8_t PROGMEM_MAPPED TrueBuffer[4] { '1', '\r', '\n', 0, };
+    static constexpr const uint8_t PROGMEM_MAPPED FalseBuffer[4] { '0', '\r', '\n', 0, };
     static const ush_file_descriptor PROGMEM_MAPPED i960Files[] {
         {
             .name = "running",
@@ -105,7 +105,7 @@ namespace InterfaceEngine {
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
                 *data = (i960::cpuRunning()) ? TrueBuffer : FalseBuffer;
-                return 3;
+                return 3u;
             }
         },
         {
@@ -115,7 +115,7 @@ namespace InterfaceEngine {
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
                 *data = (i960::isBusLocked()) ? TrueBuffer : FalseBuffer;
-                return 3;
+                return 3u;
             }
         },
         {
@@ -125,7 +125,7 @@ namespace InterfaceEngine {
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
                 *data = (i960::cpuRunning()) ? TrueBuffer : FalseBuffer;
-                return 3;
+                return 3u;
             },
             .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
                 long value = 0;
@@ -147,7 +147,7 @@ namespace InterfaceEngine {
             .exec = nullptr,
             .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
                 *data = (i960::isBusHeld()) ? TrueBuffer : FalseBuffer;
-                return 3;
+                return 3u;
             },
             .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
                 long value = 0;
