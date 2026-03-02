@@ -286,6 +286,7 @@ startDivideByTwoClockGenerator() noexcept {
   PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the ready pulse output
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
   PORTG.PIN3CTRL |= PORT_INVEN_bm; // configure the INT0 pulse output
+  PORTB.PIN3CTRL |= PORT_INVEN_bm; // configure the INT3 pulse output
 }
 void
 configureINT0PulseGenerator(Event& clk1out, Event& router) noexcept {
@@ -324,7 +325,7 @@ configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
 }
 void
 configureINT3PulseGenerator(Event& clk1out, Logic& logic) noexcept {
-    // we can use CCL4 and CCL5 to construct a DFlipFlop that acts a
+    // we can use CCL4 to construct a DFlipFlop that acts a
     // synchronization target
     clk1out.set_user(user::ccl4_event_b);
     logic.enable = true;
@@ -332,6 +333,15 @@ configureINT3PulseGenerator(Event& clk1out, Logic& logic) noexcept {
     logic.input1 = in::disable; // connect PB0
     logic.input2 = in::event_b; // connect to CLK1
     logic.clocksource = clocksource::in2; // use in2 as the clock source
+    logic.output = out::enable; // connect to PB3
+    logic.edgedetect = edgedetect::enable;
+    logic.filter = filter::sync;
+    logic.truth = computeCCLValueBasedOffOfFunction(
+            [](bool low, bool, bool) -> uint8_t {
+                return !low; // so if we have the line pulled low then it is
+                             // successful, use the invert output feature of
+                             // the pin to make the result correct
+            });
 
 }
 void 
@@ -352,6 +362,8 @@ configureCCLs() {
   configureINT0PulseGenerator(Event0, Event7);
   // Event 9: Route CCL0.OUT to TCB0.CAPT
   configureINT1PulseGenerator(Event0, Logic0, Event9);
+  // Use CCL4 as a pulse generation system
+  configureINT3PulseGenerator(Event0, Logic4);
   configureDivideByTwoClockGenerator();
   configureReadyPulseGenerator();
   startDivideByTwoClockGenerator();
@@ -361,6 +373,7 @@ configureCCLs() {
   Event7.start();
   Event9.start();
   Logic0.init();
+  Logic4.init();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
