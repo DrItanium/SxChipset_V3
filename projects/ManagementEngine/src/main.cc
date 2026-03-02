@@ -295,7 +295,17 @@ configureINT0PulseGenerator(Event& clk1out, Event& router) noexcept {
     router.set_generator(gen7::pin_pg0); // use PG0/INT0_IN as the generator source
     router.set_user(user::tcb4_capt); // use PG0 to trigger TCB4 and generate
                                       // the ~INT0 pulse
-    /// @todo finish this
+  // okay, so start configuring the secondary single shot setup
+  // make sure we output TCB4 to PG3
+  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB4_bm)); 
+  TCB4.CCMP = 1; // two cycles
+  TCB4.CNT = 1; // 
+  TCB4.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB4.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+               TCB_CCMPEN_bm; // enable output via GPIO
+  TCB4.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+               TCB_ENABLE_bm | // enable
+               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
 configureINT1PulseGenerator(Event& clk1out, Logic& chan0, Event& chan1) noexcept {
@@ -322,6 +332,17 @@ configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
   router.set_generator(gen5::pin_pf5); // use PF5/INT2_IN as the generator source for Event5
   router.set_user(user::tcb3_capt); // use PF5 to trigger TCB3 and generate the INT2 pulse
   /// @todo finish this
+  // okay, so start configuring the secondary single shot setup
+  // make sure we output TCB4 to PG3
+  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB3_bm)); 
+  TCB3.CCMP = 1; // two cycles
+  TCB3.CNT = 1; // 
+  TCB3.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB3.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
+               TCB_CCMPEN_bm; // enable output via GPIO
+  TCB3.CTRLA = TCB_RUNSTDBY_bm | // run in standby
+               TCB_ENABLE_bm | // enable
+               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
 configureINT3PulseGenerator(Event& clk1out, Logic& logic) noexcept {
@@ -367,10 +388,16 @@ configureCCLs() {
   configureDivideByTwoClockGenerator();
   configureReadyPulseGenerator();
   startDivideByTwoClockGenerator();
+  // unused channels are commented out
   Event0.start();
   Event1.start();
+  //Event2.start();
+  //Event3.start();
+  //Event4.start();
   Event5.start();
+  //Event6.start();
   Event7.start();
+  //Event8.start();
   Event9.start();
   Logic0.init();
   Logic4.init();
