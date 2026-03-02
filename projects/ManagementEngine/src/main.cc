@@ -14,18 +14,18 @@
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)
 // TCA1:
-// TCB0: INT1 (potentially)
+// TCB0: INT1
 // TCB1: Ready pulse generator
 // TCB2: micros/millis (reserved by DxCore)
-// TCB3: INT2 (potentially)
-// TCB4: INT0 (potentially)
+// TCB3: INT2
+// TCB4: INT0
 // TCD0: 
-// CCL0: 
+// CCL0: INT1
 // CCL1: 
 // CCL2: 
 // CCL3: 
-// CCL4: INT3 (potentially)
-// CCL5: INT0 (potentially)
+// CCL4: INT3
+// CCL5:
 // TWI0: Teensy Communication Channel
 // TWI1: 
 // USART0:
@@ -259,7 +259,8 @@ setupInterrupt0Pins() noexcept {
 void
 configureReadyPulseGenerator() noexcept {
   // okay, so start configuring the secondary single shot setup
-  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm));
+  // make sure we output TCB1 to PA3
+  PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm)); 
   TCB1.CCMP = 1; // two cycles
   TCB1.CNT = 1; // 
   TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
@@ -282,15 +283,56 @@ void
 startDivideByTwoClockGenerator() noexcept {
   TCA0.SINGLE.CTRLA = TCA_SINGLE_ENABLE_bm | // turn the device on
       TCA_SINGLE_RUNSTDBY_bm; // run in standby
-  PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the pulse automatically
+  PORTA.PIN3CTRL |= PORT_INVEN_bm; // invert the ready pulse output
   PORTA.PIN5CTRL |= PORT_INVEN_bm; // make the input inverted for simplicity
+  PORTG.PIN3CTRL |= PORT_INVEN_bm; // configure the INT0 pulse output
+}
+void
+configureINT0PulseGenerator(Event& clk1out, Event& router) noexcept {
+    // Okay, so ~INT0 so use TCB4 to act as a pulse generator
+    clk1out.set_user(user::tcb4_cnt); // route CLK1 to TCB4 as the clock source
+    router.set_generator(gen7::pin_pg0); // use PG0/INT0_IN as the generator source
+    router.set_user(user::tcb4_capt); // use PG0 to trigger TCB4 and generate
+                                      // the ~INT0 pulse
+    /// @todo finish this
+}
+void
+configureINT1PulseGenerator(Event& clk1out, Logic& chan0, Event& chan1) noexcept {
+    // INT1 requires some extra routing since we don't have enough event channels to
+    // directly map pin PA1 to tcb1_capt. So, we have to use the CCL0 output as
+    // an extra router "channel"
+    clk1out.set_user(user::tcb0_cnt); // connect clk1out to TCB0
+    chan0.enable = true;
+    chan0.input0 = in::disable; // PA0 is not active
+    chan0.input1 = in::input; // PA1 is the only input
+    chan0.input2 = in::disable; // PA2 is not active
+    chan0.output = out::disable; // do not output on PA3
+    chan0.filter = filter::disable; // no output filter
+    chan0.truth = computeCCLValueBasedOffOfFunction(
+                [](bool, bool mid, bool) -> uint8_t { return mid; }
+            ); // forward propagate the input value
+    chan1.set_generator(gen::ccl0_out); // hook the CCL up to a real event
+                                        // channel
+    chan1.set_user(user::tcb0_capt); // connect to the capture signal
 }
 void
 configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
   clk1out.set_user(user::tcb3_cnt); // route it to TCB3 as clock source
   router.set_generator(gen5::pin_pf5); // use PF5/INT2_IN as the generator source for Event5
   router.set_user(user::tcb3_capt); // use PF5 to trigger TCB3 and generate the INT2 pulse
-  /// @todo 
+  /// @todo finish this
+}
+void
+configureINT3PulseGenerator(Event& clk1out, Logic& logic) noexcept {
+    // we can use CCL4 and CCL5 to construct a DFlipFlop that acts a
+    // synchronization target
+    clk1out.set_user(user::ccl4_event_b);
+    logic.enable = true;
+    logic.input0 = in::pin; // connect PB0 to input 0
+    logic.input1 = in::disable; // connect PB0
+    logic.input2 = in::event_b; // connect to CLK1
+    logic.clocksource = clocksource::in2; // use in2 as the clock source
+
 }
 void 
 configureCCLs() {
@@ -299,19 +341,26 @@ configureCCLs() {
   // Useful for various triggers and such
   Event0.set_generator(gen0::pin_pa0);
   Event0.set_user(user::tcb1_cnt); // route it to TCB1 as clock source
-  Event0.set_user(user::tcb4_cnt); // route it to TCB4 as clock source
   // Event 1: Route PA5 to TCB1 trigger source
   // setting this to gen1 causes problems (compiler bug?)
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
   Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the READY pulse
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
+  // Event 5: Route PF5 to TCB3.CAPT
   configureINT2PulseGenerator(Event0, Event5);
+  // Event 7: Route PG0 to TCB4.CAPT
+  configureINT0PulseGenerator(Event0, Event7);
+  // Event 9: Route CCL0.OUT to TCB0.CAPT
+  configureINT1PulseGenerator(Event0, Logic0, Event9);
   configureDivideByTwoClockGenerator();
   configureReadyPulseGenerator();
   startDivideByTwoClockGenerator();
   Event0.start();
   Event1.start();
   Event5.start();
+  Event7.start();
+  Event9.start();
+  Logic0.init();
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
