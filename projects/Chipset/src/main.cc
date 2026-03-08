@@ -1391,23 +1391,21 @@ union FilesystemOperation {
                 Cell rest : 48;
             };
         } control;
-        // add two 64-bit cells for saving return values
+        UID target; // always allocated and is the first 64-bit Cell in the return values
+        // add two extra 64-bit cells for extra return data
         Cell returnComponents[2];
+        // upper 32-bytes used for arguments
         union {
-            Cell words[5]; // we can never exceed this
-            UID uid; // always the first word if needed
+            Cell words[4]; // we can never exceed this
             struct {
-                UID target;
                 Pointer bufferAddress;
                 uint32_t size;
             } onRead;
             struct {
-                UID target;
                 Pointer bufferAddress;
                 uint32_t size;
             } onWrite;
             struct {
-                UID target;
                 uint64_t position;
                 uint32_t mode;
             } onSeek;
@@ -1418,7 +1416,7 @@ union FilesystemOperation {
                 uint32_t org;
             } onOpen;
         } args;
-        static_assert(sizeof(args) == 40);
+        static_assert(sizeof(args) == 32);
     };
 };
 static_assert(sizeof(FilesystemOperation) == 64);
@@ -1514,6 +1512,15 @@ class FileTracker {
 // The spaces we accept i960 addresses from are:
 // 1) PSRAM
 // 2) OnboardSRAM2
+constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
+    // the lowest 6 bits must be all zeros
+    return (address & 0b111111) == 0;
+}
+constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
+    if (address < 0x0100'0000) {
+        return alignedTo64ByteBoundaries(address);
+    }
+}
 struct RawFilesystemInterface {
     void clear() noexcept { 
 
