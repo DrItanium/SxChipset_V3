@@ -1400,11 +1400,7 @@ union FilesystemOperation {
             struct {
                 Pointer bufferAddress;
                 uint32_t size;
-            } onRead;
-            struct {
-                Pointer bufferAddress;
-                uint32_t size;
-            } onWrite;
+            } onRead, onWrite;
             struct {
                 uint64_t position;
                 uint32_t mode;
