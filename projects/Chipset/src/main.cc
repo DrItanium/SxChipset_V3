@@ -1449,13 +1449,11 @@ class FileTracker {
             _openFiles.clear();
             _lfsrStartState = startState;
             _lfsrState = startState;
-            _period = 0;
         }
         void end() {
             _openFiles.clear();
             _lfsrStartState = 0;
             _lfsrState = 0;
-            _period = 0;
         }
         bool enabled() const noexcept { return _lfsrStartState != 0; }
         uint64_t open(const char* path, uint32_t flags, uint32_t i960HandleId) noexcept {
@@ -1473,7 +1471,7 @@ class FileTracker {
                 // different unique index! Interestingly enough, this means
                 // that the i960 could also use the same xorshift32 lfsr as a
                 // way to break this deadlock. We should try at least 8 times
-                // to see if we have tracks of use that are no longer available
+                // to see if we have tracks of ids that are no longer available
                 for (int i = 0; i < 8; ++i) {
                     // try eight times to get a unique handle index
                     auto chipsetHandleId = getNewValue();
@@ -1484,8 +1482,7 @@ class FileTracker {
                     }
                 }
                 // close the file since were unable to use it, the i960 needs
-                // to help us by changing its unique id
-                handle.close();
+                // to help us by changing its 32-bit component
                 return static_cast<uint32_t>(ErrorCodes::CouldNotFindASpotForFileGivenI960UniqueId);
             } else {
                 return static_cast<uint32_t>(ErrorCodes::CouldNotOpenFile);
@@ -1507,7 +1504,6 @@ class FileTracker {
     private:
         uint32_t getNewValue() noexcept {
             // taken from https://en.wikipedia.org/wiki/Xorshift
-            ++_period;
             auto x = _lfsrState;
             x ^= x << 13;
             x ^= x >> 17;
@@ -1517,14 +1513,21 @@ class FileTracker {
         }
     private:
         // use an LFSR to get a unique 32-bit id that is combined with the i960
-        // provided id field to create a unique 64-bit ID. There is a maximum
-        // of 2^32-1 files allowed this way. If the teensy 32-bit component is
-        // ever zero then it is an error as that will never get generated. 
-        uint64_t _period = 0;
+        // provided id field to create a unique 64-bit ID. The idea is that
+        // for each i960 provided component, we can have up to 2^32 files. When
+        // we hit a collision 8 times in a row then we ask the i960 for a new
+        // component. Since we can never use zero, it means we have a builtin
+        // error space! 
         uint32_t _lfsrStartState = 0;
         uint32_t _lfsrState = 0;
         std::map<uint64_t, File> _openFiles;
 };
+// for the i960 interface side, we pass an i960 memory address in and must
+// translate it to a teensy address
+//
+// The spaces we accept i960 addresses from are:
+// 1) PSRAM
+// 2) OnboardSRAM2
 struct RawFilesystemInterface {
     void clear() noexcept { 
 
