@@ -1347,11 +1347,11 @@ configureShells() noexcept {
 union FileUID {
     uint64_t raw;
     struct {
-        uint32_t i960;
+        uint32_t i960; // if this is zero then it is an error state
         uint32_t chipset;
     };
 };
-constexpr uint64_t BadUID = 0xFFFF'FFFF'FFFF'FFFF;
+
 /**
  * @brief A structure in memory that the teensy reads which the i960 forms, the i960 provides an address to this in memory structure only
  */
@@ -1429,7 +1429,6 @@ struct FilesystemRequest {
         struct {
             Pointer path;
             uint32_t flags;
-            uint32_t mode;
             /// @brief i960 organization id used to salt the file system handle to make it somewhat harder to access files that don't belong to you!
             uint32_t org;
         } onOpen;
@@ -1438,6 +1437,11 @@ struct FilesystemRequest {
     };
 };
 class FileTracker {
+    enum class ErrorCodes : uint32_t {
+        Unknown = 0x0000'0100, // first unknown code
+        CouldNotFindASpotForFileGivenI960UniqueId,
+        CouldNotOpenFile,
+    };
     public:
         using OptionalFile = std::optional<std::reference_wrapper<File>>;
         FileTracker() = default;
@@ -1454,13 +1458,46 @@ class FileTracker {
             _period = 0;
         }
         bool enabled() const noexcept { return _lfsrStartState != 0; }
-        bool full() const noexcept { _lfsrState == _lfsrStartState && _period > 0; }
-        OptionalFile find(uint64_t handle) noexcept {
-            if (auto potentialFile = _openFiles.find(handle); potentialFile != _openFiles.end()) {
-                return potentialFile->second;
+        uint64_t open(const char* path, uint32_t flags, uint32_t i960HandleId) noexcept {
+            FileUID result;
+            result.i960 = i960HandleId;
+            /// @todo do we need to translate the flags to an SdFat compatbile design?
+            auto handle = SD.open(path, flags);
+            if (handle) {
+                // okay, so we were able to open the file so now we need to
+                // make sure that it is possible to actually insert it with the
+                // specified index
+                //
+                // We don't want the system to lockup though so introduce a
+                // timeout value where we can ask the i960 to generate a
+                // different unique index! Interestingly enough, this means
+                // that the i960 could also use the same xorshift32 lfsr as a
+                // way to break this deadlock. We should try at least 8 times
+                // to see if we have tracks of use that are no longer available
+                for (int i = 0; i < 8; ++i) {
+                    // try eight times to get a unique handle index
+                    auto chipsetHandleId = getNewValue();
+                    result.chipset = chipsetHandleId;
+                    if (!_openFiles.contains(result.raw)) {
+                        _openFiles.emplace(result.raw, handle);
+                        return result.raw;
+                    }
+                }
+                // close the file since were unable to use it, the i960 needs
+                // to help us by changing its unique id
+                handle.close();
+                return static_cast<uint32_t>(ErrorCodes::CouldNotFindASpotForFileGivenI960UniqueId);
             } else {
-                return std::nullopt;
+                return static_cast<uint32_t>(ErrorCodes::CouldNotOpenFile);
             }
+            return result.raw;
+        }
+        bool close(uint64_t uid) noexcept {
+            if (auto outcome = _openFiles.find(uid); outcome != _openFiles.end()) {
+                outcome->second.close();
+                return true;
+            }
+            return false;
         }
     private:
         uint32_t getNewValue() noexcept {
