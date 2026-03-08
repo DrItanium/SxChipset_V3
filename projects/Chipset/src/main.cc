@@ -1383,7 +1383,7 @@ struct FilesystemRequest {
     /**
      * @brief Another slot useful for providing nuance or more info the i960
      */
-    uint64_t returnFlags; 
+    uint64_t returnFlags;
     Opcode kind;
     struct FileHandleOnlyOperation { UID target; };
     union {
@@ -1415,7 +1415,7 @@ struct FilesystemRequest {
         // other operations
         FileHandleOnlyOperation onPeek;
         struct {
-            Pointer address;
+            Pointer path;
             uint32_t flags;
             uint32_t mode;
         } onOpen;
