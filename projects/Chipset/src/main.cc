@@ -515,6 +515,9 @@ union FilesystemOperation {
     void setErrorCode(uint16_t code) noexcept {
         control.errorCode = code;
     }
+    [[nodiscard]] constexpr uint64_t getUid() const noexcept {
+        return target.raw;
+    }
 };
 static_assert(sizeof(FilesystemOperation) == 64);
 class FileTracker {
@@ -525,6 +528,7 @@ class FileTracker {
         CouldNotOpenFile,
         InvalidOperation,
         UnimplementedOperation,
+        CouldNotCloseFile,
     };
     public:
         using OptionalFile = std::optional<std::reference_wrapper<File>>;
@@ -593,6 +597,12 @@ class FileTracker {
                 return;
             }
             switch (operation.getOpcode()) {
+                case FSOpcode::Close:
+                    if (!close(operation.getUid())) {
+                        operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::CouldNotCloseFile));
+                    }
+                    break;
+
                 default:
                     operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::UnimplementedOperation));
                     break;
