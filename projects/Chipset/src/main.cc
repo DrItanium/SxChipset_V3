@@ -1493,11 +1493,16 @@ class FileTracker {
             return result.raw;
         }
         bool close(uint64_t uid) noexcept {
-            if (auto outcome = _openFiles.find(uid); outcome != _openFiles.end()) {
-                outcome->second.close();
-                return true;
+            // just erase the file and that should cause the destructor to be
+            // called!
+            return _openFiles.erase(uid) == 1;
+        }
+        OptionalFile find(uint64_t uid) noexcept {
+            if (auto result = _openFiles.find(uid); result != _openFiles.end()) {
+                return result->second;
+            } else {
+                return std::nullopt;
             }
-            return false;
         }
     private:
         uint32_t getNewValue() noexcept {
