@@ -515,6 +515,10 @@ union FilesystemOperation {
     void setErrorCode(uint16_t code) noexcept {
         control.errorCode = code;
     }
+    template<typename T>
+    void setErrorCode(T code) noexcept {
+        setErrorCode(static_cast<uint16_t>(code));
+    }
     [[nodiscard]] constexpr uint64_t getUid() const noexcept {
         return target.raw;
     }
@@ -529,6 +533,9 @@ class FileTracker {
         InvalidOperation,
         UnimplementedOperation,
         CouldNotCloseFile,
+        NotAnOpenFile,
+        InvalidBufferAddress,
+        RequestedLengthTooLong,
     };
     public:
         using OptionalFile = std::optional<std::reference_wrapper<File>>;
@@ -589,22 +596,31 @@ class FileTracker {
                 return std::nullopt;
             }
         }
+    private:
+        void doReadOperation(FilesystemOperation& operation) noexcept;
+        void doWriteOperation(FilesystemOperation& operation) noexcept;
+        void doCloseOperation(FilesystemOperation& operation) {
+            if (!close(operation.getUid())) {
+                operation.setErrorCode(ErrorCodes::CouldNotCloseFile);
+            }
+        }
+    public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
-            operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::None));
+            operation.setErrorCode(ErrorCodes::None);
             if (!FilesystemOperation::valid(operation.getOpcode())) {
-                operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::InvalidOperation));
+                operation.setErrorCode(ErrorCodes::InvalidOperation);
                 return;
             }
             switch (operation.getOpcode()) {
                 case FSOpcode::Close:
-                    if (!close(operation.getUid())) {
-                        operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::CouldNotCloseFile));
-                    }
+                    doCloseOperation(operation);
                     break;
-
+                case FSOpcode::Read:
+                    doReadOperation(operation);
+                    break;
                 default:
-                    operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::UnimplementedOperation));
+                    operation.setErrorCode(ErrorCodes::UnimplementedOperation);
                     break;
             }
         }
@@ -667,6 +683,51 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
 }
 constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
     return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
+}
+void 
+FileTracker::doReadOperation(FilesystemOperation& operation) noexcept {
+    auto outcome = find(operation.getUid());
+    if (outcome) {
+        auto addr960 = operation.args.onRead.bufferAddress;
+        auto len = operation.args.onRead.size;
+        if (!inValidMemorySpace(addr960)) {
+            operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        } else if (!inValidMemorySpace(addr960 + len)) {
+            // we would walk into illegal memory so do not allow it to go
+            // through
+            operation.setErrorCode(ErrorCodes::RequestedLengthTooLong);
+        } else {
+            auto addrChipset = computeChipsetMemoryAddress(addr960);
+            File& f = outcome->get();
+            // return the number of bytes read
+            operation.returnComponents[0] = f.read(reinterpret_cast<uint8_t*>(addrChipset), len);
+        }
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
+}
+
+void 
+FileTracker::doWriteOperation(FilesystemOperation& operation) noexcept {
+    auto outcome = find(operation.getUid());
+    if (outcome) {
+        auto addr960 = operation.args.onWrite.bufferAddress;
+        auto len = operation.args.onWrite.size;
+        if (!inValidMemorySpace(addr960)) {
+            operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        } else if (!inValidMemorySpace(addr960 + len)) {
+            // we would walk into illegal memory so do not allow it to go
+            // through
+            operation.setErrorCode(ErrorCodes::RequestedLengthTooLong);
+        } else {
+            auto addrChipset = computeChipsetMemoryAddress(addr960);
+            File& f = outcome->get();
+            // return the number of bytes read
+            operation.returnComponents[0] = f.write(reinterpret_cast<uint8_t*>(addrChipset), len);
+        }
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
 }
 struct RawFilesystemInterface {
     enum class ErrorCodes : uint32_t {
