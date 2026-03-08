@@ -1544,6 +1544,7 @@ struct RawFilesystemInterface {
     void clear() noexcept { 
         _targetAddress.value = 0;
         _errorCode.value = 0;
+        _tryCarryOutOperation = false;
     }
     void update() noexcept {
     }
@@ -1554,21 +1555,61 @@ struct RawFilesystemInterface {
             case 1:
                 return _targetAddress.shorts[1];
             case 2:
-                return _errorCode.shorts[0];
             case 3:
+                return 0;
+            case 4:
+                return _errorCode.shorts[0];
+            case 5:
                 return _errorCode.shorts[1];
             default:
                 return 0;
         }
     }
-    void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
+    void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
+        switch (offset & 0b111) {
+            case 0:
+                _targetAddress.setWord(0, value, updateLo, updateHi);
+                break;
+            case 1:
+                _targetAddress.setWord(1, value, updateLo, updateHi);
+                break;
+            case 2:
+            case 3:
+                _tryCarryOutOperation = true;
+                break;
+            default:
+                // don't allow writing to the error code register
+                break;
+
+        }
     }
     void setWord(uint8_t offset, uint16_t value) noexcept { 
+        switch (offset & 0b111) {
+            case 0:
+                _targetAddress.setWord(0, value);
+                break;
+            case 1:
+                _targetAddress.setWord(1, value);
+                break;
+            case 2:
+            case 3:
+                _tryCarryOutOperation = true;
+                break;
+            default:
+                // don't allow writing to the error code register
+                break;
+        }
     }
     void onFinish() noexcept { 
-        // here we want to actually carry out operations
+        if (_tryCarryOutOperation) {
+            _errorCode.clear();
+            _tryCarryOutOperation = false;
+            // do nothing right now
+            _errorCode.value = 0xFFFF'FFFF;
+        }
     }
 private:
+    bool _tryCarryOutOperation = false;
     SplitWord32 _targetAddress { 0 };
     SplitWord32 _errorCode { 0 };
     // layout for this 16-byte page is:

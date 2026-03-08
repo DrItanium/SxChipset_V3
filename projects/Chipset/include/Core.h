@@ -34,7 +34,7 @@ union SplitWord32 {
     uint16_t shorts[2];
     uint32_t value;
     
-    inline void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
+    inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
         switch (offset & 0b1) {
             case 0:
                 if (updateLo) {
@@ -74,7 +74,7 @@ union SplitWord64 {
     void clear() noexcept { value = 0; }
     void update() noexcept { }
     void onFinish() noexcept { }
-    inline void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
+    inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
         switch (offset & 0b11) {
             case 0:
                 if (updateLo) {
