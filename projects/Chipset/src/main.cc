@@ -423,6 +423,7 @@ union FileUID {
     };
 };
 union FilesystemOperation {
+
     enum class Opcode : uint16_t {
         None, // make sure that zero is not accepted as a valid operation
         // direct manipulation
@@ -450,6 +451,27 @@ union FilesystemOperation {
         // OpenNextFile,
         // RewindDirectory,
     };
+    static constexpr bool valid(Opcode code) noexcept {
+        switch (code) {
+            case Opcode::None:
+            case Opcode::Read:
+            case Opcode::Write:
+            case Opcode::Seek:
+            case Opcode::Valid:
+            case Opcode::Available:
+            case Opcode::IsOpen:
+            case Opcode::IsDirectory:
+            case Opcode::GetPosition:
+            case Opcode::GetSize:
+            case Opcode::Peek:
+            case Opcode::Open:
+            case Opcode::Close:
+            case Opcode::Flush:
+                return true;
+            default:
+                return false;
+        }
+    }
     using Cell = uint64_t;
     using UID = FileUID;
     using Pointer = uint32_t;
@@ -459,7 +481,8 @@ union FilesystemOperation {
             Cell raw;
             struct {
                 Opcode opcode;
-                Cell rest : 48;
+                uint16_t errorCode;
+                Cell rest : 32;
             };
         } control;
         UID target; // always allocated and is the first 64-bit Cell in the return values
@@ -485,13 +508,23 @@ union FilesystemOperation {
         } args;
         static_assert(sizeof(args) == 32);
     };
+    Opcode getOpcode() const noexcept { return control.opcode; }
+    uint16_t getErrorCode() const noexcept {
+        return control.errorCode;
+    }
+    void setErrorCode(uint16_t code) noexcept {
+        control.errorCode = code;
+    }
 };
 static_assert(sizeof(FilesystemOperation) == 64);
 class FileTracker {
-    enum class ErrorCodes : uint32_t {
-        Unknown = 0x0000'0100, // first unknown code
+    enum class ErrorCodes : uint16_t {
+        None = 0,
+        Unknown = 0x0100, // first unknown code
         CouldNotFindASpotForFileGivenI960UniqueId,
         CouldNotOpenFile,
+        InvalidOperation,
+        UnimplementedOperation,
     };
     public:
         using OptionalFile = std::optional<std::reference_wrapper<File>>;
@@ -550,6 +583,19 @@ class FileTracker {
                 return result->second;
             } else {
                 return std::nullopt;
+            }
+        }
+        void processRequest(FilesystemOperation& operation) noexcept {
+            using FSOpcode = FilesystemOperation::Opcode;
+            operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::None));
+            if (!FilesystemOperation::valid(operation.getOpcode())) {
+                operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::InvalidOperation));
+                return;
+            }
+            switch (operation.getOpcode()) {
+                default:
+                    operation.setErrorCode(static_cast<uint16_t>(ErrorCodes::UnimplementedOperation));
+                    break;
             }
         }
     private:
@@ -619,6 +665,7 @@ struct RawFilesystemInterface {
         UnimplementedOperation,
         UnalignedAddressProvided,
         IllegalAddressProvided,
+        ErrorHappenedDuringProcessing,
     };
     void clear() noexcept { 
         _targetAddress.value = 0;
@@ -693,14 +740,14 @@ struct RawFilesystemInterface {
                     auto convertedAddress = computeChipsetMemoryAddress(addr);
                     // make sure that we don't do anything goofy
                     // TODO: can we eliminate the volatile keyword?
-                    volatile FilesystemOperation& fsop = *reinterpret_cast<volatile FilesystemOperation*>(convertedAddress);
-                    // do nothing right now
-                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnimplementedOperation);
+                    FilesystemOperation& fsop = *reinterpret_cast<FilesystemOperation*>(convertedAddress);
+                    sdcardTracker.processRequest(fsop);
                 }
             } else {
+                // begin was never called, probably because no sdcard could be
+                // found!
                 _errorCode.value = static_cast<uint32_t>(ErrorCodes::NotEnabled);
             }
-
         }
     }
 private:
