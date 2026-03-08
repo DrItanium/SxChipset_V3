@@ -1512,19 +1512,54 @@ constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
     // the lowest 6 bits must be all zeros
     return (address & 0b111111) == 0;
 }
-constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
-    if (address < 0x0100'0000) {
-        return alignedTo64ByteBoundaries(address);
+constexpr bool isPSRAMAddress(uint32_t address) noexcept {
+    return address < 0x0100'0000;
+}
+constexpr bool isSRAM2Address(uint32_t address) noexcept {
+    return (address & 0xFFFF'0000) == 0xFE01'0000;
+}
+constexpr bool inValidMemorySpace(uint32_t address) noexcept {
+    return isPSRAMAddress(address) || isSRAM2Address(address);
+}
+constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
+}
+constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
+}
+constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
+    if (isPSRAMAddress(address)) {
+        return computePSRAMOffset(address);
+    } else if (isSRAM2Address(address)) {
+        return computeSRAM2Offset(address);
+    } else {
+        // don't allow the i960 to mess with teensy internals
+        return 0xFFFF'FFFF;
     }
+}
+constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
+    return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
 }
 struct RawFilesystemInterface {
     void clear() noexcept { 
-
+        _targetAddress = 0;
+        _errorCode = 0;
     }
     void update() noexcept {
     }
     uint16_t getWord(uint8_t offset) const noexcept {
-        return 0;
+        switch (offset & 0b111) {
+            case 0:
+                return static_cast<uint16_t>(_targetAddress);
+            case 1:
+                return static_cast<uint16_t>(_targetAddress >> 16);
+            case 2:
+                return static_cast<uint16_t>(_errorCode);
+            case 3:
+                return static_cast<uint16_t>(_errorCode >> 16);
+            default:
+                return 0;
+        }
     }
     void setWord(uint8_t, uint16_t) noexcept { 
 
@@ -1535,5 +1570,9 @@ struct RawFilesystemInterface {
     void onFinish() noexcept { 
 
     }
-
+private:
+    uint32_t _targetAddress = 0;
+    uint32_t _errorCode = 0;
+    // layout for this 16-byte page is:
+    //
 };
