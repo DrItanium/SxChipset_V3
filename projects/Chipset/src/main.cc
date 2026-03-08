@@ -1542,37 +1542,35 @@ constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
 }
 struct RawFilesystemInterface {
     void clear() noexcept { 
-        _targetAddress = 0;
-        _errorCode = 0;
+        _targetAddress.value = 0;
+        _errorCode.value = 0;
     }
     void update() noexcept {
     }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset & 0b111) {
             case 0:
-                return static_cast<uint16_t>(_targetAddress);
+                return _targetAddress.shorts[0];
             case 1:
-                return static_cast<uint16_t>(_targetAddress >> 16);
+                return _targetAddress.shorts[1];
             case 2:
-                return static_cast<uint16_t>(_errorCode);
+                return _errorCode.shorts[0];
             case 3:
-                return static_cast<uint16_t>(_errorCode >> 16);
+                return _errorCode.shorts[1];
             default:
                 return 0;
         }
     }
-    void setWord(uint8_t, uint16_t) noexcept { 
-
+    void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
     }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { 
-
+    void setWord(uint8_t offset, uint16_t value) noexcept { 
     }
     void onFinish() noexcept { 
-
+        // here we want to actually carry out operations
     }
 private:
-    uint32_t _targetAddress = 0;
-    uint32_t _errorCode = 0;
+    SplitWord32 _targetAddress { 0 };
+    SplitWord32 _errorCode { 0 };
     // layout for this 16-byte page is:
     //
 };
