@@ -1541,6 +1541,12 @@ constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
     return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
 }
 struct RawFilesystemInterface {
+    enum class ErrorCodes : uint32_t {
+        Ok = 0,
+        UnimplementedOperation,
+        UnalignedAddressProvided,
+        IllegalAddressProvided,
+    };
     void clear() noexcept { 
         _targetAddress.value = 0;
         _errorCode.value = 0;
@@ -1604,8 +1610,20 @@ struct RawFilesystemInterface {
         if (_tryCarryOutOperation) {
             _errorCode.clear();
             _tryCarryOutOperation = false;
-            // do nothing right now
-            _errorCode.value = 0xFFFF'FFFF;
+            auto addr = _targetAddress.value;
+            if (!inValidMemorySpace(addr)) {
+                _errorCode.value = static_cast<uint32_t>(ErrorCodes::IllegalAddressProvided);
+            } else if (!alignedTo64ByteBoundaries(addr)) {
+                _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnalignedAddressProvided);
+            } else {
+                auto convertedAddress = computeChipsetMemoryAddress(addr);
+                // make sure that we don't do anything goofy
+                // TODO: can we eliminate the volatile keyword?
+                volatile FilesystemOperation& fsop = *reinterpret_cast<volatile FilesystemOperation*>(convertedAddress);
+                // do nothing right now
+                _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnimplementedOperation);
+            }
+
         }
     }
 private:
