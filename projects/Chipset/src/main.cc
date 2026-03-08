@@ -573,6 +573,7 @@ class FileTracker {
         uint32_t _lfsrState = 0;
         std::map<uint64_t, File> _openFiles;
 };
+FileTracker sdcardTracker;
 // for the i960 interface side, we pass an i960 memory address in and must
 // translate it to a teensy address
 //
@@ -614,6 +615,7 @@ constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
 struct RawFilesystemInterface {
     enum class ErrorCodes : uint32_t {
         Ok = 0,
+        NotEnabled,
         UnimplementedOperation,
         UnalignedAddressProvided,
         IllegalAddressProvided,
@@ -681,18 +683,22 @@ struct RawFilesystemInterface {
         if (_tryCarryOutOperation) {
             _errorCode.clear();
             _tryCarryOutOperation = false;
-            auto addr = _targetAddress.value;
-            if (!inValidMemorySpace(addr)) {
-                _errorCode.value = static_cast<uint32_t>(ErrorCodes::IllegalAddressProvided);
-            } else if (!alignedTo64ByteBoundaries(addr)) {
-                _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnalignedAddressProvided);
+            if (sdcardTracker.enabled()) {
+                auto addr = _targetAddress.value;
+                if (!inValidMemorySpace(addr)) {
+                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::IllegalAddressProvided);
+                } else if (!alignedTo64ByteBoundaries(addr)) {
+                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnalignedAddressProvided);
+                } else {
+                    auto convertedAddress = computeChipsetMemoryAddress(addr);
+                    // make sure that we don't do anything goofy
+                    // TODO: can we eliminate the volatile keyword?
+                    volatile FilesystemOperation& fsop = *reinterpret_cast<volatile FilesystemOperation*>(convertedAddress);
+                    // do nothing right now
+                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnimplementedOperation);
+                }
             } else {
-                auto convertedAddress = computeChipsetMemoryAddress(addr);
-                // make sure that we don't do anything goofy
-                // TODO: can we eliminate the volatile keyword?
-                volatile FilesystemOperation& fsop = *reinterpret_cast<volatile FilesystemOperation*>(convertedAddress);
-                // do nothing right now
-                _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnimplementedOperation);
+                _errorCode.value = static_cast<uint32_t>(ErrorCodes::NotEnabled);
             }
 
         }
@@ -705,7 +711,6 @@ private:
     //
 };
 
-FileTracker sdcardTracker;
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 CapacityInformation capacityInfo;
