@@ -1342,7 +1342,7 @@ configureShells() noexcept {
 // In fact, we can even hold the bus until action is complete!
 //
 /**
- * @brief A structure in memory that the teensy reads which the i960 forms
+ * @brief A structure in memory that the teensy reads which the i960 forms, the i960 provides an address to this in memory structure only
  */
 struct FilesystemRequest {
     enum class Opcode : uint16_t {
@@ -1387,20 +1387,40 @@ struct FilesystemRequest {
     Opcode kind;
     struct FileHandleOnlyOperation { UID target; };
     union {
+        // read/write operations
+        struct {
+            UID target;
+            Pointer bufferAddress;
+            uint32_t size;
+        } onRead;
+        struct {
+            UID target;
+            Pointer bufferAddress;
+            uint32_t size;
+        } onWrite;
+        // position manipulation
+        struct {
+            UID target;
+            uint64_t position;
+            uint32_t mode;
+        } onSeek;
+        // flag operations
+        FileHandleOnlyOperation onValid;
+        FileHandleOnlyOperation onAvailable; 
+        FileHandleOnlyOperation onIsOpen;
+        FileHandleOnlyOperation onIsDirectory;
+        // large value returns
+        FileHandleOnlyOperation onGetPosition;
+        FileHandleOnlyOperation onGetSize;
+        // other operations
+        FileHandleOnlyOperation onPeek;
         struct {
             Pointer address;
             uint32_t flags;
             uint32_t mode;
         } onOpen;
-        FileHandleOnlyOperation onValid;
         FileHandleOnlyOperation onClose;
-        FileHandleOnlyOperation onPeek;
-        FileHandleOnlyOperation onAvailable; 
         FileHandleOnlyOperation onFlush;
-        FileHandleOnlyOperation onGetPosition;
-        FileHandleOnlyOperation onGetSize;
-        FileHandleOnlyOperation onIsOpen;
-        FileHandleOnlyOperation onIsDirectory;
     };
 };
 struct RawFilesystemInterface {
