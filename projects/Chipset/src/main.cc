@@ -1396,9 +1396,19 @@ struct FilesystemRequest {
      * @brief Another slot useful for providing nuance or more info the i960
      */
     uint64_t returnFlags;
-    Opcode kind;
+    union {
+        uint64_t raw;
+        struct {
+            Opcode opcode;
+            // any other operations go here
+        };
+    } cfg;
     struct FileHandleOnlyOperation { UID target; };
     union {
+        // 40 bytes of space are left
+        uint8_t bytes[40];
+        uint32_t words[40/sizeof(uint32_t)];
+        uint64_t longWords[40/sizeof(uint64_t)];
         // read/write operations
         struct {
             UID target;
@@ -1436,6 +1446,7 @@ struct FilesystemRequest {
         FileHandleOnlyOperation onFlush;
     };
 };
+static_assert(sizeof(FilesystemRequest) == 64);
 class FileTracker {
     enum class ErrorCodes : uint32_t {
         Unknown = 0x0000'0100, // first unknown code
