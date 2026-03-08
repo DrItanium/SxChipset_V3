@@ -26,6 +26,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 #include <functional>
 #include <memory>
+// map should be useful for keeping track of file handles
+#include <map>
+#include <optional>
 
 #include <SPI.h>
 #include <Wire.h>
@@ -1433,6 +1436,52 @@ struct FilesystemRequest {
         FileHandleOnlyOperation onClose;
         FileHandleOnlyOperation onFlush;
     };
+};
+class FileTracker {
+    public:
+        using OptionalFile = std::optional<std::reference_wrapper<File>>;
+        FileTracker() = default;
+        void begin(uint32_t startState = Entropy.random()) noexcept {
+            _openFiles.clear();
+            _lfsrStartState = startState;
+            _lfsrState = startState;
+            _period = 0;
+        }
+        void end() {
+            _openFiles.clear();
+            _lfsrStartState = 0;
+            _lfsrState = 0;
+            _period = 0;
+        }
+        bool enabled() const noexcept { return _lfsrStartState != 0; }
+        bool full() const noexcept { _lfsrState == _lfsrStartState && _period > 0; }
+        OptionalFile find(uint64_t handle) noexcept {
+            if (auto potentialFile = _openFiles.find(handle); potentialFile != _openFiles.end()) {
+                return potentialFile->second;
+            } else {
+                return std::nullopt;
+            }
+        }
+    private:
+        uint32_t getNewValue() noexcept {
+            // taken from https://en.wikipedia.org/wiki/Xorshift
+            ++_period;
+            auto x = _lfsrState;
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            _lfsrState = x;
+            return x;
+        }
+    private:
+        // use an LFSR to get a unique 32-bit id that is combined with the i960
+        // provided id field to create a unique 64-bit ID. There is a maximum
+        // of 2^32-1 files allowed this way. If the teensy 32-bit component is
+        // ever zero then it is an error as that will never get generated. 
+        uint64_t _period = 0;
+        uint32_t _lfsrStartState = 0;
+        uint32_t _lfsrState = 0;
+        std::map<uint64_t, File> _openFiles;
 };
 struct RawFilesystemInterface {
     void clear() noexcept { 
