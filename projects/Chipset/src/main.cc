@@ -83,6 +83,7 @@ RTC_DS3231 rtc;
 Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
+
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
  * Teensy has no way of knowing this configuration so it is a compile time
@@ -397,940 +398,10 @@ struct RTCMemoryBlock {
         };
         bool _32kOutEn = false;
 };
-
-USBSerialBlock usbSerial;
-TimingRelatedThings timingInfo;
-CapacityInformation capacityInfo;
-RandomSourceRelatedThings randomSource;
+// ----- hard memory space definitions begin
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
 DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
-EEPROMWrapper eeprom{0};
-RTCMemoryBlock rtcInterface;
-struct CH351 {
-  constexpr explicit CH351(uint8_t baseAddress) noexcept
-    : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
-  }
-  constexpr auto getBaseAddress() const noexcept {
-    return _baseAddress;
-  }
-  constexpr auto getDataPortBaseAddress() const noexcept {
-    return _dataPortBaseAddress;
-  }
-  constexpr auto getDataPortReadAddressBase() const noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
-          return _dataPortBaseAddress + 2;
-      } else {
-          return _dataPortBaseAddress;
-      }
-  }
-  constexpr auto getDataPortWriteAddressBase() const noexcept {
-      return _dataPortBaseAddress;
-  }
-  constexpr auto getConfigPortBaseAddress() const noexcept {
-    return _cfgPortBaseAddress;
-  }
-private:
-  uint8_t _baseAddress;
-  uint8_t _dataPortBaseAddress;
-  uint8_t _cfgPortBaseAddress;
-};
-constexpr uint32_t makeAddress(uint8_t value) noexcept {
-    return static_cast<uint32_t>(value & 0b111111) << 16;
-}
-static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
-static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
-
-constexpr uint32_t EBIAddressTable[256] {
-#define X(value) makeAddress(value), 
-#include "Entry255.def"
-#undef X
-};
-
-constexpr uint32_t EBIOutputTransformation[256] {
-#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
-#include "Entry255.def"
-#undef X
-};
-constexpr auto AddressLineAddress = 0b1000;
-constexpr auto DataLinesAddress = 0;
-constexpr CH351 addressLines{ AddressLineAddress }, 
-                dataLines{ DataLinesAddress };
-
-struct EBIWrapperInterface {
-public:
-  EBIWrapperInterface() = delete;
-  ~EBIWrapperInterface() = delete;
-  EBIWrapperInterface(const EBIWrapperInterface&) = delete;
-  EBIWrapperInterface(EBIWrapperInterface&&) = delete;
-  EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
-  EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
-  static void
-  begin() noexcept {
-    _currentDirection = OUTPUT;
-    for (auto a : {
-           Pin::EBI_A5,
-           Pin::EBI_A4,
-           Pin::EBI_A3,
-           Pin::EBI_A2,
-           Pin::EBI_A1,
-           Pin::EBI_A0,
-           Pin::EBI_RD,
-           Pin::EBI_WR,
-           Pin::EBI_D0,
-           Pin::EBI_D1,
-           Pin::EBI_D2,
-           Pin::EBI_D3,
-           Pin::EBI_D4,
-           Pin::EBI_D5,
-           Pin::EBI_D6,
-           Pin::EBI_D7,
-         }) {
-      pinMode(a, OUTPUT);
-      digitalWrite(a, LOW);
-    }
-    // force EBI_A4 and A5 to low  since we will never be accessing that
-    setAddress(0);
-    digitalWriteFast(Pin::EBI_RD, HIGH);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
-    setDataLines<true>(0);
-  }
-  template<bool directPortManipulation = UseDirectPortManipulation>
-  static void
-  setAddress(uint8_t address) noexcept {
-      if constexpr (directPortManipulation) {
-          // the address table lookup is necessary because the address bits are
-          // backwards compared to the GPIO index
-          // 0: A5
-          // 1: A4
-          // 2: A3
-          // 3: A2
-          // 4: A1
-          // 5: A0
-          //
-          // This layout is taken from the Raspberry pi 0-4's SMI alternate
-          // mode. It allows me to leverage a PCB I made with the two CH351s
-          // meant for a raspberry pi 4.
-          GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-          GPIO6_DR_SET = EBIAddressTable[address];
-      } else {
-          digitalWriteFast(Pin::EBI_A0, address & 0b000001);
-          digitalWriteFast(Pin::EBI_A1, address & 0b000010);
-          digitalWriteFast(Pin::EBI_A2, address & 0b000100);
-          digitalWriteFast(Pin::EBI_A3, address & 0b001000);
-          digitalWriteFast(Pin::EBI_A4, address & 0b010000);
-          digitalWriteFast(Pin::EBI_A5, address & 0b100000);
-      }
-  }
-  template<bool checkD0 = true, bool useDirectPortRead = UseDirectPortManipulation>
-  static uint8_t
-  readDataLines() noexcept {
-      if constexpr (useDirectPortRead) {
-          return static_cast<uint8_t>((GPIO6_PSR) >> 24);
-      } else {
-          uint8_t value = 0;
-#define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
-          //@todo accelerate using direct GPIO port reads
-          if constexpr (checkD0) {
-              X(Pin::EBI_D0, 0b00000001);
-          }
-          X(Pin::EBI_D1, 0b00000010);
-          X(Pin::EBI_D2, 0b00000100);
-          X(Pin::EBI_D3, 0b00001000);
-          X(Pin::EBI_D4, 0b00010000);
-          X(Pin::EBI_D5, 0b00100000);
-          X(Pin::EBI_D6, 0b01000000);
-          X(Pin::EBI_D7, 0b10000000);
-#undef X
-          return value;
-      }
-  }
-  template<bool force = false, bool directPortManipulation = UseDirectPortManipulation>
-  static void
-  setDataLines(uint8_t value) noexcept {
-      // clear then set the corresponding bits
-      if constexpr (!force) {
-          if (_currentOutputDataLines == value) {
-              return;
-          }
-      }
-      if constexpr (directPortManipulation) {
-          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
-          GPIO6_DR_SET = EBIOutputTransformation[value];
-      } else {
-
-          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
-          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010));
-          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100));
-          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000));
-          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000));
-          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000));
-          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000));
-          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000));
-      }
-      _currentOutputDataLines = value;
-  }
-
-  template<PinDirection direction, bool directPortManipulation = UseDirectPortManipulation>
-  static void
-  setDataLinesDirection() noexcept {
-      if (_currentDirection != direction) {
-          if constexpr (directPortManipulation) {
-              // I get a warning from the compiler if I do &= and |= directly
-              // on GPIO6_GDIR. It warning states that doing that with a
-              // volatile variable is deprecated. This form, however, is
-              // supported.
-              auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
-              if constexpr (direction == OUTPUT) {
-                  GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
-              } else {
-                  GPIO6_GDIR = value;
-              }
-              SynchronizeData; // Make sure that the direction update is
-                               // happening
-
-          } else {
-#define X(p) pinMode(p, direction)
-              X(Pin::EBI_D0);
-              X(Pin::EBI_D1);
-              X(Pin::EBI_D2);
-              X(Pin::EBI_D3);
-              X(Pin::EBI_D4);
-              X(Pin::EBI_D5);
-              X(Pin::EBI_D6);
-              X(Pin::EBI_D7);
-#undef X
-          }
-          _currentDirection = direction; 
-      }
-
-  }
-
-private:
-  static inline PinDirection _currentDirection = OUTPUT;
-  static inline uint8_t _currentOutputDataLines = 0;
-};
-using EBIInterface = EBIWrapperInterface;
-// we want to make it as easy as possible to do display updates without having
-// to override everything, only the parts you need to do
-
-struct InterfaceTimingDescription {
-    uint32_t addressWait;
-    uint32_t setupTime;
-    uint32_t holdTime;
-    uint32_t afterTime;
-    constexpr InterfaceTimingDescription(uint32_t a, uint32_t b, uint32_t c, uint32_t d) : addressWait(a), setupTime(b), holdTime(c), afterTime(d) { }
-};
-template<uint32_t value>
-inline void fixedDelayNanoseconds() noexcept {
-    if constexpr (value > 0) {
-        delayNanoseconds(value);
-    }
-}
-static constexpr InterfaceTimingDescription defaultWrite8{
-    50, 30, 100, 150
-}; // 330ns worth of delay
-static constexpr InterfaceTimingDescription customWrite8 {
-    10, // address wait
-    0,  // setup time
-    30, // hold time
-    0   // after time / resting time
-}; // 40ns worth of delay
-   
-
-static constexpr InterfaceTimingDescription defaultRead8 {
-    100, 80, 20, 50
-}; // 250ns worth of delay
-static constexpr InterfaceTimingDescription customRead8 {
-    10, 50, 0, 0 
-}; // 60ns worth of delay
-static constexpr auto WriteConfiguration = customWrite8;
-static constexpr auto ReadConfiguration = customRead8;
-struct i960Interface {
-  i960Interface() = delete;
-  ~i960Interface() = delete;
-  i960Interface(const i960Interface&) = delete;
-  i960Interface(i960Interface&&) = delete;
-  i960Interface& operator=(const i960Interface&) = delete;
-  i960Interface& operator=(i960Interface&&) = delete;
-  // signal information from CH351DS3.pdf
-  // TWW : Valid Write Strobe Pulse Width : 25ns (40ns) minimum
-  // TRW : Valid Read Strobe Pulse Width : 25ns (40ns) minimum
-  // TWS : Read or Write strobe pulse interval width : 25ns (40ns) minimum
-  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
-  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
-  // TIS : Data input setup time before write strobe : 5 ns minimum
-  // TIH : Data input hold time after write strobe : 5 ns minimum
-  // TON : Read strobe assert to data out valid time : 
-  //        typical time: 15ns (22ns)
-  //        maximum time: 22ns (33ns)
-  // TOF : Read strobe deassert to data out invalid time :
-  //        maximum time: 18 (25ns)
-  //
-  // The parens contain the 3.3v times so for the teensy, this is what we care
-  // about:
-  //
-  // TWW : Valid Write Strobe Pulse Width : 40ns minimum
-  // TRW : Valid Read Strobe Pulse Width : 40ns minimum
-  // TWS : Read or Write strobe pulse interval width : 40ns minimum
-  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
-  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
-  // TIS : Data input setup time before write strobe : 5 ns minimum
-  // TIH : Data input hold time after write strobe : 5 ns minimum
-  // TON : Read strobe assert to data out valid time : 
-  //        typical time: 22ns
-  //        maximum time: 33ns
-  // TOF : Read strobe deassert to data out invalid time :
-  //        maximum time: 25ns
-
-  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = WriteConfiguration>
-  static inline void write8(uint8_t address, uint8_t value) noexcept {
-      if constexpr (CompareWithPrevious) {
-          if (EBIOutputStorage[address] == value) {
-              return;
-          }
-      }
-      /// @todo once new board comes in we can implement the fixed direction
-      /// design
-      EBIInterface::setDataLinesDirection<OUTPUT>();
-      EBIInterface::setAddress(address);
-      EBIInterface::setDataLines(value);
-
-      fixedDelayNanoseconds<decl.addressWait>();
-      fixedDelayNanoseconds<decl.setupTime>(); // setup time (tDS), normally 30
-      digitalWriteFast(Pin::EBI_WR, LOW);
-      fixedDelayNanoseconds<decl.holdTime>(); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
-      // update the address
-      EBIOutputStorage[address] = value;
-      fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
-  }
-
-  template<InterfaceTimingDescription decl = ReadConfiguration>
-  static inline uint8_t
-  read8(uint8_t address) noexcept {
-      // the CH351 has some very strict requirements
-      // This function will take at least 230 ns to complete
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(address);
-      fixedDelayNanoseconds<decl.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
-      uint8_t output = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<decl.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
-      return output;
-  }
-
-  static void
-  begin() noexcept {
-      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
-      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
-          // lower 16-bits are for the i960 read port
-          write8<false>(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
-          write8<false>(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
-          // upper 16-bits are for the i960 write port
-          write8<false>(dataLines.getConfigPortBaseAddress() + 2, 0);
-          write8<false>(dataLines.getConfigPortBaseAddress() + 3, 0);
-          // after this point, the code will no longer change directions since
-          // it is unnecessary
-      } else if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          // configure the data bus for a read operation (which is output to the i960)
-        configureDataLinesForRead<false>();
-      }
-      EBIInterface::setDataLines(0);
-  }
-  template<uint16_t value, bool compareWithPrevious = true>
-  static inline void
-  configureDataLinesDirection() noexcept {
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
-      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
-  }
-  template<bool compareWithPrevious = true>
-  static inline void
-  configureDataLinesForRead() noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0xFFFF, compareWithPrevious>();
-      }
-  }
-  template<bool compareWithPrevious = true>
-  static inline void
-  configureDataLinesForWrite() noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0, compareWithPrevious>();
-      }
-  }
-  static void
-  waitForReadySignal() noexcept {
-      while (!readyTriggered);
-  }
-  template<bool wait = true, uint32_t readyDelayTimer = 0>
-  static void
-  signalReady() noexcept {
-      readyTriggered = false;
-      // run and block until we get the completion pulse
-      digitalToggleFast(Pin::READY);
-      if constexpr (wait) {
-          waitForReadySignal();
-          fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
-      }
-  }
-  static inline bool
-  isReadOperation() noexcept {
-    return digitalReadFast(Pin::WR) == LOW;
-  }
-  static inline bool
-  isWriteOperation() noexcept {
-    return digitalReadFast(Pin::WR) == HIGH;
-  }
-  static uint32_t 
-  getAddress() noexcept {
-      uint32_t value = 0;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      SynchronizeData;
-      return value;
-  }
-  static inline bool
-  isBurstLast() noexcept {
-    return digitalReadFast(Pin::BLAST) == LOW;
-  }
-  static inline bool
-  byteEnableLow() noexcept {
-    return digitalReadFast(Pin::BE0) == LOW;
-  }
-  static inline bool
-  byteEnableHigh() noexcept {
-    return digitalReadFast(Pin::BE1) == LOW;
-  }
-  static inline void
-  writeDataLines(uint16_t value) noexcept {
-      constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
-      write8(baseAddress, static_cast<uint8_t>(value)); 
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
-  }
-  static inline uint16_t
-  readDataLines() noexcept {
-      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
-      uint16_t lo = read8(baseAddress);
-      uint16_t hi = read8(baseAddress+1);
-      SynchronizeData;
-      return lo | (hi << 8);
-  }
-
-  template<bool isReadTransaction>
-  static inline void
-  doNothingTransaction() noexcept {
-    if constexpr (isReadTransaction) {
-      writeDataLines(0);
-    }
-    while (true) {
-      if (isBurstLast()) {
-        break;
-      }
-      signalReady();
-    }
-    signalReady();
-  }
-  template<MemoryCell MC>
-  static void
-  doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
-          writeDataLines(target.getWord(wordOffset));
-          if (isBurstLast()) {
-              break;
-          } 
-          signalReady();
-      }
-      signalReady<false>();
-  }
-  template<MemoryCell MC>
-  static void
-  doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
-          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
-          if (isBurstLast()) {
-              break;
-          } 
-          signalReady();
-      }
-      signalReady<false>();
-  }
-  template<bool isReadTransaction, MemoryCell MC>
-  static inline void
-  doMemoryCellTransaction(MC& target, uint8_t offset) noexcept {
-      target.update();
-      if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction(target, offset);
-      } else {
-          doMemoryCellWriteTransaction(target, offset);
-      }
-      target.onFinish();
-  }
-  template<bool isReadTransaction, MemoryCell MC>
-  static inline void 
-  transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
-      if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction(cell, offset);
-      } else {
-          doNothingTransaction<isReadTransaction>();
-      }
-  }
-  template<bool isReadTransaction>
-  static inline void
-  handleBuiltinDevices(uint8_t offset) noexcept {
-      auto lineOffset = offset & 0xF;
-      switch (offset) {
-          case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction>(CLKValues, lineOffset);
-              break;
-          case 0x08 ... 0x0F:
-              doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
-              break;
-          case 0x10 ... 0x1F:
-              doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
-              break;
-          case 0x20 ... 0x2F:
-              doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
-              break;
-          case 0x30 ... 0x3F:
-              // new entropy related stuff
-              doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
-              break;
-          case 0x40 ... 0x4F:
-              doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
-              break;
-          default:
-              doNothingTransaction<isReadTransaction>();
-              break;
-      }
-  }
-  template<bool isReadTransaction>
-  static inline void
-  doIOTransaction(uint32_t address) noexcept {
-      switch (address & 0xFF'FFFF) {
-          case 0x00'0000 ... 0x00'00FF:
-              handleBuiltinDevices<isReadTransaction>(address & 0xFF);
-              break;
-          //case 0x00'0100 ... 0x00'01FF:
-          //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
-          //    break;
-          case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
-              break;
-          case 0x00'1000 ... 0x00'1FFF: // EEPROM
-              eeprom.updateBaseAddress(address);
-              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
-              break;
-          case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], address & 0xF);
-              break;
-          default:
-              doNothingTransaction<isReadTransaction>();
-              break;
-      }
-  }
-
-  template<bool isReadTransaction>
-  static inline void
-  doMemoryTransaction(uint32_t address) noexcept {
-      if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
-          if constexpr (isReadTransaction) { 
-              i960Interface::configureDataLinesForRead();
-          } else {
-              i960Interface::configureDataLinesForWrite();
-          }
-      }
-      switch (static_cast<uint8_t>(address >> 24)) {
-          case 0x00: // PSRAM
-              doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
-              break;
-          case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address);
-              break;
-          default:
-              doNothingTransaction<isReadTransaction>();
-              break;
-      }
-  }
-  static void 
-  setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
-      CLKValues.setWord32(0, clk1);
-      CLKValues.setWord32(1, clk2);
-  }
-private:
-  // allocate a 2k memory cache like the avr did
-  static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
-  // use this to keep track of the output values that were sent to the EBI
-  // useful when you don't want to waste time if the given output address
-  // already contains the value in question. This does not apply to reads
-  static inline uint8_t EBIOutputStorage[256] = { 0 }; 
-};
-
-namespace i960 {
-namespace {
-    template<ManagementEngineReceiveOpcode code>
-    constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
-    template<ManagementEngineReceiveOpcode code>
-    void
-    doFixedWriteOperation() noexcept {
-        managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
-    }
-    template<ManagementEngineRequestOpcode code>
-    int
-    requestByte() noexcept {
-        static constexpr uint8_t InstructionSequence[] {
-            static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
-            static_cast<uint8_t>(code),
-        };
-        uint8_t result = 0;
-        if (managementEngine.write_then_read(InstructionSequence, sizeof(InstructionSequence), 
-                                             &result, sizeof(uint8_t))) {
-            return result;
-        } else {
-            return -1;
-        }
-    }
-}
-void
-putCPUInReset() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
-    cpuIsRunning = false;
-}
-
-void
-pullCPUOutOfReset() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
-    cpuIsRunning = true;
-}
-bool
-cpuRunning() noexcept {
-    return cpuIsRunning;
-}
-void
-holdBus() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
-}
-void
-releaseBus() noexcept {
-    doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
-}
-
-bool
-isBusLocked() noexcept {
-    return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
-}
-
-bool
-isBusHeld() noexcept {
-    return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
-}
-
-}
-
-void 
-setupSDCard() noexcept {
-    if (!SD.begin(BUILTIN_SDCARD)) {
-        Serial.println("No SDCARD found!");
-        return;
-    } 
-    Serial.println("SDCARD Found");
-    if (!SD.exists("prog.bin")) {
-        Serial.println("prog.bin not found! No boot image will be installed");
-        return;
-    } 
-    auto file = SD.open("prog.bin");
-    if (file.size() > MemoryPoolSizeInBytes) {
-        Serial.println("Boot image is too large!");
-    } else {
-        Serial.print("Installing prog.bin...");
-        file.read(memory960, file.size());
-        Serial.println("done");
-    }
-    file.close();
-}
-
-
-
-void setupRandomSeed() noexcept {
-    // allow the entropy source to actually block until we get enough
-    // randomness
-  uint32_t newSeed = Entropy.random();
-#define X(pin) newSeed += analogRead(pin)
-  X(A0);
-  X(A1);
-  X(A2);
-  X(A3);
-  X(A4);
-  X(A5);
-  X(A6);
-  X(A7);
-  X(A8);
-  X(A9);
-  X(A10);
-  X(A11);
-  X(A12);
-  X(A14);
-  X(A15);
-  X(A16);
-  X(A17);
-#undef X
-  newSeed += rtc.now().unixtime();
-  randomSeed(newSeed);
-  Serial.printf("Random Seed: 0x%x\n", newSeed);
-}
-void setupMemory() noexcept {
-  Serial.println("Clearing PSRAM");
-  for (auto& a : memory960) {
-      a.clear();
-  }
-  Serial.println("Clearing SRAM Caches");
-  for (auto& cell : sramCache) {
-      cell.clear();
-  }
-  for (auto& cell : sramCache2) {
-      cell.clear();
-  }
-}
-void
-setupRTC() noexcept {
-    if (rtc.begin(&Wire2)) {
-        if (rtc.lostPower()) {
-            rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-        }
-        Serial.println("Found RTC!");
-        auto now = rtc.now();
-        Serial.printf("unixtime: %d\n", now.unixtime());
-    }
-}
-void
-sinkWire() noexcept {
-    while (Wire2.available()) {
-        (void)Wire2.read();
-    }
-}
-const uint8_t setCPUClockMode_CLKAll [] { 0, 0 };
-
-void
-displayClockSpeedInformation() noexcept {
-    SplitWord64 clk3;
-    managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
-            clk3.bytes, sizeof(clk3));
-    Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
-    i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
-}
-void
-waitForAVRToComeUp() noexcept {
-    static const uint8_t InstructionSequence[] {
-        static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
-        static_cast<uint8_t>(ManagementEngineRequestOpcode::ChipIsReady),
-    };
-    managementEngine.write(InstructionSequence, sizeof(InstructionSequence));
-
-    bool chipIsUp = false;
-    do {
-        managementEngine.read(reinterpret_cast<uint8_t*>(&chipIsUp), 1);
-    } while (!chipIsUp);
-
-
-}
-namespace i960 {
-    void putCPUInReset() noexcept;
-    void pullCPUOutOfReset() noexcept;
-}
-using i960::putCPUInReset;
-using i960::pullCPUOutOfReset;
-void
-triggerADS() noexcept {
-    adsTriggered = true;
-    //SynchronizeData;
-}
-void
-triggerReadySync() noexcept {
-    readyTriggered = true;
-    //SynchronizeData;
-}
-void
-setupLEDMatrix() noexcept {
-    if (!ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire2)) {
-        Serial.println("IS41 not found!");
-    } else {
-        ledmatrix.setLEDscaling(0xff);
-        ledmatrix.setGlobalCurrent(0xff);
-        Serial.print("Global LED Current set to: ");
-        Serial.println(ledmatrix.getGlobalCurrent());
-        ledmatrix.fill(0);
-        ledmatrix.enable(true);
-        ledmatrix.setRotation(0);
-        ledmatrix.setTextWrap(false);
-        ledmatrix.print("i960");
-        ledmatrix.setGlobalCurrent(5);
-    }
-}
-void 
-triggerSystemTimer() noexcept {
-    if (systemCounterEnabled) {
-        digitalToggleFast(Pin::INT960_0); 
-    }
-}
-
-void configureShells();
-void processRealtimeShell() noexcept;
-void 
-setup() {
-    cpuIsRunning = false;
-    Wire2.begin();
-    managementEngine.begin();
-    delay(1000);
-    waitForAVRToComeUp();
-    putCPUInReset();
-    inputPin(Pin::ADS);
-    outputPin(Pin::INT960_0, HIGH);
-    outputPin(Pin::INT960_1, LOW);
-    outputPin(Pin::INT960_2, LOW);
-    outputPin(Pin::INT960_3, HIGH);
-    inputPin(Pin::BE0);
-    inputPin(Pin::BE1);
-    inputPin(Pin::WR);
-    outputPin(Pin::READY, HIGH);
-    inputPin(Pin::BLAST);
-    inputPin(Pin::READY_SYNC);
-
-
-    Serial.begin(115200);
-    Serial1.begin(115200); // connection to the AVR
-    SerialUSB1.begin(115200); // chipset_realtime interface
-    SerialUSB2.begin(115200); // propagation of management shell interface
-    while (!Serial) {
-        delay(10);
-    }
-    configureShells();
-    Entropy.Initialize();
-    EEPROM.begin();
-    // put your setup code here, to run once:
-    EBIInterface::begin();
-    i960Interface::begin();
-    setupMemory();
-    setupRTC();
-    setupSDCard();
-    SPI.begin();
-    setupRandomSeed();
-    setupLEDMatrix();
-    Entropy.Initialize();
-    PCJoystick::begin();
-    GamepadQT::begin();
-    systemTimer.begin(triggerSystemTimer, 100'000);
-    attachInterrupt(Pin::ADS, triggerADS, FALLING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
-    displayClockSpeedInformation();
-    pullCPUOutOfReset();
-    // so attaching the interrupt seems to not be functioning fully
-}
-void 
-tryDoTransaction() noexcept {
-    if (adsTriggered) {
-        adsTriggered = false;
-        auto targetAddress = i960Interface::getAddress();
-        //Serial.printf("Target Address: 0x%x\n", targetAddress);
-        if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
-        } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
-        }
-    } 
-}
-void
-handleAVRSerialConnection() noexcept {
-    if (Serial1.available()) {
-        SerialUSB2.write(Serial1.read());
-    }
-    if (SerialUSB2.available()) {
-        Serial1.write(SerialUSB2.read());
-    }
-}
-void 
-loop() {
-    tryDoTransaction();
-    handleAVRSerialConnection();
-    processRealtimeShell();
-}
-
-namespace RealtimeShell {
-    static int ioRead(ush_object* self, char* ch) {
-        if (SerialUSB1.available() > 0) {
-            *ch = SerialUSB1.read();
-            return 1;
-        }
-        return 0;
-    }
-
-    static int ioWrite(ush_object* self, char ch) {
-        return (SerialUSB1.write(ch) == 1);
-    }
-
-    const ush_io_interface ioInterface = { .read = ioRead, .write = ioWrite, };
-    char inputBuffer[256];
-    char outputBuffer[256];
-    constexpr auto PATH_MAX_SIZE = 256;
-    ush_object ush;
-    const ush_descriptor descriptor = {
-        .io = &ioInterface,
-        .input_buffer = inputBuffer,
-        .input_buffer_size = sizeof(inputBuffer),
-        .output_buffer = outputBuffer,
-        .output_buffer_size = sizeof(outputBuffer),
-        .path_max_length = PATH_MAX_SIZE,
-        .hostname = "chipset_realtime",
-    };
-    size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-        static const char* message = "Teensy Chipset Realtime Console\r\n";
-        *data = (uint8_t*)message;
-        return strlen(message);
-    }
-    static const ush_file_descriptor rootFiles[] {
-        {
-            .name = "info.txt",
-            .description = nullptr,
-            .help = nullptr,
-            .exec = nullptr,
-            .get_data = infoGetDataCallback,
-        }
-    };
-    static const ush_file_descriptor devFiles[] {
-        INTERFACE_ENGINE_COMMON_DEVICES,
-    };
-    static ush_node_object root;
-    static ush_node_object dev;
-    void begin() {
-        ush_init(&ush, &descriptor);
-        InterfaceEngine::installCommonCommands(&ush);
-        InterfaceEngine::installI960Commands(&ush);
-        ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
-        ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
-        InterfaceEngine::installEepromDeviceDirectory(&ush);
-        InterfaceEngine::installI960Devices(&ush);
-    }
-    void runService() noexcept { ush_service(&ush); }
-}
-
-void
-processRealtimeShell() noexcept {
-    RealtimeShell::runService();
-}
-
-
-
-void
-configureShells() noexcept {
-    RealtimeShell::begin();
-}
-
 // ------ Filesystem components begin ------
 
 
@@ -1633,3 +704,940 @@ private:
     // layout for this 16-byte page is:
     //
 };
+
+FileTracker sdcardTracker;
+USBSerialBlock usbSerial;
+TimingRelatedThings timingInfo;
+CapacityInformation capacityInfo;
+RandomSourceRelatedThings randomSource;
+EEPROMWrapper eeprom{0};
+RTCMemoryBlock rtcInterface;
+RawFilesystemInterface sdcardInterface;
+struct CH351 {
+  constexpr explicit CH351(uint8_t baseAddress) noexcept
+    : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
+  }
+  constexpr auto getBaseAddress() const noexcept {
+    return _baseAddress;
+  }
+  constexpr auto getDataPortBaseAddress() const noexcept {
+    return _dataPortBaseAddress;
+  }
+  constexpr auto getDataPortReadAddressBase() const noexcept {
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+          return _dataPortBaseAddress + 2;
+      } else {
+          return _dataPortBaseAddress;
+      }
+  }
+  constexpr auto getDataPortWriteAddressBase() const noexcept {
+      return _dataPortBaseAddress;
+  }
+  constexpr auto getConfigPortBaseAddress() const noexcept {
+    return _cfgPortBaseAddress;
+  }
+private:
+  uint8_t _baseAddress;
+  uint8_t _dataPortBaseAddress;
+  uint8_t _cfgPortBaseAddress;
+};
+constexpr uint32_t makeAddress(uint8_t value) noexcept {
+    return static_cast<uint32_t>(value & 0b111111) << 16;
+}
+static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
+static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
+
+constexpr uint32_t EBIAddressTable[256] {
+#define X(value) makeAddress(value), 
+#include "Entry255.def"
+#undef X
+};
+
+constexpr uint32_t EBIOutputTransformation[256] {
+#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
+#include "Entry255.def"
+#undef X
+};
+constexpr auto AddressLineAddress = 0b1000;
+constexpr auto DataLinesAddress = 0;
+constexpr CH351 addressLines{ AddressLineAddress }, 
+                dataLines{ DataLinesAddress };
+
+struct EBIWrapperInterface {
+public:
+  EBIWrapperInterface() = delete;
+  ~EBIWrapperInterface() = delete;
+  EBIWrapperInterface(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface(EBIWrapperInterface&&) = delete;
+  EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
+  static void
+  begin() noexcept {
+    _currentDirection = OUTPUT;
+    for (auto a : {
+           Pin::EBI_A5,
+           Pin::EBI_A4,
+           Pin::EBI_A3,
+           Pin::EBI_A2,
+           Pin::EBI_A1,
+           Pin::EBI_A0,
+           Pin::EBI_RD,
+           Pin::EBI_WR,
+           Pin::EBI_D0,
+           Pin::EBI_D1,
+           Pin::EBI_D2,
+           Pin::EBI_D3,
+           Pin::EBI_D4,
+           Pin::EBI_D5,
+           Pin::EBI_D6,
+           Pin::EBI_D7,
+         }) {
+      pinMode(a, OUTPUT);
+      digitalWrite(a, LOW);
+    }
+    // force EBI_A4 and A5 to low  since we will never be accessing that
+    setAddress(0);
+    digitalWriteFast(Pin::EBI_RD, HIGH);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+    setDataLines<true>(0);
+  }
+  template<bool directPortManipulation = UseDirectPortManipulation>
+  static void
+  setAddress(uint8_t address) noexcept {
+      if constexpr (directPortManipulation) {
+          // the address table lookup is necessary because the address bits are
+          // backwards compared to the GPIO index
+          // 0: A5
+          // 1: A4
+          // 2: A3
+          // 3: A2
+          // 4: A1
+          // 5: A0
+          //
+          // This layout is taken from the Raspberry pi 0-4's SMI alternate
+          // mode. It allows me to leverage a PCB I made with the two CH351s
+          // meant for a raspberry pi 4.
+          GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+          GPIO6_DR_SET = EBIAddressTable[address];
+      } else {
+          digitalWriteFast(Pin::EBI_A0, address & 0b000001);
+          digitalWriteFast(Pin::EBI_A1, address & 0b000010);
+          digitalWriteFast(Pin::EBI_A2, address & 0b000100);
+          digitalWriteFast(Pin::EBI_A3, address & 0b001000);
+          digitalWriteFast(Pin::EBI_A4, address & 0b010000);
+          digitalWriteFast(Pin::EBI_A5, address & 0b100000);
+      }
+  }
+  template<bool checkD0 = true, bool useDirectPortRead = UseDirectPortManipulation>
+  static uint8_t
+  readDataLines() noexcept {
+      if constexpr (useDirectPortRead) {
+          return static_cast<uint8_t>((GPIO6_PSR) >> 24);
+      } else {
+          uint8_t value = 0;
+#define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
+          //@todo accelerate using direct GPIO port reads
+          if constexpr (checkD0) {
+              X(Pin::EBI_D0, 0b00000001);
+          }
+          X(Pin::EBI_D1, 0b00000010);
+          X(Pin::EBI_D2, 0b00000100);
+          X(Pin::EBI_D3, 0b00001000);
+          X(Pin::EBI_D4, 0b00010000);
+          X(Pin::EBI_D5, 0b00100000);
+          X(Pin::EBI_D6, 0b01000000);
+          X(Pin::EBI_D7, 0b10000000);
+#undef X
+          return value;
+      }
+  }
+  template<bool force = false, bool directPortManipulation = UseDirectPortManipulation>
+  static void
+  setDataLines(uint8_t value) noexcept {
+      // clear then set the corresponding bits
+      if constexpr (!force) {
+          if (_currentOutputDataLines == value) {
+              return;
+          }
+      }
+      if constexpr (directPortManipulation) {
+          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+          GPIO6_DR_SET = EBIOutputTransformation[value];
+      } else {
+
+          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
+          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010));
+          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100));
+          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000));
+          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000));
+          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000));
+          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000));
+          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000));
+      }
+      _currentOutputDataLines = value;
+  }
+
+  template<PinDirection direction, bool directPortManipulation = UseDirectPortManipulation>
+  static void
+  setDataLinesDirection() noexcept {
+      if (_currentDirection != direction) {
+          if constexpr (directPortManipulation) {
+              // I get a warning from the compiler if I do &= and |= directly
+              // on GPIO6_GDIR. It warning states that doing that with a
+              // volatile variable is deprecated. This form, however, is
+              // supported.
+              auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+              if constexpr (direction == OUTPUT) {
+                  GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
+              } else {
+                  GPIO6_GDIR = value;
+              }
+              SynchronizeData; // Make sure that the direction update is
+                               // happening
+
+          } else {
+#define X(p) pinMode(p, direction)
+              X(Pin::EBI_D0);
+              X(Pin::EBI_D1);
+              X(Pin::EBI_D2);
+              X(Pin::EBI_D3);
+              X(Pin::EBI_D4);
+              X(Pin::EBI_D5);
+              X(Pin::EBI_D6);
+              X(Pin::EBI_D7);
+#undef X
+          }
+          _currentDirection = direction; 
+      }
+
+  }
+
+private:
+  static inline PinDirection _currentDirection = OUTPUT;
+  static inline uint8_t _currentOutputDataLines = 0;
+};
+using EBIInterface = EBIWrapperInterface;
+// i960 common interface begin
+// we want to make it as easy as possible to do display updates without having
+// to override everything, only the parts you need to do
+
+struct InterfaceTimingDescription {
+    uint32_t addressWait;
+    uint32_t setupTime;
+    uint32_t holdTime;
+    uint32_t afterTime;
+    constexpr InterfaceTimingDescription(uint32_t a, uint32_t b, uint32_t c, uint32_t d) : addressWait(a), setupTime(b), holdTime(c), afterTime(d) { }
+};
+template<uint32_t value>
+inline void fixedDelayNanoseconds() noexcept {
+    if constexpr (value > 0) {
+        delayNanoseconds(value);
+    }
+}
+static constexpr InterfaceTimingDescription defaultWrite8{
+    50, 30, 100, 150
+}; // 330ns worth of delay
+static constexpr InterfaceTimingDescription customWrite8 {
+    10, // address wait
+    0,  // setup time
+    30, // hold time
+    0   // after time / resting time
+}; // 40ns worth of delay
+   
+
+static constexpr InterfaceTimingDescription defaultRead8 {
+    100, 80, 20, 50
+}; // 250ns worth of delay
+static constexpr InterfaceTimingDescription customRead8 {
+    10, 50, 0, 0 
+}; // 60ns worth of delay
+static constexpr auto WriteConfiguration = customWrite8;
+static constexpr auto ReadConfiguration = customRead8;
+struct i960Interface {
+  i960Interface() = delete;
+  ~i960Interface() = delete;
+  i960Interface(const i960Interface&) = delete;
+  i960Interface(i960Interface&&) = delete;
+  i960Interface& operator=(const i960Interface&) = delete;
+  i960Interface& operator=(i960Interface&&) = delete;
+  // signal information from CH351DS3.pdf
+  // TWW : Valid Write Strobe Pulse Width : 25ns (40ns) minimum
+  // TRW : Valid Read Strobe Pulse Width : 25ns (40ns) minimum
+  // TWS : Read or Write strobe pulse interval width : 25ns (40ns) minimum
+  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
+  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
+  // TIS : Data input setup time before write strobe : 5 ns minimum
+  // TIH : Data input hold time after write strobe : 5 ns minimum
+  // TON : Read strobe assert to data out valid time : 
+  //        typical time: 15ns (22ns)
+  //        maximum time: 22ns (33ns)
+  // TOF : Read strobe deassert to data out invalid time :
+  //        maximum time: 18 (25ns)
+  //
+  // The parens contain the 3.3v times so for the teensy, this is what we care
+  // about:
+  //
+  // TWW : Valid Write Strobe Pulse Width : 40ns minimum
+  // TRW : Valid Read Strobe Pulse Width : 40ns minimum
+  // TWS : Read or Write strobe pulse interval width : 40ns minimum
+  // TAS : Address input setup time (RD or WR) [ before ] : 2 ns minimum
+  // TAH : Address hold time (RD or WR ) [ after ] : 3 ns minimum
+  // TIS : Data input setup time before write strobe : 5 ns minimum
+  // TIH : Data input hold time after write strobe : 5 ns minimum
+  // TON : Read strobe assert to data out valid time : 
+  //        typical time: 22ns
+  //        maximum time: 33ns
+  // TOF : Read strobe deassert to data out invalid time :
+  //        maximum time: 25ns
+
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = WriteConfiguration>
+  static inline void write8(uint8_t address, uint8_t value) noexcept {
+      if constexpr (CompareWithPrevious) {
+          if (EBIOutputStorage[address] == value) {
+              return;
+          }
+      }
+      /// @todo once new board comes in we can implement the fixed direction
+      /// design
+      EBIInterface::setDataLinesDirection<OUTPUT>();
+      EBIInterface::setAddress(address);
+      EBIInterface::setDataLines(value);
+
+      fixedDelayNanoseconds<decl.addressWait>();
+      fixedDelayNanoseconds<decl.setupTime>(); // setup time (tDS), normally 30
+      digitalWriteFast(Pin::EBI_WR, LOW);
+      fixedDelayNanoseconds<decl.holdTime>(); // tWL hold for at least 80ns
+      digitalWriteFast(Pin::EBI_WR, HIGH);
+      // update the address
+      EBIOutputStorage[address] = value;
+      fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
+  }
+
+  template<InterfaceTimingDescription decl = ReadConfiguration>
+  static inline uint8_t
+  read8(uint8_t address) noexcept {
+      // the CH351 has some very strict requirements
+      // This function will take at least 230 ns to complete
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(address);
+      fixedDelayNanoseconds<decl.addressWait>();
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      uint8_t output = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<decl.holdTime>();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<decl.afterTime>();
+      return output;
+  }
+
+  static void
+  begin() noexcept {
+      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
+          // lower 16-bits are for the i960 read port
+          write8<false>(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
+          // upper 16-bits are for the i960 write port
+          write8<false>(dataLines.getConfigPortBaseAddress() + 2, 0);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 3, 0);
+          // after this point, the code will no longer change directions since
+          // it is unnecessary
+      } else if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          // configure the data bus for a read operation (which is output to the i960)
+        configureDataLinesForRead<false>();
+      }
+      EBIInterface::setDataLines(0);
+  }
+  template<uint16_t value, bool compareWithPrevious = true>
+  static inline void
+  configureDataLinesDirection() noexcept {
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
+  }
+  template<bool compareWithPrevious = true>
+  static inline void
+  configureDataLinesForRead() noexcept {
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          configureDataLinesDirection<0xFFFF, compareWithPrevious>();
+      }
+  }
+  template<bool compareWithPrevious = true>
+  static inline void
+  configureDataLinesForWrite() noexcept {
+      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
+          configureDataLinesDirection<0, compareWithPrevious>();
+      }
+  }
+  static void
+  waitForReadySignal() noexcept {
+      while (!readyTriggered);
+  }
+  template<bool wait = true, uint32_t readyDelayTimer = 0>
+  static void
+  signalReady() noexcept {
+      readyTriggered = false;
+      // run and block until we get the completion pulse
+      digitalToggleFast(Pin::READY);
+      if constexpr (wait) {
+          waitForReadySignal();
+          fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
+      }
+  }
+  static inline bool
+  isReadOperation() noexcept {
+    return digitalReadFast(Pin::WR) == LOW;
+  }
+  static inline bool
+  isWriteOperation() noexcept {
+    return digitalReadFast(Pin::WR) == HIGH;
+  }
+  static uint32_t 
+  getAddress() noexcept {
+      uint32_t value = 0;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      SynchronizeData;
+      return value;
+  }
+  static inline bool
+  isBurstLast() noexcept {
+    return digitalReadFast(Pin::BLAST) == LOW;
+  }
+  static inline bool
+  byteEnableLow() noexcept {
+    return digitalReadFast(Pin::BE0) == LOW;
+  }
+  static inline bool
+  byteEnableHigh() noexcept {
+    return digitalReadFast(Pin::BE1) == LOW;
+  }
+  static inline void
+  writeDataLines(uint16_t value) noexcept {
+      constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
+      write8(baseAddress, static_cast<uint8_t>(value)); 
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
+  }
+  static inline uint16_t
+  readDataLines() noexcept {
+      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
+      uint16_t lo = read8(baseAddress);
+      uint16_t hi = read8(baseAddress+1);
+      SynchronizeData;
+      return lo | (hi << 8);
+  }
+
+  template<bool isReadTransaction>
+  static inline void
+  doNothingTransaction() noexcept {
+    if constexpr (isReadTransaction) {
+      writeDataLines(0);
+    }
+    while (true) {
+      if (isBurstLast()) {
+        break;
+      }
+      signalReady();
+    }
+    signalReady();
+  }
+  template<MemoryCell MC>
+  static void
+  doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
+      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
+          writeDataLines(target.getWord(wordOffset));
+          if (isBurstLast()) {
+              break;
+          } 
+          signalReady();
+      }
+      signalReady<false>();
+  }
+  template<MemoryCell MC>
+  static void
+  doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
+      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
+          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          if (isBurstLast()) {
+              break;
+          } 
+          signalReady();
+      }
+      signalReady<false>();
+  }
+  template<bool isReadTransaction, MemoryCell MC>
+  static inline void
+  doMemoryCellTransaction(MC& target, uint8_t offset) noexcept {
+      target.update();
+      if constexpr (isReadTransaction) {
+          doMemoryCellReadTransaction(target, offset);
+      } else {
+          doMemoryCellWriteTransaction(target, offset);
+      }
+      target.onFinish();
+  }
+  template<bool isReadTransaction, MemoryCell MC>
+  static inline void 
+  transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
+      if constexpr (isReadTransaction) {
+          doMemoryCellReadTransaction(cell, offset);
+      } else {
+          doNothingTransaction<isReadTransaction>();
+      }
+  }
+  template<bool isReadTransaction>
+  static inline void
+  handleBuiltinDevices(uint8_t offset) noexcept {
+      auto lineOffset = offset & 0xF;
+      switch (offset) {
+          case 0x00 ... 0x07:
+              transmitConstantMemoryCell<isReadTransaction>(CLKValues, lineOffset);
+              break;
+          case 0x08 ... 0x0F:
+              doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
+              break;
+          case 0x10 ... 0x1F:
+              doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
+              break;
+          case 0x20 ... 0x2F:
+              doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
+              break;
+          case 0x30 ... 0x3F:
+              // new entropy related stuff
+              doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
+              break;
+          case 0x40 ... 0x4F:
+              doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
+              break;
+          case 0x50 ... 0x5F:
+              doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
+              break;
+          default:
+              doNothingTransaction<isReadTransaction>();
+              break;
+      }
+  }
+  template<bool isReadTransaction>
+  static inline void
+  doIOTransaction(uint32_t address) noexcept {
+      switch (address & 0xFF'FFFF) {
+          case 0x00'0000 ... 0x00'00FF:
+              handleBuiltinDevices<isReadTransaction>(address & 0xFF);
+              break;
+          //case 0x00'0100 ... 0x00'01FF:
+          //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
+          //    break;
+          case 0x00'0800 ... 0x00'0FFF: 
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+              break;
+          case 0x00'1000 ... 0x00'1FFF: // EEPROM
+              eeprom.updateBaseAddress(address);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
+              break;
+          case 0x01'0000 ... 0x01'FFFF: // SRAM2
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], address & 0xF);
+              break;
+          default:
+              doNothingTransaction<isReadTransaction>();
+              break;
+      }
+  }
+
+  template<bool isReadTransaction>
+  static inline void
+  doMemoryTransaction(uint32_t address) noexcept {
+      if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
+          if constexpr (isReadTransaction) { 
+              i960Interface::configureDataLinesForRead();
+          } else {
+              i960Interface::configureDataLinesForWrite();
+          }
+      }
+      switch (static_cast<uint8_t>(address >> 24)) {
+          case 0x00: // PSRAM
+              doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              break;
+          case 0xFE: // IO Space
+              doIOTransaction<isReadTransaction>(address);
+              break;
+          default:
+              doNothingTransaction<isReadTransaction>();
+              break;
+      }
+  }
+  static void 
+  setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
+      CLKValues.setWord32(0, clk1);
+      CLKValues.setWord32(1, clk2);
+  }
+private:
+  // allocate a 2k memory cache like the avr did
+  static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
+  // use this to keep track of the output values that were sent to the EBI
+  // useful when you don't want to waste time if the given output address
+  // already contains the value in question. This does not apply to reads
+  static inline uint8_t EBIOutputStorage[256] = { 0 }; 
+};
+
+namespace i960 {
+namespace {
+    template<ManagementEngineReceiveOpcode code>
+    constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
+    template<ManagementEngineReceiveOpcode code>
+    void
+    doFixedWriteOperation() noexcept {
+        managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
+    }
+    template<ManagementEngineRequestOpcode code>
+    int
+    requestByte() noexcept {
+        static constexpr uint8_t InstructionSequence[] {
+            static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
+            static_cast<uint8_t>(code),
+        };
+        uint8_t result = 0;
+        if (managementEngine.write_then_read(InstructionSequence, sizeof(InstructionSequence), 
+                                             &result, sizeof(uint8_t))) {
+            return result;
+        } else {
+            return -1;
+        }
+    }
+}
+void
+putCPUInReset() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
+    cpuIsRunning = false;
+}
+
+void
+pullCPUOutOfReset() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
+    cpuIsRunning = true;
+}
+bool
+cpuRunning() noexcept {
+    return cpuIsRunning;
+}
+void
+holdBus() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
+}
+void
+releaseBus() noexcept {
+    doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
+}
+
+bool
+isBusLocked() noexcept {
+    return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
+}
+
+bool
+isBusHeld() noexcept {
+    return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
+}
+
+}
+
+void 
+setupSDCard() noexcept {
+    if (!SD.begin(BUILTIN_SDCARD)) {
+        Serial.println("No SDCARD found!");
+        return;
+    } 
+    sdcardTracker.begin();
+    Serial.println("SDCARD Found");
+    if (!SD.exists("prog.bin")) {
+        Serial.println("prog.bin not found! No boot image will be installed");
+        return;
+    } 
+    auto file = SD.open("prog.bin");
+    if (file.size() > MemoryPoolSizeInBytes) {
+        Serial.println("Boot image is too large!");
+    } else {
+        Serial.print("Installing prog.bin...");
+        file.read(memory960, file.size());
+        Serial.println("done");
+    }
+    file.close();
+}
+
+
+void setupRandomSeed() noexcept {
+    // allow the entropy source to actually block until we get enough
+    // randomness
+  uint32_t newSeed = Entropy.random();
+#define X(pin) newSeed += analogRead(pin)
+  X(A0);
+  X(A1);
+  X(A2);
+  X(A3);
+  X(A4);
+  X(A5);
+  X(A6);
+  X(A7);
+  X(A8);
+  X(A9);
+  X(A10);
+  X(A11);
+  X(A12);
+  X(A14);
+  X(A15);
+  X(A16);
+  X(A17);
+#undef X
+  newSeed += rtc.now().unixtime();
+  randomSeed(newSeed);
+  Serial.printf("Random Seed: 0x%x\n", newSeed);
+}
+void setupMemory() noexcept {
+  Serial.println("Clearing PSRAM");
+  for (auto& a : memory960) {
+      a.clear();
+  }
+  Serial.println("Clearing SRAM Caches");
+  for (auto& cell : sramCache) {
+      cell.clear();
+  }
+  for (auto& cell : sramCache2) {
+      cell.clear();
+  }
+}
+void
+setupRTC() noexcept {
+    if (rtc.begin(&Wire2)) {
+        if (rtc.lostPower()) {
+            rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        }
+        Serial.println("Found RTC!");
+        auto now = rtc.now();
+        Serial.printf("unixtime: %d\n", now.unixtime());
+    }
+}
+void
+sinkWire() noexcept {
+    while (Wire2.available()) {
+        (void)Wire2.read();
+    }
+}
+const uint8_t setCPUClockMode_CLKAll [] { 0, 0 };
+
+void
+displayClockSpeedInformation() noexcept {
+    SplitWord64 clk3;
+    managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
+            clk3.bytes, sizeof(clk3));
+    Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
+    i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
+}
+void
+waitForAVRToComeUp() noexcept {
+    static const uint8_t InstructionSequence[] {
+        static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
+        static_cast<uint8_t>(ManagementEngineRequestOpcode::ChipIsReady),
+    };
+    managementEngine.write(InstructionSequence, sizeof(InstructionSequence));
+
+    bool chipIsUp = false;
+    do {
+        managementEngine.read(reinterpret_cast<uint8_t*>(&chipIsUp), 1);
+    } while (!chipIsUp);
+
+
+}
+namespace i960 {
+    void putCPUInReset() noexcept;
+    void pullCPUOutOfReset() noexcept;
+}
+using i960::putCPUInReset;
+using i960::pullCPUOutOfReset;
+void
+triggerADS() noexcept {
+    adsTriggered = true;
+    //SynchronizeData;
+}
+void
+triggerReadySync() noexcept {
+    readyTriggered = true;
+    //SynchronizeData;
+}
+void
+setupLEDMatrix() noexcept {
+    if (!ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire2)) {
+        Serial.println("IS41 not found!");
+    } else {
+        ledmatrix.setLEDscaling(0xff);
+        ledmatrix.setGlobalCurrent(0xff);
+        Serial.print("Global LED Current set to: ");
+        Serial.println(ledmatrix.getGlobalCurrent());
+        ledmatrix.fill(0);
+        ledmatrix.enable(true);
+        ledmatrix.setRotation(0);
+        ledmatrix.setTextWrap(false);
+        ledmatrix.print("i960");
+        ledmatrix.setGlobalCurrent(5);
+    }
+}
+void 
+triggerSystemTimer() noexcept {
+    if (systemCounterEnabled) {
+        digitalToggleFast(Pin::INT960_0); 
+    }
+}
+
+void configureShells();
+void processRealtimeShell() noexcept;
+void 
+setup() {
+    cpuIsRunning = false;
+    Wire2.begin();
+    managementEngine.begin();
+    delay(1000);
+    waitForAVRToComeUp();
+    putCPUInReset();
+    inputPin(Pin::ADS);
+    outputPin(Pin::INT960_0, HIGH);
+    outputPin(Pin::INT960_1, LOW);
+    outputPin(Pin::INT960_2, LOW);
+    outputPin(Pin::INT960_3, HIGH);
+    inputPin(Pin::BE0);
+    inputPin(Pin::BE1);
+    inputPin(Pin::WR);
+    outputPin(Pin::READY, HIGH);
+    inputPin(Pin::BLAST);
+    inputPin(Pin::READY_SYNC);
+
+
+    Serial.begin(115200);
+    Serial1.begin(115200); // connection to the AVR
+    SerialUSB1.begin(115200); // chipset_realtime interface
+    SerialUSB2.begin(115200); // propagation of management shell interface
+    while (!Serial) {
+        delay(10);
+    }
+    configureShells();
+    Entropy.Initialize();
+    EEPROM.begin();
+    // put your setup code here, to run once:
+    EBIInterface::begin();
+    i960Interface::begin();
+    setupMemory();
+    setupRTC();
+    setupSDCard();
+    SPI.begin();
+    setupRandomSeed();
+    setupLEDMatrix();
+    Entropy.Initialize();
+    PCJoystick::begin();
+    GamepadQT::begin();
+    systemTimer.begin(triggerSystemTimer, 100'000);
+    attachInterrupt(Pin::ADS, triggerADS, FALLING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
+    displayClockSpeedInformation();
+    pullCPUOutOfReset();
+    // so attaching the interrupt seems to not be functioning fully
+}
+void 
+tryDoTransaction() noexcept {
+    if (adsTriggered) {
+        adsTriggered = false;
+        auto targetAddress = i960Interface::getAddress();
+        //Serial.printf("Target Address: 0x%x\n", targetAddress);
+        if (i960Interface::isReadOperation()) {
+            i960Interface::doMemoryTransaction<true>(targetAddress);
+        } else {
+            i960Interface::doMemoryTransaction<false>(targetAddress);
+        }
+    } 
+}
+void
+handleAVRSerialConnection() noexcept {
+    if (Serial1.available()) {
+        SerialUSB2.write(Serial1.read());
+    }
+    if (SerialUSB2.available()) {
+        Serial1.write(SerialUSB2.read());
+    }
+}
+void 
+loop() {
+    tryDoTransaction();
+    handleAVRSerialConnection();
+    processRealtimeShell();
+}
+
+namespace RealtimeShell {
+    static int ioRead(ush_object* self, char* ch) {
+        if (SerialUSB1.available() > 0) {
+            *ch = SerialUSB1.read();
+            return 1;
+        }
+        return 0;
+    }
+
+    static int ioWrite(ush_object* self, char ch) {
+        return (SerialUSB1.write(ch) == 1);
+    }
+
+    const ush_io_interface ioInterface = { .read = ioRead, .write = ioWrite, };
+    char inputBuffer[256];
+    char outputBuffer[256];
+    constexpr auto PATH_MAX_SIZE = 256;
+    ush_object ush;
+    const ush_descriptor descriptor = {
+        .io = &ioInterface,
+        .input_buffer = inputBuffer,
+        .input_buffer_size = sizeof(inputBuffer),
+        .output_buffer = outputBuffer,
+        .output_buffer_size = sizeof(outputBuffer),
+        .path_max_length = PATH_MAX_SIZE,
+        .hostname = "chipset_realtime",
+    };
+    size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
+        static const char* message = "Teensy Chipset Realtime Console\r\n";
+        *data = (uint8_t*)message;
+        return strlen(message);
+    }
+    static const ush_file_descriptor rootFiles[] {
+        {
+            .name = "info.txt",
+            .description = nullptr,
+            .help = nullptr,
+            .exec = nullptr,
+            .get_data = infoGetDataCallback,
+        }
+    };
+    static const ush_file_descriptor devFiles[] {
+        INTERFACE_ENGINE_COMMON_DEVICES,
+    };
+    static ush_node_object root;
+    static ush_node_object dev;
+    void begin() {
+        ush_init(&ush, &descriptor);
+        InterfaceEngine::installCommonCommands(&ush);
+        InterfaceEngine::installI960Commands(&ush);
+        ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
+        ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
+        InterfaceEngine::installEepromDeviceDirectory(&ush);
+        InterfaceEngine::installI960Devices(&ush);
+    }
+    void runService() noexcept { ush_service(&ush); }
+}
+
+void
+processRealtimeShell() noexcept {
+    RealtimeShell::runService();
+}
+
+
+
+void
+configureShells() noexcept {
+    RealtimeShell::begin();
+}
+
