@@ -663,10 +663,39 @@ class FileTracker {
         void doValidOperation(FilesystemOperation& operation) noexcept {
             operation.returnComponents[0] = _openFiles.find(operation.getUid()) != _openFiles.end();
         }
+        void doIsOpenOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().operator bool();
+            } else {
+                operation.returnComponents[0] = 0;
+            }
+
+        }
+        void doIsDirectoryOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().isDirectory();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doAvailableOperation(FilesystemOperation& operation) noexcept {
+            // TODO: be more ambiguous instead of generating error codes?
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().available();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
     public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
             operation.setErrorCode(ErrorCodes::None);
+            // clear these out to prevent potential state leakage
+            operation.returnComponents[0] = 0;
+            operation.returnComponents[1] = 0;
             if (!FilesystemOperation::valid(operation.getOpcode())) {
                 operation.setErrorCode(ErrorCodes::InvalidOperation);
                 return;
@@ -704,6 +733,12 @@ class FileTracker {
                     break;
                 case FSOpcode::Valid:
                     doValidOperation(operation);
+                    break;
+                case FSOpcode::IsOpen:
+                    doIsOpenOperation(operation);
+                    break;
+                case FSOpcode::IsDirectory:
+                    doIsDirectoryOperation(operation);
                     break;
                 default:
                     operation.setErrorCode(ErrorCodes::UnimplementedOperation);
