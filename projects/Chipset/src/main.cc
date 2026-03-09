@@ -604,6 +604,14 @@ class FileTracker {
                 operation.setErrorCode(ErrorCodes::CouldNotCloseFile);
             }
         }
+        void doFlushOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                potentialFile->get().flush();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
     public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
@@ -618,6 +626,12 @@ class FileTracker {
                     break;
                 case FSOpcode::Read:
                     doReadOperation(operation);
+                    break;
+                case FSOpcode::Write:
+                    doWriteOperation(operation);
+                    break;
+                case FSOpcode::Flush:
+                    doFlushOperation(operation);
                     break;
                 default:
                     operation.setErrorCode(ErrorCodes::UnimplementedOperation);
