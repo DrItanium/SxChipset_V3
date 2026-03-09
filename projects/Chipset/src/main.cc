@@ -430,7 +430,9 @@ union FilesystemOperation {
         Read,
         Write,
         // position manipulation
-        Seek,
+        SetPosition_Absolute,
+        SetPosition_RelativeToCurr,
+        SetPosition_RelativeToEnd,
         // flags
         Valid,
         Available,
@@ -456,7 +458,9 @@ union FilesystemOperation {
             case Opcode::None:
             case Opcode::Read:
             case Opcode::Write:
-            case Opcode::Seek:
+            case Opcode::SetPosition_Absolute:
+            case Opcode::SetPosition_RelativeToCurr:
+            case Opcode::SetPosition_RelativeToEnd:
             case Opcode::Valid:
             case Opcode::Available:
             case Opcode::IsOpen:
@@ -497,8 +501,7 @@ union FilesystemOperation {
             } onRead, onWrite;
             struct {
                 uint64_t position;
-                uint32_t mode;
-            } onSeek;
+            } onSeekOperation;
             struct {
                 Pointer path;
                 uint32_t flags;
@@ -521,6 +524,9 @@ union FilesystemOperation {
     }
     [[nodiscard]] constexpr uint64_t getUid() const noexcept {
         return target.raw;
+    }
+    constexpr uint64_t getPosition() const noexcept {
+        return args.onSeekOperation.position;
     }
 };
 static_assert(sizeof(FilesystemOperation) == 64);
@@ -612,6 +618,47 @@ class FileTracker {
                 operation.setErrorCode(ErrorCodes::NotAnOpenFile);
             }
         }
+        void doPeekOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().peek();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSizeOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().size();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doPositionOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().position();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSeekOperation(FilesystemOperation& operation, int mode) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                potentialFile->get().seek(operation.getPosition(), mode);
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSetAbsolutePosition(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekSet);
+        }
+        void doSetPositionRelativeToCurrentPosition(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekCur);
+        }
+        void doSetPositionRelativeToEnd(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekEnd);
+        }
     public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
@@ -632,6 +679,24 @@ class FileTracker {
                     break;
                 case FSOpcode::Flush:
                     doFlushOperation(operation);
+                    break;
+                case FSOpcode::Peek:
+                    doPeekOperation(operation);
+                    break;
+                case FSOpcode::GetSize:
+                    doSizeOperation(operation);
+                    break;
+                case FSOpcode::GetPosition:
+                    doPositionOperation(operation);
+                    break;
+                case FSOpcode::SetPosition_Absolute:
+                    doSetAbsolutePosition(operation);
+                    break;
+                case FSOpcode::SetPosition_RelativeToCurr:
+                    doSetPositionRelativeToCurrentPosition(operation);
+                    break;
+                case FSOpcode::SetPosition_RelativeToEnd:
+                    doSetPositionRelativeToEnd(operation);
                     break;
                 default:
                     operation.setErrorCode(ErrorCodes::UnimplementedOperation);
