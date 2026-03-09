@@ -511,6 +511,15 @@ union FilesystemOperation {
         } args;
         static_assert(sizeof(args) == 32);
     };
+    constexpr Pointer getOpen_Path() const noexcept {
+        return args.onOpen.path;
+    }
+    constexpr uint32_t getOpen_Flags() const noexcept {
+        return args.onOpen.flags;
+    }
+    constexpr uint32_t getOpen_i960Orgid() const noexcept {
+        return args.onOpen.org;
+    }
     Opcode getOpcode() const noexcept { return control.opcode; }
     uint16_t getErrorCode() const noexcept {
         return control.errorCode;
@@ -689,6 +698,8 @@ class FileTracker {
                 operation.setErrorCode(ErrorCodes::NotAnOpenFile);
             }
         }
+        void doOpenOperation(FilesystemOperation& operation) noexcept;
+
     public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
@@ -804,6 +815,30 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
 }
 constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
     return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
+}
+void 
+FileTracker::doOpenOperation(FilesystemOperation& operation) noexcept {
+    if (!validFilesystemOperationAddress(operation.getOpen_Path())) {
+        operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        return;
+    } else {
+        auto convertedAddress = computeChipsetMemoryAddress(operation.getOpen_Path());
+        FileUID resultant;
+        resultant.raw = open(reinterpret_cast<const char*>(convertedAddress), operation.getOpen_Flags(), operation.getOpen_i960Orgid());
+        if (resultant.chipset == 0) {
+            // an error happened
+            operation.setErrorCode(resultant.i960);
+            operation.target.raw = 0;
+        } else {
+            operation.target = resultant;
+        }
+    }
+    auto potentialFile = find(operation.getUid());
+    if (potentialFile) {
+        operation.returnComponents[0] = potentialFile->get().available();
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
 }
 void 
 FileTracker::doReadOperation(FilesystemOperation& operation) noexcept {
