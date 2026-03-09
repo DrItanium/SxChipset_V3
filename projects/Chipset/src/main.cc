@@ -557,6 +557,7 @@ class FileTracker {
             _lfsrState = 0;
         }
         bool enabled() const noexcept { return _lfsrStartState != 0; }
+        
         uint64_t open(const char* path, uint32_t flags, uint32_t i960HandleId) noexcept {
             FileUID result;
             result.i960 = i960HandleId;
@@ -659,6 +660,9 @@ class FileTracker {
         void doSetPositionRelativeToEnd(FilesystemOperation& operation) noexcept {
             doSeekOperation(operation, SeekEnd);
         }
+        void doValidOperation(FilesystemOperation& operation) noexcept {
+            operation.returnComponents[0] = _openFiles.find(operation.getUid()) != _openFiles.end();
+        }
     public:
         void processRequest(FilesystemOperation& operation) noexcept {
             using FSOpcode = FilesystemOperation::Opcode;
@@ -697,6 +701,9 @@ class FileTracker {
                     break;
                 case FSOpcode::SetPosition_RelativeToEnd:
                     doSetPositionRelativeToEnd(operation);
+                    break;
+                case FSOpcode::Valid:
+                    doValidOperation(operation);
                     break;
                 default:
                     operation.setErrorCode(ErrorCodes::UnimplementedOperation);
