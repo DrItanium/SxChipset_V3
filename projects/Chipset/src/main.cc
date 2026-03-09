@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ManagementEngineProtocol.h"
 #include "InterfaceEngineCommon.h"
 #include "i960CommonInterface.h"
+#include <fileuids.h>
 
 // the dsb instruction makes sure that all instructions in the pipeline
 // complete before this instruction finishes. Very necessary to prevent reads
@@ -415,143 +416,8 @@ DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock
 // are offsets into PSRAM itself! Then we can just read that data as we desire.
 // In fact, we can even hold the bus until action is complete!
 //
-union FileUID {
-    uint64_t raw;
-    struct {
-        uint32_t i960; // if this is zero then it is an error state
-        uint32_t chipset;
-    };
-};
-union FilesystemOperation {
-
-    enum class Opcode : uint16_t {
-        None, // make sure that zero is not accepted as a valid operation
-        // direct manipulation
-        Read,
-        Write,
-        // position manipulation
-        SetPosition_Absolute,
-        SetPosition_RelativeToCurr,
-        SetPosition_RelativeToEnd,
-        // flags
-        Valid,
-        Available,
-        IsOpen,
-        IsDirectory,
-        // individual large size parameters
-        GetPosition,
-        GetSize,
-        // Other
-        Peek,
-        Open,
-        Close,
-        Flush,
-        // extra operations, keep the commented out ones at the bottom to not
-        // break compatibility
-        // GetName,
-        // Truncate,
-        // OpenNextFile,
-        // RewindDirectory,
-    };
-    static constexpr bool valid(Opcode code) noexcept {
-        switch (code) {
-            case Opcode::None:
-            case Opcode::Read:
-            case Opcode::Write:
-            case Opcode::SetPosition_Absolute:
-            case Opcode::SetPosition_RelativeToCurr:
-            case Opcode::SetPosition_RelativeToEnd:
-            case Opcode::Valid:
-            case Opcode::Available:
-            case Opcode::IsOpen:
-            case Opcode::IsDirectory:
-            case Opcode::GetPosition:
-            case Opcode::GetSize:
-            case Opcode::Peek:
-            case Opcode::Open:
-            case Opcode::Close:
-            case Opcode::Flush:
-                return true;
-            default:
-                return false;
-        }
-    }
-    using Cell = uint64_t;
-    using UID = FileUID;
-    using Pointer = uint32_t;
-    Cell storage[8]; // reserve 64-bytes for this
-    struct {
-        union {
-            Cell raw;
-            struct {
-                Opcode opcode;
-                uint16_t errorCode;
-                Cell rest : 32;
-            };
-        } control;
-        UID target; // always allocated and is the first 64-bit Cell in the return values
-        // add two extra 64-bit cells for extra return data
-        Cell returnComponents[2];
-        // upper 32-bytes used for arguments
-        union {
-            Cell words[4]; // we can never exceed this
-            struct {
-                Pointer bufferAddress;
-                uint32_t size;
-            } onRead, onWrite;
-            struct {
-                uint64_t position;
-            } onSeekOperation;
-            struct {
-                Pointer path;
-                uint32_t flags;
-                /// @brief i960 organization id used to salt the file system handle to make it somewhat harder to access files that don't belong to you!
-                uint32_t org;
-            } onOpen;
-        } args;
-        static_assert(sizeof(args) == 32);
-    };
-    constexpr Pointer getOpen_Path() const noexcept {
-        return args.onOpen.path;
-    }
-    constexpr uint32_t getOpen_Flags() const noexcept {
-        return args.onOpen.flags;
-    }
-    constexpr uint32_t getOpen_i960Orgid() const noexcept {
-        return args.onOpen.org;
-    }
-    Opcode getOpcode() const noexcept { return control.opcode; }
-    uint16_t getErrorCode() const noexcept {
-        return control.errorCode;
-    }
-    void setErrorCode(uint16_t code) noexcept {
-        control.errorCode = code;
-    }
-    template<typename T>
-    void setErrorCode(T code) noexcept {
-        setErrorCode(static_cast<uint16_t>(code));
-    }
-    [[nodiscard]] constexpr uint64_t getUid() const noexcept {
-        return target.raw;
-    }
-    constexpr uint64_t getPosition() const noexcept {
-        return args.onSeekOperation.position;
-    }
-};
-static_assert(sizeof(FilesystemOperation) == 64);
 class FileTracker {
-    enum class ErrorCodes : uint16_t {
-        None = 0,
-        Unknown = 0x0100, // first unknown code
-        CouldNotFindASpotForFileGivenI960UniqueId,
-        CouldNotOpenFile,
-        InvalidOperation,
-        UnimplementedOperation,
-        CouldNotCloseFile,
-        NotAnOpenFile,
-        InvalidBufferAddress,
-        RequestedLengthTooLong,
-    };
+    using ErrorCodes = FileRequestErrorCodes;
     public:
         using OptionalFile = std::optional<std::reference_wrapper<File>>;
         FileTracker() = default;
@@ -886,14 +752,7 @@ FileTracker::doWriteOperation(FilesystemOperation& operation) noexcept {
     }
 }
 struct RawFilesystemInterface {
-    enum class ErrorCodes : uint32_t {
-        Ok = 0,
-        NotEnabled,
-        UnimplementedOperation,
-        UnalignedAddressProvided,
-        IllegalAddressProvided,
-        ErrorHappenedDuringProcessing,
-    };
+    using ErrorCodes = FilesystemInterfaceErrorCodes;
     void clear() noexcept { 
         _targetAddress.value = 0;
         _errorCode.value = 0;
