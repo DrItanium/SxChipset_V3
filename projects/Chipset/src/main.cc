@@ -119,81 +119,7 @@ constexpr bool valid(CPUDataBusConfiguration config) noexcept {
     }
 }
 static_assert(valid(BusConfiguration), "Unsupported bus configuration specified");
-namespace PCJoystick {
-    Adafruit_seesaw device{&Wire2};
-    bool available = false;
-    constexpr auto Button1 = 3;
-    constexpr auto Button2 = 13;
-    constexpr auto Button3 = 2;
-    constexpr auto Button4 = 14;
-    constexpr uint32_t ButtonMask = (1UL << Button1) | (1UL << Button2) | 
-                                    (1UL << Button3) | (1UL << Button4);
-    constexpr auto Joy1X = 1;
-    constexpr auto Joy1Y = 15;
-    constexpr auto Joy2X = 0;
-    constexpr auto Joy2Y = 16;
 
-    void begin() noexcept {
-        available = device.begin(0x49);
-        if (!available) {
-            Serial.println("PC Joystick port not found");
-        } else {
-            Serial.println("PC Joystick port found");
-            device.pinModeBulk(ButtonMask, INPUT_PULLUP);
-        }
-    }
-    uint32_t readButtons() noexcept {
-        return device.digitalReadBulk(ButtonMask);
-    }
-    int readJoy1X() noexcept {
-        return device.analogRead(Joy1X);
-    }
-    int readJoy1Y() noexcept {
-        return device.analogRead(Joy1Y);
-    }
-    int readJoy2X() noexcept {
-        return device.analogRead(Joy2X);
-    }
-    int readJoy2Y() noexcept {
-        return device.analogRead(Joy2Y);
-    }
-
-} // end namespace PCJoystick 
-
-namespace GamepadQT {
-    Adafruit_seesaw device{&Wire2};
-    bool available = false;
-    constexpr auto ButtonX = 6;
-    constexpr auto ButtonY = 2;
-    constexpr auto ButtonA = 5;
-    constexpr auto ButtonB = 1;
-    constexpr auto ButtonSelect = 0;
-    constexpr auto ButtonStart = 16;
-    constexpr uint32_t ButtonMask = (1UL << ButtonX) | (1UL << ButtonY) | 
-        (1UL << ButtonA) | (1UL << ButtonB) | 
-        (1UL << ButtonSelect) | (1UL << ButtonStart);
-
-    constexpr auto JoyX = 14;
-    constexpr auto JoyY = 15;
-    void begin() {
-        available = device.begin(0x50);
-        if (!available) {
-            Serial.println("ERROR! seesaw not found (GamepadQT)");
-        } else {
-            Serial.println("GamepadQT found!");
-            device.pinModeBulk(ButtonMask, INPUT_PULLUP);
-        }
-    }
-    uint32_t readButtons() noexcept {
-        return device.digitalReadBulk(ButtonMask);
-    }
-    int readX() noexcept {
-        return 1023 - device.analogRead(JoyX);
-    }
-    int readY() noexcept {
-        return 1023 - device.analogRead(JoyY);
-    }
-} // end namespace GamepadQT
 
 
 struct EEPROMWrapper {
@@ -1671,8 +1597,6 @@ setup() {
     setupRandomSeed();
     setupLEDMatrix();
     Entropy.Initialize();
-    PCJoystick::begin();
-    GamepadQT::begin();
     systemTimer.begin(triggerSystemTimer, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, FALLING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
