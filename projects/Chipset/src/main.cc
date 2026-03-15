@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Metro.h>
 #include <RTClib.h>
 #include <FlexIO_t4.h>
-#include <Adafruit_IS31FL3741.h>
 #include <IntervalTimer.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
@@ -81,7 +80,6 @@ bool cpuIsRunning = false;
 
 // We can open up to 4096 files on the sd card simultaneously
 RTC_DS3231 rtc;
-Adafruit_IS31FL3741_QT ledmatrix;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 
@@ -1530,23 +1528,6 @@ triggerReadySync() noexcept {
     readyTriggered = true;
     //SynchronizeData;
 }
-void
-setupLEDMatrix() noexcept {
-    if (!ledmatrix.begin(IS3741_ADDR_DEFAULT, &Wire2)) {
-        Serial.println("IS41 not found!");
-    } else {
-        ledmatrix.setLEDscaling(0xff);
-        ledmatrix.setGlobalCurrent(0xff);
-        Serial.print("Global LED Current set to: ");
-        Serial.println(ledmatrix.getGlobalCurrent());
-        ledmatrix.fill(0);
-        ledmatrix.enable(true);
-        ledmatrix.setRotation(0);
-        ledmatrix.setTextWrap(false);
-        ledmatrix.print("i960");
-        ledmatrix.setGlobalCurrent(5);
-    }
-}
 void 
 triggerSystemTimer() noexcept {
     if (systemCounterEnabled) {
@@ -1595,7 +1576,6 @@ setup() {
     setupSDCard();
     SPI.begin();
     setupRandomSeed();
-    setupLEDMatrix();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
     attachInterrupt(Pin::ADS, triggerADS, FALLING);
