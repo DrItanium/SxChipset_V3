@@ -1012,8 +1012,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
-static constexpr auto WriteConfiguration = defaultWrite8;
-static constexpr auto ReadConfiguration = defaultRead8;
+static constexpr auto WriteConfiguration = customWrite8;
+static constexpr auto ReadConfiguration = customRead8;
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -1622,7 +1622,7 @@ handleAVRSerialConnection() noexcept {
 void 
 loop() {
     tryDoTransaction();
-    //handleAVRSerialConnection();
+    handleAVRSerialConnection();
     processRealtimeShell();
 }
 
