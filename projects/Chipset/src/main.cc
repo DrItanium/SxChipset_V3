@@ -1611,26 +1611,24 @@ tryDoTransaction() noexcept {
         }
     } 
 }
-#ifdef USB_TRIPLE_SERIAL
 void
 handleAVRSerialConnection() noexcept {
+#ifdef USB_TRIPLE_SERIAL
     if (Serial1.available()) {
         SerialUSB2.write(Serial1.read());
     }
     if (SerialUSB2.available()) {
         Serial1.write(SerialUSB2.read());
     }
-}
 #endif
+}
 void 
 loop() {
     tryDoTransaction();
-#ifdef USB_TRIPLE_SERIAL
     handleAVRSerialConnection();
     tryDoTransaction();
     processRealtimeShell();
     tryDoTransaction();
-#endif
 }
 #ifdef USB_TRIPLE_SERIAL
 namespace RealtimeShell {
@@ -1690,12 +1688,14 @@ namespace RealtimeShell {
     }
     void runService() noexcept { ush_service(&ush); }
 }
+#endif
 
 void
 processRealtimeShell() noexcept {
+#ifdef USB_TRIPLE_SERIAL
     RealtimeShell::runService();
-}
 #endif
+}
 
 
 
