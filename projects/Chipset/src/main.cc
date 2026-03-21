@@ -1310,7 +1310,8 @@ struct i960Interface {
 
   template<bool isReadTransaction>
   static inline void
-  doMemoryTransaction(uint32_t address) noexcept {
+  doMemoryTransaction() noexcept {
+      auto address = getAddress();
       if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
           if constexpr (isReadTransaction) { 
               i960Interface::configureDataLinesForRead();
@@ -1602,12 +1603,11 @@ tryDoTransaction() noexcept {
         // Request 2: Give me 0x10-0x1f (and this is wrong)
         // Request 2 (if we wait): Give me 0x248 (and this is right)
         while (digitalReadFast(Pin::DEN) != LOW);
-        auto targetAddress = i960Interface::getAddress();
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
-            i960Interface::doMemoryTransaction<true>(targetAddress);
+            i960Interface::doMemoryTransaction<true>();
         } else {
-            i960Interface::doMemoryTransaction<false>(targetAddress);
+            i960Interface::doMemoryTransaction<false>();
         }
     } 
 }
