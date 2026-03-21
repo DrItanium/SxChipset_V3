@@ -1136,7 +1136,7 @@ struct i960Interface {
   waitForReadySignal() noexcept {
       while (!readyTriggered);
   }
-  template<bool wait = true, uint32_t readyDelayTimer = 200>
+  template<bool wait = true, uint32_t readyDelayTimer = 0>
   static void
   signalReady() noexcept {
       readyTriggered = false;
