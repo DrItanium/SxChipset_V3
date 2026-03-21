@@ -1011,8 +1011,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
-    10, 40, 0, 0 
-}; // 50ns worth of delay
+    10, 30, 0, 0 
+}; // 40ns worth of delay
 static constexpr auto WriteConfiguration = customWrite8;
 static constexpr auto ReadConfiguration = customRead8;
 struct i960Interface {
