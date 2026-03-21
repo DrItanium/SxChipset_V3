@@ -1012,8 +1012,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
-static constexpr auto WriteConfiguration = customWrite8;
-static constexpr auto ReadConfiguration = customRead8;
+static constexpr auto WriteConfiguration = defaultWrite8;
+static constexpr auto ReadConfiguration = defaultRead8;
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -1216,7 +1216,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady<false>();
+      signalReady();
   }
   template<MemoryCell MC>
   static void
@@ -1228,7 +1228,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady<false>();
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
@@ -1577,16 +1577,26 @@ setup() {
     setupRandomSeed();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    attachInterrupt(Pin::ADS, triggerADS, FALLING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
+    attachInterrupt(Pin::ADS, triggerADS, RISING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
-    // so attaching the interrupt seems to not be functioning fully
+    // so it seems that initial checksum computation is being a little goofy
+    // where the address of the first memory access is actually 
 }
+volatile uint32_t addressStorage[8] = { 0 };
 void 
 tryDoTransaction() noexcept {
     if (adsTriggered) {
         adsTriggered = false;
+#if 1
+
+        SerialUSB2.println("Sampling the address multiple times (8)");
+        for (int i = 0; i < 8; ++i) {
+            addressStorage[i] = i960Interface::getAddress();
+            SerialUSB2.println(addressStorage[i], HEX);
+        }
+#endif
         auto targetAddress = i960Interface::getAddress();
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
@@ -1608,7 +1618,7 @@ handleAVRSerialConnection() noexcept {
 void 
 loop() {
     tryDoTransaction();
-    handleAVRSerialConnection();
+    //handleAVRSerialConnection();
     processRealtimeShell();
 }
 
