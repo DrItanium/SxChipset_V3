@@ -1004,7 +1004,8 @@ static constexpr InterfaceTimingDescription customWrite8 {
     0,  // setup time
     10, // hold time
     0   // after time / resting time
-}; // 20ns worth of delay
+}; // 20ns worth of delay (can go lower safely but I'm not sure how reliable it
+   // is)
    
 
 static constexpr InterfaceTimingDescription defaultRead8 {
@@ -1012,7 +1013,7 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 }; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
     10, 20, 0, 0 
-}; // 30ns worth of delay
+}; // 30ns worth of delay (pulling hold time down any further prevents booting)
 static constexpr auto WriteConfiguration = customWrite8;
 static constexpr auto ReadConfiguration = customRead8;
 struct i960Interface {
