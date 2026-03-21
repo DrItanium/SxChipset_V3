@@ -1585,7 +1585,6 @@ setup() {
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
-volatile uint32_t addressStorage[8] = { 0 };
 void 
 tryDoTransaction() noexcept {
     if (adsTriggered) {
