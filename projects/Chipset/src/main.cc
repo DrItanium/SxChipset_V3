@@ -1012,8 +1012,8 @@ static constexpr InterfaceTimingDescription defaultRead8 {
 static constexpr InterfaceTimingDescription customRead8 {
     10, 50, 0, 0 
 }; // 60ns worth of delay
-static constexpr auto WriteConfiguration = customWrite8;
-static constexpr auto ReadConfiguration = customRead8;
+static constexpr auto WriteConfiguration = defaultWrite8;
+static constexpr auto ReadConfiguration = defaultRead8;
 struct i960Interface {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -1136,7 +1136,7 @@ struct i960Interface {
   waitForReadySignal() noexcept {
       while (!readyTriggered);
   }
-  template<bool wait = true, uint32_t readyDelayTimer = 0>
+  template<bool wait = true, uint32_t readyDelayTimer = 200>
   static void
   signalReady() noexcept {
       readyTriggered = false;
@@ -1560,8 +1560,10 @@ setup() {
 
     Serial.begin(115200);
     Serial1.begin(115200); // connection to the AVR
+#ifdef USB_TRIPLE_SERIAL
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
+#endif
     while (!Serial) {
         delay(10);
     }
@@ -1610,6 +1612,7 @@ tryDoTransaction() noexcept {
         }
     } 
 }
+#ifdef USB_TRIPLE_SERIAL
 void
 handleAVRSerialConnection() noexcept {
     if (Serial1.available()) {
@@ -1619,13 +1622,16 @@ handleAVRSerialConnection() noexcept {
         Serial1.write(SerialUSB2.read());
     }
 }
+#endif
 void 
 loop() {
     tryDoTransaction();
+#ifdef USB_TRIPLE_SERIAL
     handleAVRSerialConnection();
     processRealtimeShell();
+#endif
 }
-
+#ifdef USB_TRIPLE_SERIAL
 namespace RealtimeShell {
     static int ioRead(ush_object* self, char* ch) {
         if (SerialUSB1.available() > 0) {
@@ -1688,11 +1694,14 @@ void
 processRealtimeShell() noexcept {
     RealtimeShell::runService();
 }
+#endif
 
 
 
 void
 configureShells() noexcept {
+#ifdef USB_TRIPLE_SERIAL
     RealtimeShell::begin();
+#endif
 }
 
