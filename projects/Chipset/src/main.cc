@@ -1580,8 +1580,8 @@ setup() {
     setupRandomSeed();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    attachInterrupt(Pin::ADS, triggerADS, RISING);
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
+    attachInterrupt(Pin::ADS, triggerADS, FALLING);
+    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
