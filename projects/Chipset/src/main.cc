@@ -1002,9 +1002,9 @@ static constexpr InterfaceTimingDescription defaultWrite8{
 static constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
     0,  // setup time
-    30, // hold time
+    20, // hold time
     0   // after time / resting time
-}; // 40ns worth of delay
+}; // 30ns worth of delay
    
 
 static constexpr InterfaceTimingDescription defaultRead8 {
