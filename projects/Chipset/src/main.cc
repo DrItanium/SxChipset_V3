@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Wire.h>
 #include <SD.h>
-#include <Ethernet.h>
+#include <NativeEthernet.h>
 #include <Entropy.h>
 #include <EEPROM.h>
 #include <FastCRC.h>
@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <RTClib.h>
 #include <FlexIO_t4.h>
 #include <IntervalTimer.h>
+#include <USBHost_t36.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
