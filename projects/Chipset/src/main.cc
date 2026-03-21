@@ -1544,6 +1544,7 @@ setup() {
     delay(1000);
     waitForAVRToComeUp();
     putCPUInReset();
+    inputPin(Pin::DEN);
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
@@ -1581,22 +1582,25 @@ setup() {
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, RISING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
-    // so it seems that initial checksum computation is being a little goofy
-    // where the address of the first memory access is actually 
 }
 volatile uint32_t addressStorage[8] = { 0 };
 void 
 tryDoTransaction() noexcept {
     if (adsTriggered) {
         adsTriggered = false;
-#if 1
-
-        SerialUSB2.println("Sampling the address multiple times (8)");
-        for (int i = 0; i < 8; ++i) {
-            addressStorage[i] = i960Interface::getAddress();
-            SerialUSB2.println(addressStorage[i], HEX);
-        }
-#endif
+        // after introducing a new base board, I have to reintroduce the DEN
+        // pin detection routine. It seems that after providing the first
+        // 32-bytes the i960 CPU triggers ADS but delays on updating the actual
+        // address lines fully. Perhaps it has to do with the pullups in the
+        // CH351 or something similar. But adding this back in seems to solve
+        // the issue. 
+        //
+        // Here is what I was seeing:
+        // Request 0: Give me 0x00-0x0F (and we send that)
+        // Request 1: Give me 0x10-0x1F (and we send that)
+        // Request 2: Give me 0x10-0x1f (and this is wrong)
+        // Request 2 (if we wait): Give me 0x248 (and this is right)
+        while (digitalReadFast(Pin::DEN) != LOW);
         auto targetAddress = i960Interface::getAddress();
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
