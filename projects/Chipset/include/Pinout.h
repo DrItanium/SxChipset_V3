@@ -99,9 +99,9 @@ enum class Pin {
     // RPI_D24
     // RPI_D25
     // RPI_D26
-    DEN = RPI_D27,
+    // RPI_D27
     // RPI_D28
-    // RPI_D29
+    DEN = RPI_D29,
     READY = RPI_D30,
     READY_SYNC = RPI_D31,
     INT960_2 = RPI_D32,
