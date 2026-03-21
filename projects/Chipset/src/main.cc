@@ -1204,7 +1204,7 @@ struct i960Interface {
       }
       signalReady();
     }
-    signalReady<false>();
+    signalReady();
   }
   template<MemoryCell MC>
   static void
@@ -1216,7 +1216,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady<false>();
+      signalReady();
   }
   template<MemoryCell MC>
   static void
@@ -1228,7 +1228,7 @@ struct i960Interface {
           } 
           signalReady();
       }
-      signalReady<false>();
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
@@ -1627,7 +1627,9 @@ loop() {
     tryDoTransaction();
 #ifdef USB_TRIPLE_SERIAL
     handleAVRSerialConnection();
+    tryDoTransaction();
     processRealtimeShell();
+    tryDoTransaction();
 #endif
 }
 #ifdef USB_TRIPLE_SERIAL
