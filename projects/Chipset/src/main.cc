@@ -948,7 +948,7 @@ public:
               } else {
                   GPIO6_GDIR = value;
               }
-              SynchronizeData; // Make sure that the direction update is
+              //SynchronizeData; // Make sure that the direction update is
                                // happening
 
           } else {
@@ -1155,7 +1155,6 @@ struct i960Interface {
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
       value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
-      SynchronizeData;
       return value;
   }
   static inline bool
@@ -1182,7 +1181,6 @@ struct i960Interface {
       constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
       value |= static_cast<uint16_t>(read8(baseAddress));
       value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
-      SynchronizeData;
       return value;
   }
 
@@ -1515,12 +1513,10 @@ using i960::pullCPUOutOfReset;
 void
 triggerADS() noexcept {
     adsTriggered = true;
-    //SynchronizeData;
 }
 void
 triggerReadySync() noexcept {
     readyTriggered = true;
-    //SynchronizeData;
 }
 void 
 triggerSystemTimer() noexcept {
