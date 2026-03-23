@@ -948,8 +948,6 @@ public:
               } else {
                   GPIO6_GDIR = value;
               }
-              //SynchronizeData; // Make sure that the direction update is
-                               // happening
 
           } else {
 #define X(p) pinMode(p, direction)
