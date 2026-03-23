@@ -1178,11 +1178,12 @@ struct i960Interface {
   }
   static inline uint16_t
   readDataLines() noexcept {
+      uint16_t value = 0;
       constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
-      uint16_t lo = read8(baseAddress);
-      uint16_t hi = read8(baseAddress+1);
+      value |= static_cast<uint16_t>(read8(baseAddress));
+      value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
       SynchronizeData;
-      return lo | (hi << 8);
+      return value;
   }
 
   template<bool isReadTransaction>
