@@ -861,7 +861,7 @@ public:
     setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
-    setDataLines<true>(0);
+    setDataLines(0);
   }
   template<bool directPortManipulation = UseDirectPortManipulation>
   static void
@@ -913,15 +913,10 @@ public:
           return value;
       }
   }
-  template<bool force = false, bool directPortManipulation = UseDirectPortManipulation>
+  template<bool directPortManipulation = UseDirectPortManipulation>
   static void
   setDataLines(uint8_t value) noexcept {
       // clear then set the corresponding bits
-      if constexpr (!force) {
-          if (_currentOutputDataLines == value) {
-              return;
-          }
-      }
       if constexpr (directPortManipulation) {
           GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
           GPIO6_DR_SET = EBIOutputTransformation[value];
@@ -936,7 +931,6 @@ public:
           digitalWriteFast(Pin::EBI_D6, (value & 0b01000000));
           digitalWriteFast(Pin::EBI_D7, (value & 0b10000000));
       }
-      _currentOutputDataLines = value;
   }
 
   template<PinDirection direction, bool directPortManipulation = UseDirectPortManipulation>
@@ -976,7 +970,6 @@ public:
 
 private:
   static inline PinDirection _currentDirection = OUTPUT;
-  static inline uint8_t _currentOutputDataLines = 0;
 };
 using EBIInterface = EBIWrapperInterface;
 // i960 common interface begin
