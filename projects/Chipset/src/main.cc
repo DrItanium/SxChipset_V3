@@ -194,6 +194,7 @@ struct TimingRelatedThings {
     void update() noexcept {
         _currentMillis = millis();
         _currentMicros = micros();
+        _currentCycle = ARM_DWT_CYCCNT;
     }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset) {
@@ -205,6 +206,10 @@ struct TimingRelatedThings {
                 return static_cast<uint16_t>(_currentMicros);
             case 3:
                 return static_cast<uint16_t>(_currentMicros >> 16);
+            case 4: // cycle count
+                return static_cast<uint16_t>(_currentCycle);
+            case 5: 
+                return static_cast<uint16_t>(_currentCycle >> 16);
             default:
                 return 0;
         }
@@ -217,6 +222,7 @@ private:
     // for temporary snapshot purposes
     uint32_t _currentMicros = 0;
     uint32_t _currentMillis = 0;
+    uint32_t _currentCycle = 0;
 };
 struct CapacityInformation {
     void clear() noexcept { }
