@@ -1052,11 +1052,6 @@ struct i960Interface {
 
   template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = WriteConfiguration>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
-      if constexpr (CompareWithPrevious) {
-          if (EBIOutputStorage[address] == value) {
-              return;
-          }
-      }
       /// @todo once new board comes in we can implement the fixed direction
       /// design
       EBIInterface::setDataLinesDirection<OUTPUT>();
@@ -1069,7 +1064,6 @@ struct i960Interface {
       fixedDelayNanoseconds<decl.holdTime>(); // tWL hold for at least 80ns
       digitalWriteFast(Pin::EBI_WR, HIGH);
       // update the address
-      EBIOutputStorage[address] = value;
       fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
@@ -1136,7 +1130,7 @@ struct i960Interface {
       while (!readyTriggered);
   }
   template<uint32_t readyDelayTimer = 0>
-  static void
+  static inline void
   signalReady() noexcept {
       readyTriggered = false;
       // run and block until we get the completion pulse
@@ -1335,10 +1329,6 @@ struct i960Interface {
 private:
   // allocate a 2k memory cache like the avr did
   static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
-  // use this to keep track of the output values that were sent to the EBI
-  // useful when you don't want to waste time if the given output address
-  // already contains the value in question. This does not apply to reads
-  static inline uint8_t EBIOutputStorage[256] = { 0 }; 
 };
 
 namespace i960 {
