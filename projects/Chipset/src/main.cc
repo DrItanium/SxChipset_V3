@@ -1129,14 +1129,12 @@ struct i960Interface {
   waitForReadySignal() noexcept {
       while (!readyTriggered);
   }
-  template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
       readyTriggered = false;
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
-      fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
   isReadOperation() noexcept {
