@@ -1050,7 +1050,7 @@ struct i960Interface {
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
 
-  template<InterfaceTimingDescription decl = WriteConfiguration>
+  template<bool CompareWithPrevious = true, InterfaceTimingDescription decl = WriteConfiguration>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
       /// @todo once new board comes in we can implement the fixed direction
       /// design
@@ -1086,41 +1086,43 @@ struct i960Interface {
 
   static void
   begin() noexcept {
-      write8(addressLines.getConfigPortBaseAddress(), 0);
-      write8(addressLines.getConfigPortBaseAddress() + 1, 0);
-      write8(addressLines.getConfigPortBaseAddress() + 2, 0);
-      write8(addressLines.getConfigPortBaseAddress() + 3, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress(), 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
+      write8<false>(addressLines.getConfigPortBaseAddress() + 3, 0);
       if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
           // lower 16-bits are for the i960 read port
-          write8(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
-          write8(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
           // upper 16-bits are for the i960 write port
-          write8(dataLines.getConfigPortBaseAddress() + 2, 0);
-          write8(dataLines.getConfigPortBaseAddress() + 3, 0);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 2, 0);
+          write8<false>(dataLines.getConfigPortBaseAddress() + 3, 0);
           // after this point, the code will no longer change directions since
           // it is unnecessary
       } else if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
           // configure the data bus for a read operation (which is output to the i960)
-        configureDataLinesForRead();
+        configureDataLinesForRead<false>();
       }
       EBIInterface::setDataLines(0);
   }
-  template<uint16_t value>
+  template<uint16_t value, bool compareWithPrevious = true>
   static inline void
   configureDataLinesDirection() noexcept {
-      write8(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
-      write8(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
+      write8<compareWithPrevious>(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
   }
+  template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForRead() noexcept {
       if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0xFFFF>();
+          configureDataLinesDirection<0xFFFF, compareWithPrevious>();
       }
   }
+  template<bool compareWithPrevious = true>
   static inline void
   configureDataLinesForWrite() noexcept {
       if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0>();
+          configureDataLinesDirection<0, compareWithPrevious>();
       }
   }
   static void
