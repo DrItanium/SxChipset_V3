@@ -5,8 +5,6 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include "ManagementEngineProtocol.h"
-#include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
 #include <microshell.h>
 #include "InterfaceEngineCommon.h"
 #include "i960CommonInterface.h"
@@ -34,7 +32,7 @@
 // USART3:
 // USART4:
 // USART5:
-// SPI0: ILI9341 display
+// SPI0: 
 // SPI1:
 // registered pins
 constexpr auto CLK1OUT = PIN_PA0;
@@ -74,20 +72,20 @@ constexpr auto BLAST = PIN_PD5;
 // PIN_PD6
 constexpr auto DEN = PIN_PD7;
 
-constexpr auto DISPLAY_MOSI = PIN_PE0;
-constexpr auto DISPLAY_MISO = PIN_PE1;
-constexpr auto DISPLAY_SCK = PIN_PE2;
+// PIN_PE0
+// PIN_PE1
+// PIN_PE2
 constexpr auto WR = PIN_PE3;
 constexpr auto BE0 = PIN_PE4;
 constexpr auto BE1 = PIN_PE5;
-constexpr auto DISPLAY_DC = PIN_PE6;
-constexpr auto DISPLAY_RST = PIN_PE7;
+// PIN_PE6
+// PIN_PE7
 
 // PIN_PF0
 // PIN_PF1
 // PIN_PF2
 // PIN_PF3
-constexpr auto DISPLAY_CS = PIN_PF4;
+// PIN_PF4
 constexpr auto INT2_IN = PIN_PF5; 
 // PIN_PF6 (input only/Reset)
 
@@ -110,8 +108,6 @@ uint8_t devidCache[3] = { 0 };
 long rSeed = 0;
 bool chipIsUp = false;
 bool cpuIsInReset = true;
-Adafruit_ILI9341 tft{DISPLAY_CS, DISPLAY_DC, DISPLAY_RST};
-void setupDisplay() noexcept;
 void
 configurePins() noexcept {
     pinMode(CLK1OUT, OUTPUT);
@@ -470,46 +466,10 @@ setup() {
     configureCCLs();
     cpuIsInReset = true;
     chipIsUp = true;
-    setupDisplay();
     configureMicroshellInterface();
 }
-uint16_t
-randomColor() noexcept {
-    uint32_t baseColor = random();
-    return tft.color565(static_cast<uint8_t>(baseColor), static_cast<uint8_t>(baseColor >> 8), static_cast<uint8_t>(baseColor >> 16));
-}
-class FizzleFade {
-    public:
-    FizzleFade(int w, int h, uint16_t color = randomColor()) : _width(w), _height(h), _color(color) { }
-    void cycle() noexcept {
-        {
-            uint16_t y = _rndval & 0x001FF;
-            uint16_t x = (_rndval & 0x3FE00) >> 9;
-            unsigned lsb = _rndval & 1;
-            _rndval >>= 1;
-            if (lsb) {
-                _rndval ^= 0x0001'2000;
-            }
-            if (x < _width && y < _height) {
-                tft.drawPixel(x, y, _color);
-            }
-        }
-        if (_rndval == 1) {
-            _rndval = 1;
-            _color = randomColor();
-        }
-    }
-    private:
-        int _width;
-        int _height;
-        uint16_t _color;
-        uint32_t _rndval = 1;
-
-};
-FizzleFade ff(tft.width(), tft.height());
 void
 loop() {
-    ff.cycle();
     serviceShell();
 }
 
@@ -587,11 +547,6 @@ onRequestHandler() {
     }
 }
 
-void
-setupDisplay() noexcept {
-    tft.begin();
-    tft.fillScreen(ILI9341_BLACK);
-}
 
 int ushRead(struct ush_object* self, char* ch) {
     if (Serial1.available()) {
@@ -664,100 +619,9 @@ const ush_file_descriptor devFiles[] {
         },
     },
 };
-const ush_file_descriptor displayFiles[] {
-    {
-        .name = "width",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[8];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.width());
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-    },
-    {
-        .name = "height",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[8];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.height());
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-    },
-    {
-        .name = "rotation",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[8];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getRotation());
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
-            long value = 0;
-            if (sscanf((const char*)data, "%lu", &value) == EOF) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
-                return;
-            }
-            tft.setRotation(static_cast<uint8_t>(value));
-        },
-    },
-    {
-        .name = "cursor_x",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[8];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getCursorX());
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-    },
-    {
-        .name = "cursor_y",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[8];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", (long)tft.getCursorY());
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-    },
-    {
-        .name = "invert",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = nullptr,
-        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
-            long value = 0;
-            if (sscanf((const char*)data, "%lu", &value) == EOF) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
-                return;
-            }
-            tft.invertDisplay(value != 0);
-        },
-    },
-};
 
 ush_node_object root;
 ush_node_object dev;
-ush_node_object displayNode;
 
 void
 configureMicroshellInterface() noexcept {
@@ -769,7 +633,6 @@ configureMicroshellInterface() noexcept {
     ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
     InterfaceEngine::installEepromDeviceDirectory(&ush);
     InterfaceEngine::installI960Devices(&ush);
-    ush_node_mount(&ush, "/dev/display", &displayNode, displayFiles, ComputeFileSize(displayFiles));
 }
 
 void
