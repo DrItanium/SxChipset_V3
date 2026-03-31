@@ -239,19 +239,6 @@ updateClockFrequency(uint32_t frequency) noexcept {
     CLKSpeeds[0] = frequency;
     CLKSpeeds[1] = frequency / 2;
 }
-static_assert(gen0::pin_pa5 == gen1::pin_pa5);
-void
-setupInterrupt0Pins() noexcept {
-    // INT0 from the teensy is connected to INT0_IN 
-    // INT0_OUT is separated from the two
-    //
-    // There are different ways to do this but right now INT0_IN is connected
-    // to PG0 and INT0_OUT is connected to PG3. Thus I can either use:
-    // 1. CCL to act as a passthrough
-    // 2. CCL to enable edge detection (bleh)
-    // 3. Use EVSYS to hook INT0_IN to TCB4's trigger pulse
-    // 4. Use CCL and EVSYS to route INT0_IN to TCB4's trigger pulse (allows for more flexible EVSYS usage)
-}
 void
 configureReadyPulseGenerator() noexcept {
   // okay, so start configuring the secondary single shot setup
