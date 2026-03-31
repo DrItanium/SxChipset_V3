@@ -1504,10 +1504,10 @@ namespace i960 {
 }
 using i960::putCPUInReset;
 using i960::pullCPUOutOfReset;
-void
-triggerADS() noexcept {
-    adsTriggered = true;
-}
+//void
+//triggerADS() noexcept {
+//    adsTriggered = true;
+//}
 void
 triggerReadySync() noexcept {
     readyTriggered = true;
@@ -1565,15 +1565,16 @@ setup() {
     setupRandomSeed();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    attachInterrupt(Pin::ADS, triggerADS, FALLING);
+    //attachInterrupt(Pin::ADS, triggerADS, FALLING);
     attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
 void 
 tryDoTransaction() noexcept {
-    if (adsTriggered) {
-        adsTriggered = false;
+    if (digitalReadFast(Pin::DEN) == LOW) {
+    //if (adsTriggered) {
+    //    adsTriggered = false;
         // after introducing a new base board, I have to reintroduce the DEN
         // pin detection routine. It seems that after providing the first
         // 32-bytes the i960 CPU triggers ADS but delays on updating the actual
@@ -1586,7 +1587,7 @@ tryDoTransaction() noexcept {
         // Request 1: Give me 0x10-0x1F (and we send that)
         // Request 2: Give me 0x10-0x1f (and this is wrong)
         // Request 2 (if we wait): Give me 0x248 (and this is right)
-        while (digitalReadFast(Pin::DEN) != LOW);
+        //while (digitalReadFast(Pin::DEN) != LOW);
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
             i960Interface::doMemoryTransaction<true>();
