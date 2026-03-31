@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 
 enum class Pin {
-#define X(index, value) RPI_D ## index = value 
+#define X(index, value) INDIRECT_D ## index = value 
     X(0, 19),
     X(1, 18),
     X(2, 14),
@@ -72,48 +72,48 @@ enum class Pin {
     X(40, 24),
     X(41, 25),
 #undef X
-    EBI_A0 = RPI_D0,
-    EBI_A1 = RPI_D1,
-    EBI_A2 = RPI_D2,
-    EBI_A3 = RPI_D3,
-    EBI_A4 = RPI_D4,
-    EBI_A5 = RPI_D5,
-    EBI_RD = RPI_D6,
-    EBI_WR = RPI_D7,
-    EBI_D0 = RPI_D8,
-    EBI_D1 = RPI_D9,
-    EBI_D2 = RPI_D10,
-    EBI_D3 = RPI_D11,
-    EBI_D4 = RPI_D12,
-    EBI_D5 = RPI_D13,
-    EBI_D6 = RPI_D14,
-    EBI_D7 = RPI_D15,
-    ADS = RPI_D16,
-    BLAST = RPI_D17,
-    WR = RPI_D18,
-    BE0 = RPI_D19,
-    BE1 = RPI_D20,
-    INT960_0 = RPI_D21,  
-    INT960_1 = RPI_D22,  
-    // RPI_D23
-    // RPI_D24
-    // RPI_D25
-    // RPI_D26
-    // RPI_D27
-    // RPI_D28
-    DEN = RPI_D29,
-    READY = RPI_D30,
-    READY_SYNC = RPI_D31,
-    INT960_2 = RPI_D32,
-    INT960_3 = RPI_D33,
-    // RPI_D34 
-    // RPI_D35 (MOSI)
-    // RPI_D36 (MISO)
-    // RPI_D37 (SCK)
-    TEENSY_AVR_RX = RPI_D38,
-    TEENSY_AVR_TX = RPI_D39,
-    TEENSY_AVR_SCL = RPI_D40,
-    TEENSY_AVR_SDA = RPI_D41,
+    EBI_A0 = INDIRECT_D0,
+    EBI_A1 = INDIRECT_D1,
+    EBI_A2 = INDIRECT_D2,
+    EBI_A3 = INDIRECT_D3,
+    EBI_A4 = INDIRECT_D4,
+    EBI_A5 = INDIRECT_D5,
+    EBI_RD = INDIRECT_D6,
+    EBI_WR = INDIRECT_D7,
+    EBI_D0 = INDIRECT_D8,
+    EBI_D1 = INDIRECT_D9,
+    EBI_D2 = INDIRECT_D10,
+    EBI_D3 = INDIRECT_D11,
+    EBI_D4 = INDIRECT_D12,
+    EBI_D5 = INDIRECT_D13,
+    EBI_D6 = INDIRECT_D14,
+    EBI_D7 = INDIRECT_D15,
+    ADS = INDIRECT_D16,
+    BLAST = INDIRECT_D17,
+    WR = INDIRECT_D18,
+    BE0 = INDIRECT_D19,
+    BE1 = INDIRECT_D20,
+    INT960_0 = INDIRECT_D21,  
+    INT960_1 = INDIRECT_D22,  
+    // INDIRECT_D23
+    // INDIRECT_D24
+    // INDIRECT_D25
+    // INDIRECT_D26
+    // INDIRECT_D27
+    // INDIRECT_D28
+    DEN = INDIRECT_D29,
+    READY = INDIRECT_D30,
+    READY_SYNC = INDIRECT_D31,
+    INT960_2 = INDIRECT_D32,
+    INT960_3 = INDIRECT_D33,
+    // INDIRECT_D34 
+    // INDIRECT_D35 (MOSI)
+    // INDIRECT_D36 (MISO)
+    // INDIRECT_D37 (SCK)
+    TEENSY_AVR_RX = INDIRECT_D38,
+    TEENSY_AVR_TX = INDIRECT_D39,
+    TEENSY_AVR_SCL = INDIRECT_D40,
+    TEENSY_AVR_SDA = INDIRECT_D41,
 
 };
 
