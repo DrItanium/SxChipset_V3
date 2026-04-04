@@ -1208,7 +1208,7 @@ struct i960Interface {
   template<MemoryCell MC>
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset) {
+      for (uint8_t wordOffset = (offset >> 1); wordOffset < 8; ++wordOffset) {
           writeDataLines(target.getWord(wordOffset));
           if (isBurstLast()) {
               break;
@@ -1220,7 +1220,7 @@ struct i960Interface {
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = offset >> 1; ; ++wordOffset ) {
+      for (uint8_t wordOffset = (offset >> 1); wordOffset < 8; ++wordOffset ) {
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               break;
