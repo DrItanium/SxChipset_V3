@@ -1161,59 +1161,18 @@ public:
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<InterfaceTimingDescription decl = ReadConfiguration>
   static uint32_t 
-  getAddress() noexcept {
+  getAddress24() noexcept {
       uint32_t value = 0;
-#if 1
-      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()));
-      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+1)) << 8;
-      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+2)) << 16;
-      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+3)) << 24;
-#else
-      // the CH351 has some very strict requirements
-      // This function will take at least 230 ns to complete
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(addressLines.getBaseAddress());
-      fixedDelayNanoseconds<decl.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
-      value |= static_cast<uint32_t>(EBIInterface::readDataLines());
-      fixedDelayNanoseconds<decl.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
-
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(addressLines.getBaseAddress()+1);
-      fixedDelayNanoseconds<decl.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
-      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 8;
-      fixedDelayNanoseconds<decl.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
-
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(addressLines.getBaseAddress()+2);
-      fixedDelayNanoseconds<decl.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
-      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 16;
-      fixedDelayNanoseconds<decl.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
-
-      EBIInterface::setDataLinesDirection<INPUT>();
-      EBIInterface::setAddress(addressLines.getBaseAddress()+3);
-      fixedDelayNanoseconds<decl.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
-      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 24;
-      fixedDelayNanoseconds<decl.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
-#endif
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
+      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
+      //value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
       return value;
+  }
+  static uint8_t
+  getAddressMSB() noexcept {
+      return read8(addressLines.getBaseAddress() + 3);
   }
   static inline bool
   isBurstLast() noexcept {
@@ -1370,7 +1329,7 @@ public:
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction() noexcept {
-      auto address = getAddress();
+      auto address = getAddress24();
       if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
           if constexpr (isReadTransaction) { 
               i960Interface::configureDataLinesForRead();
@@ -1378,7 +1337,12 @@ public:
               i960Interface::configureDataLinesForWrite();
           }
       }
-      switch (static_cast<uint8_t>(address >> 24)) {
+#if 0
+      switch (static_cast<uint8_t>(address >> 24))
+#else
+      switch (getAddressMSB()) 
+#endif
+      {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
               break;
