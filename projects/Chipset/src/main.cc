@@ -1542,6 +1542,7 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
+    outputPin(Pin::INSPECT0, HIGH);
 
 
     Serial.begin(115200);
