@@ -1087,6 +1087,9 @@ struct i960Interface {
 
   static void
   begin() noexcept {
+      // okay, we need to synchronize the initial ready out state since it
+      // could be different comparatively than expected.
+      _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
       write8<false>(addressLines.getConfigPortBaseAddress(), 0);
       write8<false>(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8<false>(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -1126,12 +1129,14 @@ struct i960Interface {
           configureDataLinesDirection<0, compareWithPrevious>();
       }
   }
+private:
+  static inline auto _lastReadyState = HIGH;
+public:
   static void
   waitForReadySignal() noexcept {
       if constexpr (UseRP2040Assistance) {
-          static auto lastReadyState = HIGH;
-          while (digitalReadFast(Pin::READY_LEVEL_IN) == lastReadyState);
-          lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+          while (digitalReadFast(Pin::READY_LEVEL_IN) == _lastReadyState);
+          _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
       } else {
           while (!readyTriggered);
       }
@@ -1156,13 +1161,58 @@ struct i960Interface {
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+  template<InterfaceTimingDescription decl = ReadConfiguration>
   static uint32_t 
   getAddress() noexcept {
       uint32_t value = 0;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+#if 1
+      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()));
+      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+1)) << 8;
+      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+2)) << 16;
+      value |= static_cast<uint32_t>(read8<decl>(addressLines.getBaseAddress()+3)) << 24;
+#else
+      // the CH351 has some very strict requirements
+      // This function will take at least 230 ns to complete
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(addressLines.getBaseAddress());
+      fixedDelayNanoseconds<decl.addressWait>();
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      value |= static_cast<uint32_t>(EBIInterface::readDataLines());
+      fixedDelayNanoseconds<decl.holdTime>();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<decl.afterTime>();
+
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(addressLines.getBaseAddress()+1);
+      fixedDelayNanoseconds<decl.addressWait>();
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 8;
+      fixedDelayNanoseconds<decl.holdTime>();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<decl.afterTime>();
+
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(addressLines.getBaseAddress()+2);
+      fixedDelayNanoseconds<decl.addressWait>();
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 16;
+      fixedDelayNanoseconds<decl.holdTime>();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<decl.afterTime>();
+
+      EBIInterface::setDataLinesDirection<INPUT>();
+      EBIInterface::setAddress(addressLines.getBaseAddress()+3);
+      fixedDelayNanoseconds<decl.addressWait>();
+      digitalWriteFast(Pin::EBI_RD, LOW);
+      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      value |= static_cast<uint32_t>(EBIInterface::readDataLines()) << 24;
+      fixedDelayNanoseconds<decl.holdTime>();
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<decl.afterTime>();
+#endif
       return value;
   }
   static inline bool
