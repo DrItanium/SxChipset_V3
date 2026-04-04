@@ -1130,11 +1130,8 @@ struct i960Interface {
   waitForReadySignal() noexcept {
       if constexpr (UseRP2040Assistance) {
           static auto lastReadyState = HIGH;
-          static auto otherReadyState = LOW;
           while (digitalReadFast(Pin::READY_LEVEL_IN) == lastReadyState);
-          auto next = lastReadyState;
-          lastReadyState = otherReadyState;
-          otherReadyState = next;
+          lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
       } else {
           while (!readyTriggered);
       }

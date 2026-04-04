@@ -14,37 +14,6 @@ import array
 # setup a state machine for processing a series of independent requests for the
 # basic bus state machine of the i960
 
-# the first thing to do is actually setup a simple blinking state machine
-blink = adafruit_pioasm.assemble(
-        """
-.program blink
-    pull block ; these two instructions take the blink duration
-    out y, 32  ; and store it in y
-forever:
-    mov x, y
-    set pins, 1 ; Turn LED on
-lp1:
-    jmp x-- lp1 ; delay for (x + 1) cycles, x is a 32-bit number
-    mov x, y
-    set pins, 0 ; turn led off
-lp2:
-    jmp x-- lp2 ; delay for the same number of cycles again
-    jmp forever
-"""
-        )
-blinkSM = rp2pio.StateMachine(
-        blink,
-        frequency = 125_000_000 ,
-        first_set_pin=board.LED,
-        wait_for_txstall = False,
-        )
-# this blinking state machine will persist for the entire time we are running
-# everything else
-data = array.array("I", [blinkSM.frequency // 5])
-blinkSM.write(data)
-
-
-
 # The first state machine is the detector for an address transaction:
 transactionStartSM = adafruit_pioasm.assemble(
         """
