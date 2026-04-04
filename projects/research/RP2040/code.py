@@ -26,7 +26,10 @@ transactionStartSM = adafruit_pioasm.assemble(
     set pins 1      ; Then pull it high
     """
     )
-
+# we reserve D9, D10, and D11 for this state machine
+# D9 and D10 are the inputs
+# D11 is the resultant output
+# We run at 125MHz to detect this as fast as possible
 adsDetect = rp2pio.StateMachine(
         transactionStartSM,
         frequency = 125_000_000,
@@ -38,6 +41,9 @@ adsDetect = rp2pio.StateMachine(
         initial_set_pin_direction = 1,
         )
 
+# this SM is responsible for detecting the READY pulse generated from the
+# AVR128DB64. It converts it into a level signal instead. This eliminates some
+# overhead from firing an interrupt. Instead, it is positional code.
 readyTranslatorSM = adafruit_pioasm.assemble(
         """
 .program readyTranslator
@@ -61,21 +67,5 @@ readyTranslator = rp2pio.StateMachine(
         initial_set_pin_direction = 1,
         )
 
-# the next state machine will only start executing once the interrupt from the
-# adsDetect has triggered the interrupt. The responsibility of this second
-# state machine is to pull in the address contents from the shift registers and
-# pass it to the microcontroller cores
-
-# after that, the responsibility will be to either get or recieve up to
-# 128-bits of data. In the case of read operations, it is just up to 128-bits
-# of data that we ignore the enable lines from.
-#
-# For write operations, we need to capture the byte enable lines as well as the
-# data itself. We can apply optimizations where only the first and last bytes
-# need to have their byte enable lines checked. Or... we just create
-# transaction packets...
-#
-# the address needs to be sent to the microcontroller cores
-# this will allow for either read or write operations to take place!
 while True:
     time.sleep(1)
