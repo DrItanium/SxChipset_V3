@@ -1210,21 +1210,22 @@ struct i960Interface {
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
-      uint8_t wordOffset = (offset >> 1);
-      auto currentWord = target.getWord(wordOffset);
-      while (true) {
+      auto currentWord = target.getWord((offset >> 1));
+      for (uint8_t wordOffset = (offset >> 1); ;) {
           // write the current word
           writeDataLines(currentWord);
           if (isBurstLast()) {
-              signalReady();
-              return;
+              break;
           } 
           // overlay operations
           digitalToggleFast(Pin::READY);
-          ++wordOffset; // advance wordOffset first
-          currentWord = target.getWord(wordOffset); // get the next value
+          {
+              ++wordOffset; // advance wordOffset first
+              currentWord = target.getWord(wordOffset); // get the next value
+          }
           waitForReadySignal(); // then wait for the ready signal to change
       }
+      signalReady();
   }
   template<MemoryCell MC>
   static void
