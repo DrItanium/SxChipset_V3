@@ -1219,10 +1219,8 @@ struct i960Interface {
           } 
           // overlay operations
           digitalToggleFast(Pin::READY);
-          {
-              ++wordOffset; // advance wordOffset first
-              currentWord = target.getWord(wordOffset); // get the next value
-          }
+          ++wordOffset; // advance wordOffset first
+          currentWord = target.getWord(wordOffset); // get the next value
           waitForReadySignal(); // then wait for the ready signal to change
       }
       signalReady();
