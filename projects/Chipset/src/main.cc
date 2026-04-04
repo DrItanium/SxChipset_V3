@@ -1338,8 +1338,7 @@ public:
               i960Interface::configureDataLinesForWrite();
           }
       }
-      switch (getAddressMSB()) 
-      {
+      switch (getAddressMSB()) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
               break;
