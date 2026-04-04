@@ -1210,12 +1210,14 @@ struct i960Interface {
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
-      auto currentWord = target.getWord((offset >> 1));
-      for (uint8_t wordOffset = (offset >> 1); ;) {
+      uint8_t wordOffset = (offset >> 1);
+      auto currentWord = target.getWord(wordOffset);
+      while (true) {
           // write the current word
           writeDataLines(currentWord);
           if (isBurstLast()) {
-              break;
+              signalReady();
+              return;
           } 
           // overlay operations
           digitalToggleFast(Pin::READY);
@@ -1223,12 +1225,13 @@ struct i960Interface {
           currentWord = target.getWord(wordOffset); // get the next value
           waitForReadySignal(); // then wait for the ready signal to change
       }
-      signalReady();
   }
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset ) {
+          // for write operations, the only thing we can do is overlay the
+          // storage operation with ready
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
           if (isBurstLast()) {
               break;
