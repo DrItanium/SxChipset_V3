@@ -1130,8 +1130,11 @@ struct i960Interface {
   waitForReadySignal() noexcept {
       if constexpr (UseRP2040Assistance) {
           static auto lastReadyState = HIGH;
-          while (digitalReadFast(Pin::INSPECT0) == lastReadyState);
-          lastReadyState = digitalReadFast(Pin::INSPECT0);
+          static auto otherReadyState = LOW;
+          while (digitalReadFast(Pin::READY_LEVEL_IN) == lastReadyState);
+          auto next = lastReadyState;
+          lastReadyState = otherReadyState;
+          otherReadyState = next;
       } else {
           while (!readyTriggered);
       }
@@ -1140,10 +1143,11 @@ struct i960Interface {
   static inline void
   signalReady() noexcept {
       if constexpr (!UseRP2040Assistance) {
-      readyTriggered = false;
+          readyTriggered = false;
+      }
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
-      waitForReadySignal<true>();
+      waitForReadySignal();
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
@@ -1549,7 +1553,7 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    inputPin(Pin::INSPECT0);
+    inputPin(Pin::READY_LEVEL_IN);
 
 
     Serial.begin(115200);
