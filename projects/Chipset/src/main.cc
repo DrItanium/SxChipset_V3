@@ -1653,9 +1653,12 @@ handleAVRSerialConnection() noexcept {
 void 
 loop() {
     tryDoTransaction();
+    tryDoTransaction();
     handleAVRSerialConnection();
     tryDoTransaction();
+    tryDoTransaction();
     processRealtimeShell();
+    tryDoTransaction();
     tryDoTransaction();
 }
 #ifdef USB_TRIPLE_SERIAL
