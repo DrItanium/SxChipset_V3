@@ -1302,7 +1302,8 @@ public:
   }
   template<bool isReadTransaction>
   static inline void
-  doIOTransaction(uint32_t address) noexcept {
+  doIOTransaction() noexcept {
+      auto address = getAddress24();
       switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
               handleBuiltinDevices<isReadTransaction>(address & 0xFF);
@@ -1325,11 +1326,16 @@ public:
               break;
       }
   }
+  template<bool isReadTransaction>
+  static inline void 
+  doPSRAMTransaction() noexcept {
+      auto address = getAddress24();
+      doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+  }
 
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction() noexcept {
-      auto address = getAddress24();
       if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
           if constexpr (isReadTransaction) { 
               i960Interface::configureDataLinesForRead();
@@ -1337,19 +1343,16 @@ public:
               i960Interface::configureDataLinesForWrite();
           }
       }
-#if 0
-      switch (static_cast<uint8_t>(address >> 24))
-#else
-      switch (getAddressMSB()) 
-#endif
-      {
-          case 0x00: // PSRAM
-              doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+      switch (getAddressMSB()) {
+          case 0x00: 
+              doPSRAMTransaction<isReadTransaction>();
               break;
-          case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address);
+          case 0xFE: 
+              doIOTransaction<isReadTransaction>();
               break;
           default:
+              // do not waste time on reading the rest of the address as it is
+              // bogus
               doNothingTransaction<isReadTransaction>();
               break;
       }
