@@ -1548,6 +1548,7 @@ triggerSystemTimer() noexcept {
 
 void configureShells();
 void processRealtimeShell() noexcept;
+void handleAVRSerialConnection() noexcept;
 void 
 setup() {
     cpuIsRunning = false;
