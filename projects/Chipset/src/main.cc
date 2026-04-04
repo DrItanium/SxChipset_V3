@@ -1128,16 +1128,22 @@ struct i960Interface {
   }
   static void
   waitForReadySignal() noexcept {
-      while (!readyTriggered);
+      if constexpr (UseRP2040Assistance) {
+          static auto lastReadyState = HIGH;
+          while (digitalReadFast(Pin::INSPECT0) == lastReadyState);
+          lastReadyState = digitalReadFast(Pin::INSPECT0);
+      } else {
+          while (!readyTriggered);
+      }
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
+      if constexpr (!UseRP2040Assistance) {
       readyTriggered = false;
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
-      waitForReadySignal();
-      digitalToggleFast(Pin::INSPECT0);
+      waitForReadySignal<true>();
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
@@ -1543,7 +1549,7 @@ setup() {
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    outputPin(Pin::INSPECT0, HIGH);
+    inputPin(Pin::INSPECT0);
 
 
     Serial.begin(115200);
@@ -1572,8 +1578,8 @@ setup() {
         // only attach this interrupt if we are not using the RP2040 as a
         // secondary coprocessor
         attachInterrupt(Pin::ADS, triggerADS, FALLING);
+        attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     }
-    attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
