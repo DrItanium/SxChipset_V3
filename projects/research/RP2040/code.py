@@ -69,6 +69,29 @@ adsDetect = rp2pio.StateMachine(
         initial_set_pin_direction = 1,
         )
 
+readyTranslatorSM = adafruit_pioasm.assemble(
+        """
+.program readyTranslator
+    wait 0 pin 0 ; wait for READY OUT to go low
+    wait 1 pin 0 ; wait for READY OUT to go high
+    set pins 0   ; make READY low
+    wait 0 pin 0 ; wait for READY OUT to go low
+    wait 1 pin 0 ; wait for READY OUT to go high
+    set pins 1   ; toggle READY
+    """
+    )
+
+readyTranslator = rp2pio.StateMachine(
+        readyTranslatorSM,
+        frequency = 125_000_000,
+        first_in_pin = board.D5,
+        in_pin_count = 1,
+        first_set_pin = board.D6,
+        set_pin_count = 1,
+        initial_set_pin_state = 1,
+        initial_set_pin_direction = 1,
+        )
+
 # the next state machine will only start executing once the interrupt from the
 # adsDetect has triggered the interrupt. The responsibility of this second
 # state machine is to pull in the address contents from the shift registers and
