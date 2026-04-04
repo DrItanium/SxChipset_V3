@@ -1236,7 +1236,19 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      for (uint8_t wordOffset = (offset >> 1); ; ) {
+#if 1
+      for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
+          // for write operations, the only thing we can do is overlay the
+          // storage operation with ready
+          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          if (isBurstLast()) {
+              break;
+          } 
+          signalReady();
+      }
+      signalReady();
+#else
+      for (uint8_t wordOffset = (offset >> 1); ;) {
           // for write operations, the only thing we can do is overlay the
           // storage operation with ready
           target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
@@ -1244,10 +1256,11 @@ public:
               break;
           } 
           digitalToggleFast(Pin::READY);
-          ++wordOffset; // advance wordOffset first
-          waitForReadySignal(); // then wait for the ready signal to change
+          ++wordOffset;
+          waitForReadySignal();
       }
       signalReady();
+#endif
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
