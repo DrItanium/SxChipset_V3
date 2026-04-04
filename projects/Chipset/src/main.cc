@@ -1137,6 +1137,7 @@ struct i960Interface {
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
+      digitalToggleFast(Pin::INSPECT0);
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
   static inline bool
