@@ -1200,7 +1200,6 @@ public:
       value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
       return value;
   }
-
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1237,18 +1236,18 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-          for (uint8_t wordOffset = (offset >> 1); ; ) {
-              // for write operations, the only thing we can do is overlay the
-              // storage operation with ready
-              target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
-              if (isBurstLast()) {
-                  break;
-              } 
-              digitalToggleFast(Pin::READY);
-              ++wordOffset; // advance wordOffset first
-              waitForReadySignal(); // then wait for the ready signal to change
-          }
-          signalReady();
+      for (uint8_t wordOffset = (offset >> 1); ; ) {
+          // for write operations, the only thing we can do is overlay the
+          // storage operation with ready
+          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          if (isBurstLast()) {
+              break;
+          } 
+          digitalToggleFast(Pin::READY);
+          ++wordOffset; // advance wordOffset first
+          waitForReadySignal(); // then wait for the ready signal to change
+      }
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
