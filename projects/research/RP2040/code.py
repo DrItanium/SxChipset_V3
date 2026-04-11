@@ -7,8 +7,11 @@ import rp2pio
 import adafruit_pioasm
 import array
 
-
-
+# D12 is the System Up pin
+systemUp = digitalio.DigitalInOut(board.D12)
+systemUp.switch_to_output(False)
+led = digitalio.DigitalInOut(board.D13)
+led.switch_to_output(True)
 
 # now that we have a successful setup for feedback testing, it is necessary to
 # setup a state machine for processing a series of independent requests for the
@@ -66,6 +69,16 @@ readyTranslator = rp2pio.StateMachine(
         initial_set_pin_state = 1,
         initial_set_pin_direction = 1,
         )
+# reserved Pins on the RP2040 Feather
+# D5: Ready Input
+# D6: Ready Output
+# D9: ADS Input
+# D10: DEN Input
+# D11: Transaction Start
 
+# Since CircuitPython is very slow to boot we need to denote that it is up and
+# running!
+systemUp.value = True
+led.value = False
 while True:
     time.sleep(1)
