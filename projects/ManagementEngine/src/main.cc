@@ -78,7 +78,7 @@ constexpr auto DEN = PIN_PD7;
 constexpr auto WR = PIN_PE3;
 constexpr auto BE0 = PIN_PE4;
 constexpr auto BE1 = PIN_PE5;
-// PIN_PE6
+constexpr auto RP2_UP = PIN_PE6;
 // PIN_PE7
 
 // PIN_PF0
@@ -87,7 +87,7 @@ constexpr auto BE1 = PIN_PE5;
 // PIN_PF3
 // PIN_PF4
 constexpr auto INT2_IN = PIN_PF5; 
-// PIN_PF6 (input only/Reset)
+constexpr auto ME_RESET = PIN_PF6; // (input only/Reset)
 
 constexpr auto INT0_IN = PIN_PG0;
 // PIN_PG1
@@ -108,6 +108,7 @@ uint8_t devidCache[3] = { 0 };
 long rSeed = 0;
 bool chipIsUp = false;
 bool cpuIsInReset = true;
+
 void
 configurePins() noexcept {
     pinMode(CLK1OUT, OUTPUT);
@@ -139,6 +140,8 @@ configurePins() noexcept {
     pinMode(HOLD960, OUTPUT);
     digitalWrite(HOLD960, LOW);
     pinMode(LOCK960, INPUT);
+    // we now have the design configured
+    pinMode(RP2_UP, INPUT_PULLUP);
 }
 namespace i960 {
 bool isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH; }
@@ -451,6 +454,11 @@ setup() {
     takeOverTCA0();
     configurePins();
     configureCCLs();
+    // just keep looping until we see that the RP2 is up and running
+    while (digitalReadFast(RP2_UP) == HIGH) {
+        delay(10);
+    }
+    
     cpuIsInReset = true;
     chipIsUp = true;
     configureMicroshellInterface();
