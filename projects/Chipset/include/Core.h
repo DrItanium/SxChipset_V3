@@ -43,6 +43,17 @@ union SplitWord32 {
         uint32_t offsetAddress : 24;
         uint8_t blockIndex; 
     } blockAddress;
+    struct {
+        // TODO: synchronize this layout with sram1 actual size
+        uint8_t offset : 4;
+        uint32_t index : 7;
+    } SRAM1Address;
+
+    struct {
+        // TODO: synchronize this layout with sram1 actual size
+        uint8_t offset : 4;
+        uint32_t index : 12;
+    } SRAM2Address;
     
     inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
         switch (offset & 0b1) {

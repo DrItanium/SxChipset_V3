@@ -1303,14 +1303,14 @@ public:
           //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
           //    break;
           case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.components.targetCellBlock) & 0x7F], address.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[address.SRAM1Address.index], address.SRAM1Address.offset);
               break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(static_cast<uint16_t>(address));
               doMemoryCellTransaction<isReadTransaction>(eeprom, address.lineOffset);
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[address.components.targetCellBlock & 0xFFF], address.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[address.SRAM2Address.index], address.SRAM2Address.offset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
