@@ -1294,8 +1294,10 @@ public:
   }
   template<bool isReadTransaction>
   static void
-  doIOTransaction(SplitWord32 address) noexcept {
-      switch (address.blockAddress.offsetAddress) {
+  doIOTransaction(uint32_t address) noexcept {
+      auto lineOffset = address & 0xF;
+      auto sramIndex = (address >> 4) & 0xFFF;
+      switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
               handleBuiltinDevices<isReadTransaction>(static_cast<uint8_t>(address));
               break;
@@ -1304,16 +1306,14 @@ public:
           //    break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(static_cast<uint16_t>(address));
-              doMemoryCellTransaction<isReadTransaction>(eeprom, address.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, lineOffset);
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[address.sramAddress.index], 
-                      address.sramAddress.offset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[sramIndex], lineOffset);
               break;
           case 0x00'0800 ... 0x00'0FFF:  // SRAM1 legacy 2k view
           case 0x02'0000 ... 0x02'FFFF: // SRAM1 full view
-              doMemoryCellTransaction<isReadTransaction>(sramCache[address.sramAddress.index], 
-                      address.sramAddress.offset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[sramIndex], lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -1337,7 +1337,7 @@ public:
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
               break;
           case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address);
+              doIOTransaction<isReadTransaction>(address.value);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
