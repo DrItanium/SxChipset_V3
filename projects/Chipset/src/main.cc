@@ -1563,7 +1563,7 @@ setup() {
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::READY_LEVEL_IN);
-
+    delay(1000); // wait for the RP2040 running circuit python to startup 
 
     Serial.begin(115200);
     Serial1.begin(115200); // connection to the AVR
