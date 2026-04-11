@@ -1302,19 +1302,18 @@ public:
           //case 0x00'0100 ... 0x00'01FF:
           //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
           //    break;
-          case 0x00'0800 ... 0x00'0FFF: 
-              // only the first 2k are visible here for legacy reasons
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.value >> 4) & 0x7F], address.lineOffset);
-              break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(static_cast<uint16_t>(address));
               doMemoryCellTransaction<isReadTransaction>(eeprom, address.lineOffset);
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address.value >> 4) & 0xFFF], address.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[address.sramAddress.index], 
+                      address.sramAddress.offset);
               break;
+          case 0x00'0800 ... 0x00'0FFF:  // SRAM1 legacy 2k view
           case 0x02'0000 ... 0x02'FFFF: // SRAM1 full view
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.value >> 4) & 0xFFF], address.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[address.sramAddress.index], 
+                      address.sramAddress.offset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
