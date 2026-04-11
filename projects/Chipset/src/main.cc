@@ -1294,24 +1294,23 @@ public:
   }
   template<bool isReadTransaction>
   static void
-  doIOTransaction(SplitWord32 addr) noexcept {
-      auto address = addr.value;
-      switch (addr.blockAddress.offsetAddress) {
+  doIOTransaction(uint32_t address) noexcept {
+      switch (address & 0xFF'FFFF) {
           case 0x00'0000 ... 0x00'00FF:
-              handleBuiltinDevices<isReadTransaction>(addr.bytes[0]);
+              handleBuiltinDevices<isReadTransaction>(address & 0xFF);
               break;
           //case 0x00'0100 ... 0x00'01FF:
           //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
           //    break;
           case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], addr.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
               break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(address);
-              doMemoryCellTransaction<isReadTransaction>(eeprom, addr.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], addr.lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], address & 0xF);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -1335,7 +1334,7 @@ public:
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
               break;
           case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address);
+              doIOTransaction<isReadTransaction>(address.value);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -1545,12 +1544,8 @@ void processRealtimeShell() noexcept;
 void handleAVRSerialConnection() noexcept;
 void 
 setup() {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH);
     cpuIsRunning = false;
     Wire2.begin();
-    Serial.begin(115200);
-    Serial1.begin(115200); // connection to the AVR
     managementEngine.begin();
     delay(1000);
     waitForAVRToComeUp();
@@ -1568,10 +1563,10 @@ setup() {
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::READY_LEVEL_IN);
-    // wait for the RP2040 to also come up since it is currently
-    // written in circuit python
-    delay(1000); 
-    digitalWrite(LED_BUILTIN, LOW);
+
+
+    Serial.begin(115200);
+    Serial1.begin(115200); // connection to the AVR
 #ifdef USB_TRIPLE_SERIAL
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
