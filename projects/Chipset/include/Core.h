@@ -75,7 +75,10 @@ union SplitWord32 {
     }
     void clear() noexcept { value = 0; }
     void onFinish() noexcept { }
-    
+    // simple conversion operators
+    explicit operator uint32_t() const noexcept { return value; }
+    explicit operator uint8_t() const noexcept { return bytes[0]; }
+    explicit operator uint16_t() const noexcept { return shorts[0]; }
 };
 union SplitWord64 {
     uint8_t bytes[sizeof(uint64_t) / sizeof(uint8_t)];
