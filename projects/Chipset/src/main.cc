@@ -1312,6 +1312,8 @@ public:
               doMemoryCellTransaction<isReadTransaction>(sramCache2[sramIndex], lineOffset);
               break;
           case 0x00'0800 ... 0x00'0FFF:  // SRAM1 legacy 2k view
+              sramIndex &= 0x7F; // mask it out further to make sure it is the
+                                 // correct address
           case 0x02'0000 ... 0x02'FFFF: // SRAM1 full view
               doMemoryCellTransaction<isReadTransaction>(sramCache[sramIndex], lineOffset);
               break;
