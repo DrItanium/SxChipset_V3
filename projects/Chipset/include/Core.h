@@ -33,11 +33,16 @@ union SplitWord32 {
     uint8_t bytes[4];
     uint16_t shorts[2];
     uint32_t value;
+    uint8_t lineOffset : 4;
     struct {
         uint8_t offset : 4;
         uint32_t targetCellBlock : 20;
         uint8_t targetBlock; // 16M section
     } components;
+    struct {
+        uint32_t offsetAddress : 24;
+        uint8_t blockIndex; 
+    } blockAddress;
     
     inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
         switch (offset & 0b1) {

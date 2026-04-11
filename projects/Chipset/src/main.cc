@@ -1293,24 +1293,24 @@ public:
       }
   }
   template<bool isReadTransaction>
-  static inline void
-  doIOTransaction(uint32_t address) noexcept {
-      switch (address & 0xFF'FFFF) {
+  static void
+  doIOTransaction(SplitWord32 address) noexcept {
+      switch (address.blockAddress.offsetAddress) {
           case 0x00'0000 ... 0x00'00FF:
-              handleBuiltinDevices<isReadTransaction>(address & 0xFF);
+              handleBuiltinDevices<isReadTransaction>(address.bytes[0]);
               break;
           //case 0x00'0100 ... 0x00'01FF:
-          //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
+          //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address.bytes[0]);
           //    break;
           case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[(address >> 4) & 0x7F], address & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.value >> 4) & 0x7F], address.lineOffset);
               break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
-              eeprom.updateBaseAddress(address);
-              doMemoryCellTransaction<isReadTransaction>(eeprom, address & 0xF);
+              eeprom.updateBaseAddress(address.value);
+              doMemoryCellTransaction<isReadTransaction>(eeprom, address.lineOffset); 
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address >> 4) & 0xFFF], address & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address.value >> 4) & 0xFFF], address.lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
@@ -1334,7 +1334,7 @@ public:
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
               break;
           case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address.value);
+              doIOTransaction<isReadTransaction>(address);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
