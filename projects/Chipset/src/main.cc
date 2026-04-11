@@ -1545,6 +1545,8 @@ void processRealtimeShell() noexcept;
 void handleAVRSerialConnection() noexcept;
 void 
 setup() {
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, HIGH);
     cpuIsRunning = false;
     Wire2.begin();
     Serial.begin(115200);
@@ -1568,7 +1570,8 @@ setup() {
     inputPin(Pin::READY_LEVEL_IN);
     // wait for the RP2040 to also come up since it is currently
     // written in circuit python
-    delay(5000); 
+    delay(1000); 
+    digitalWrite(LED_BUILTIN, LOW);
 #ifdef USB_TRIPLE_SERIAL
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
