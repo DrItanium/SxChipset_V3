@@ -43,17 +43,6 @@ union SplitWord32 {
         uint32_t offsetAddress : 24;
         uint8_t blockIndex; 
     } blockAddress;
-    struct {
-        // TODO: synchronize this layout with sram1 actual size
-        uint8_t offset : 4;
-        uint32_t index : 7;
-    } SRAM1Address;
-
-    struct {
-        // TODO: synchronize this layout with sram1 actual size
-        uint8_t offset : 4;
-        uint32_t index : 12;
-    } SRAM2Address;
     
     inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
         switch (offset & 0b1) {
@@ -91,6 +80,7 @@ union SplitWord32 {
     explicit operator uint8_t() const noexcept { return bytes[0]; }
     explicit operator uint16_t() const noexcept { return shorts[0]; }
 };
+static_assert(sizeof(SplitWord32) == sizeof(uint32_t));
 union SplitWord64 {
     uint8_t bytes[sizeof(uint64_t) / sizeof(uint8_t)];
     uint16_t shorts[sizeof(uint64_t) / sizeof(uint16_t)];

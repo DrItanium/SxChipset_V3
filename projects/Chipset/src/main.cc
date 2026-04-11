@@ -70,7 +70,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // CH351 has some real limitations when it comes to write operations. There are
 // minimum hold times in between writes. Which is around 50 ns
 //
-constexpr uint32_t OnboardSRAMCacheSize = 2048;
+constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
@@ -1303,14 +1303,18 @@ public:
           //    doMemoryCellTransaction<isReadTransaction>(oledDisplay, address & 0xFF);
           //    break;
           case 0x00'0800 ... 0x00'0FFF: 
-              doMemoryCellTransaction<isReadTransaction>(sramCache[address.SRAM1Address.index], address.SRAM1Address.offset);
+              // only the first 2k are visible here for legacy reasons
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.value >> 4) & 0x7F], address.lineOffset);
               break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(static_cast<uint16_t>(address));
               doMemoryCellTransaction<isReadTransaction>(eeprom, address.lineOffset);
               break;
           case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[address.SRAM2Address.index], address.SRAM2Address.offset);
+              doMemoryCellTransaction<isReadTransaction>(sramCache2[(address.value >> 4) & 0xFFF], address.lineOffset);
+              break;
+          case 0x02'0000 ... 0x02'FFFF: // SRAM1 full view
+              doMemoryCellTransaction<isReadTransaction>(sramCache[(address.value >> 4) & 0xFFF], address.lineOffset);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
