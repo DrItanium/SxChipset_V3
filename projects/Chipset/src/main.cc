@@ -1329,9 +1329,9 @@ public:
               i960Interface::configureDataLinesForWrite();
           }
       }
-      switch (address.bytes[3]) {
+      switch (address.components.targetBlock) {
           case 0x00: // PSRAM
-              doMemoryCellTransaction<isReadTransaction>(memory960[(address.value >> 4) & 0x000F'FFFF], address.bytes[0] & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
               break;
           case 0xFE: // IO Space
               doIOTransaction<isReadTransaction>(address.value);
