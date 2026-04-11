@@ -8,8 +8,8 @@ import adafruit_pioasm
 import array
 
 # D12 is the System Up pin
-systemUp = digitalio.DigitalInOut(board.D12)
-systemUp.switch_to_output(False)
+systemWarmUp = digitalio.DigitalInOut(board.D12)
+systemWarmUp.switch_to_output(True)
 led = digitalio.DigitalInOut(board.D13)
 led.switch_to_output(True)
 
@@ -78,7 +78,7 @@ readyTranslator = rp2pio.StateMachine(
 
 # Since CircuitPython is very slow to boot we need to denote that it is up and
 # running!
-systemUp.value = True
+systemWarmUp.value = False
 led.value = False
 while True:
     time.sleep(1)
