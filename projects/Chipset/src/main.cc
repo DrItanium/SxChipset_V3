@@ -1159,18 +1159,13 @@ public:
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  static uint32_t 
+  static SplitWord32
   getAddress24() noexcept {
-      uint32_t value = 0;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()));
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+1)) << 8;
-      value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+2)) << 16;
-      //value |= static_cast<uint32_t>(read8(addressLines.getBaseAddress()+3)) << 24;
+      SplitWord32 value;
+      for (int i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
+          value.bytes[i] = read8(k);
+      }
       return value;
-  }
-  static uint8_t
-  getAddressMSB() noexcept {
-      return read8(addressLines.getBaseAddress() + 3);
   }
   static inline bool
   isBurstLast() noexcept {
@@ -1334,12 +1329,12 @@ public:
               i960Interface::configureDataLinesForWrite();
           }
       }
-      switch (getAddressMSB()) {
+      switch (address.bytes[3]) {
           case 0x00: // PSRAM
-              doMemoryCellTransaction<isReadTransaction>(memory960[(address >> 4) & 0x000F'FFFF], address & 0xF);
+              doMemoryCellTransaction<isReadTransaction>(memory960[(address.value >> 4) & 0x000F'FFFF], address.bytes[0] & 0xF);
               break;
           case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address);
+              doIOTransaction<isReadTransaction>(address.value);
               break;
           default:
               doNothingTransaction<isReadTransaction>();
