@@ -1563,6 +1563,7 @@ setup() {
     outputPin(Pin::INT960_3, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
+    inputPin(Pin::FULL16_ENABLE);
     inputPin(Pin::WR);
     outputPin(Pin::READY, HIGH);
     inputPin(Pin::BLAST);
