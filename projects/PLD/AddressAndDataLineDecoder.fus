@@ -129,9 +129,9 @@ Pin 16 = CS1          S0 = 0   S1 = 1
 109  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 110  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 
-Pin 15 = V5           S0 = 0   S1 = 0
-111  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
-112  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+Pin 15 = F16          S0 = 0   S1 = 1
+111  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+112  ---- ---- ---- ---- ---- ---- ---- ---- -x-- -x-- ----
 113  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 114  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 115  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
