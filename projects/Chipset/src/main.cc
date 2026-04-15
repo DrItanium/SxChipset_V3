@@ -1179,13 +1179,13 @@ public:
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  static inline void
+  static void
   writeDataLines(uint16_t value) noexcept {
       constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
-  static inline uint16_t
+  static uint16_t
   readDataLines() noexcept {
       uint16_t value = 0;
       constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
@@ -1193,8 +1193,8 @@ public:
       value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
       return value;
   }
-  static inline uint16_t readLo8() noexcept { return read8(dataLines.getDataPortReadAddressBase()); }
-  static inline uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8(dataLines.getDataPortReadAddressBase()+1)) << 8; }
+  static uint16_t readLo8() noexcept { return read8(dataLines.getDataPortReadAddressBase()); }
+  static uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8(dataLines.getDataPortReadAddressBase()+1)) << 8; }
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
