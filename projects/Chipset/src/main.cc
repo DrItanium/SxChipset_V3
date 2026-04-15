@@ -1193,6 +1193,8 @@ public:
       value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
       return value;
   }
+  static inline uint16_t readLo8() noexcept { return read8(dataLines.getDataPortReadAddressBase()); }
+  static inline uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8(dataLines.getDataPortReadAddressBase()+1)) << 8; }
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1232,7 +1234,14 @@ public:
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           // for write operations, the only thing we can do is overlay the
           // storage operation with ready
-          target.setWord(wordOffset, readDataLines(), byteEnableLow(), byteEnableHigh());
+          if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
+              target.setWord(wordOffset, readDataLines());
+          } else if (byteEnableLow()) {
+              target.setWord(wordOffset, readLo8(), true, false);
+          } else {
+              target.setWord(wordOffset, readHi8(), false, true);
+          }
+
           if (isBurstLast()) {
               break;
           } 
