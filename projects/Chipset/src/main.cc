@@ -1247,6 +1247,14 @@ public:
           // Finally, if we get to the third clause then it means that BE1 is
           // low and thus we need to read the upper byte line and write only
           // that out. This seems to improve performance quite a bit
+          //
+          // Basically we only pay for reading at most two signals and only if
+          // the first signal comes back high.
+          //
+          // This is possible because it is impossible for both enable signals
+          // to be high during a legal transaction. The only time that BE0 and
+          // BE1 are high is outside a given transaction or when FAIL is setup.
+          // So this is a safe optimization.
           if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
               target.setWord(wordOffset, readDataLines());
           } else if (byteEnableLow()) {
