@@ -1232,8 +1232,21 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          // for write operations, the only thing we can do is overlay the
-          // storage operation with ready
+          // the i960Sx exposes two byte enable signals, BE0 and BE1
+          // Each signal denotes if we should write that byte value. 
+          //
+          // Previously, we were always reading BE0 and BE1 separately
+          //
+          // Now, using an external GAL chip, we have two different signals:
+          // -- FULL16_ENABLE
+          // -- BE0
+          // If Full16_ENABLE is low then stop there and read both halves and
+          // write it out
+          // If it is false then check BE0 and see if it is low. If it is then
+          // only read the lower half and update only that byte.
+          // Finally, if we get to the third clause then it means that BE1 is
+          // low and thus we need to read the upper byte line and write only
+          // that out. This seems to improve performance quite a bit
           if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
               target.setWord(wordOffset, readDataLines());
           } else if (byteEnableLow()) {
