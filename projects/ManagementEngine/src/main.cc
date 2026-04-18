@@ -363,6 +363,7 @@ configureCCLs() {
   Event1.set_generator(gen0::pin_pa5); // use PA5 as the input
   Event1.set_user(user::tcb1_capt); // use PA5 to trigger TCB1 and generate the READY pulse
   updateClockFrequency(F_CPU); // we are making CLK2 run at 24MHz
+  
   // Event 5: Route PF5 to TCB3.CAPT
   configureINT2PulseGenerator(Event0, Event5);
   // Event 7: Route PG0 to TCB4.CAPT
@@ -385,8 +386,12 @@ configureCCLs() {
   Event7.start();
   //Event8.start();
   //Event9.start();
-  Logic0.init();
-  Logic4.init();
+  Logic0.init(); // CCL0 PortA
+  //Logic1.init(); // CCL1 PortC
+  //Logic2.init(); // CCL2 PortD
+  //Logic3.init(); // CCL3 PortF
+  Logic4.init(); // CCL4 PortB
+  //Logic5.init(); // CCL5 PortG
   // make sure that power 
   CCL.CTRLA |= CCL_RUNSTDBY_bm; // run ccl in standby
   Logic::start();
