@@ -12,7 +12,7 @@
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)
 // TCA1:
-// TCB0: INT1
+// TCB0: 
 // TCB1: Ready pulse generator
 // TCB2: micros/millis (reserved by DxCore)
 // TCB3: INT2
@@ -294,23 +294,23 @@ configureINT0PulseGenerator(Event& clk1out, Event& router) noexcept {
                TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
-configureINT1PulseGenerator(Event& clk1out, Logic& chan0, Event& chan1) noexcept {
+configureINT1PulseGenerator(Event& clk1out, Logic& logic) noexcept {
     // INT1 requires some extra routing since we don't have enough event channels to
     // directly map pin PA1 to tcb1_capt. So, we have to use the CCL0 output as
     // an extra router "channel"
-    clk1out.set_user(user::tcb0_cnt); // connect clk1out to TCB0
-    chan0.enable = true;
-    chan0.input0 = in::disable; // PA0 is not active
-    chan0.input1 = in::input; // PA1 is the only input
-    chan0.input2 = in::disable; // PA2 is not active
-    chan0.output = out::disable; // do not output on PA3
-    chan0.filter = filter::disable; // no output filter
-    chan0.truth = computeCCLValueBasedOffOfFunction(
+    clk1out.set_user(user::ccl0_event_b); // connect clk1out to CCL0.EVTB
+    logic.enable = true;
+    logic.input0 = in::disable; // PA0 is not active
+    logic.input1 = in::input; // PA1 is the only input
+    logic.input2 = in::event_b; // PA2 is not active
+    logic.clocksource = clocksource::in2; // use in2 as the clock source
+    logic.output = out::enable; // output on PA6
+    logic.output_swap = out::pin_swap; // make sure we output on PA6
+    logic.filter = filter::sync; // output filter
+    logic.edgedetect = edgedetect::enable; // enable the edge detector
+    logic.truth = computeCCLValueBasedOffOfFunction(
                 [](bool, bool mid, bool) -> uint8_t { return mid; }
             ); // forward propagate the input value
-    chan1.set_generator(gen::ccl0_out); // hook the CCL up to a real event
-                                        // channel
-    chan1.set_user(user::tcb0_capt); // connect to the capture signal
 }
 void
 configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
@@ -367,8 +367,8 @@ configureCCLs() {
   configureINT2PulseGenerator(Event0, Event5);
   // Event 7: Route PG0 to TCB4.CAPT
   configureINT0PulseGenerator(Event0, Event7);
-  // Event 9: Route CCL0.OUT to TCB0.CAPT
-  configureINT1PulseGenerator(Event0, Logic0, Event9);
+  // Use CCL0 as a pulse generation system
+  configureINT1PulseGenerator(Event0, Logic0);
   // Use CCL4 as a pulse generation system
   configureINT3PulseGenerator(Event0, Logic4);
   configureDivideByTwoClockGenerator();
@@ -384,7 +384,7 @@ configureCCLs() {
   //Event6.start();
   Event7.start();
   //Event8.start();
-  Event9.start();
+  //Event9.start();
   Logic0.init();
   Logic4.init();
   // make sure that power 
