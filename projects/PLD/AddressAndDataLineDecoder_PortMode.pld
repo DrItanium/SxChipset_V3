@@ -10,10 +10,10 @@ V3 V4 F16 OE5 OE4 ALE1 ALE0 OE3 OE2 OE1 OE0 VCC
 /OE1 =  IA0 * /IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
 /OE2 = /IA0 *  IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
 /OE3 =  IA0 *  IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
-ALE0 = /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
-ALE1 =  IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
-/OE4 = /IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
-/OE5 =  IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
+ALE0 = /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR + /IA0 *  IA1 * /IA2 *  IA3 *  IA4 *  IA5 *  IRD * /IWR
+ALE1 =  IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR +  IA0 *  IA1 * /IA2 *  IA3 *  IA4 *  IA5 *  IRD * /IWR
+/OE4 = /IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD *  IWR
+/OE5 =  IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR +  IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD *  IWR
 
 DESCRIPTION
 
