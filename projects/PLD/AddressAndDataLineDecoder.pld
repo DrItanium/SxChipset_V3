@@ -18,3 +18,5 @@ DESCRIPTION
 
 The new teensy base board has a different Address and Data Line decoder chip
 pinout.
+
+F16 is a detector circuit to determine if BE0 and BE1 are both low
