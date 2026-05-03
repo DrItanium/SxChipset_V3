@@ -6,14 +6,14 @@ V3 V4 F16 OE5 OE4 ALE1 ALE0 OE3 OE2 OE1 OE0 VCC
 
 /F16 = /BE0 * /BE1
 
-/OE0 = /IA0 * /IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
-/OE1 =  IA0 * /IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
-/OE2 = /IA0 *  IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
-/OE3 =  IA0 *  IA1 * /IA2 * /IA3 *         IA5 * /IRD *  IWR
-ALE0 = /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR + /IA0 *  IA1 * /IA2 *  IA3 *  IA4 *  IA5 *  IRD * /IWR
-ALE1 =  IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR +  IA0 *  IA1 * /IA2 *  IA3 *  IA4 *  IA5 *  IRD * /IWR
-/OE4 = /IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD *  IWR
-/OE5 =  IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR +  IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD *  IWR
+/OE0 = /IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+/OE1 =  IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+/OE2 = /IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+/OE3 =  IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+ALE0 = /IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
+ALE1 =  IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
+/OE4 = /IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
+/OE5 =  IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
 
 DESCRIPTION
 
@@ -24,10 +24,5 @@ operation
 
 This is meant to control the Port mode plugboard instead of the CH351 board
 
-We use the upper two address lines to enable this design.
-
-We also map the appropriate addresses to minimize the number of changes needed
-in the source code. We use 0b10xxxx to configure the positioning of the data
-lines so that the output port is the lower two addresses. When 0b11xxxx is
-used, we swap these pairs of ports.
-
+We use the upper two address lines to enable this design. 0b01 for this new
+mode
