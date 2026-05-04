@@ -19,8 +19,8 @@
   15   | F16      | Output
   16   | CS1      | Output
   17   | UWR      | Output
-  18   | URD      | NC
-  19   | CS0      | NC
+  18   | URD      | Output
+  19   | CS0      | Output
   20   | UA3      | Output
   21   | UA2      | Output
   22   | UA1      | Output
