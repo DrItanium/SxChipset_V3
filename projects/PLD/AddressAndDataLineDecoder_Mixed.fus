@@ -86,8 +86,8 @@ Pin 18 = URD          S0 = 1   S1 = 1
  70  ---- ---- -x-- x--- ---- ---- -x-- x--- ---- ---- ----
  71  ---- ---- x--- x--- ---- ---- -x-- x--- ---- ---- ----
  72  ---- ---- x--- -x-- ---- ---- -x-- x--- ---- ---- ----
- 73  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
- 74  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 73  x--- -x-- x--- -x-- x--- -x-- x--- -x-- ---- ---- ----
+ 74  x--- -x-- x--- -x-- x--- -x-- x--- x--- ---- ---- ----
  75  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  76  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  77  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
