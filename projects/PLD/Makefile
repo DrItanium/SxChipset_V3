@@ -15,6 +15,7 @@ all: NewCPUCardDecoder.jed \
 	AddressLinesAccelerator.jed \
 	AddressAndDataLineDecoder.jed \
 	AddressAndDataLineDecoder_PortMode.jed \
+	AddressAndDataLineDecoder_Mixed.jed \
 	NewCPUCardDecoder_v3.jed
 
 install_RPiCH351Interface: RPiCH351Interface.jed
@@ -53,6 +54,8 @@ install_NewCPUCardDecoder_v3: NewCPUCardDecoder_v3.jed
 	minipro -p 'ATF22V10CQZ(UES)' --write $<
 
 install_AddressAndDataLineDecoder_PortMode: AddressAndDataLineDecoder_PortMode.jed
+	minipro -p 'ATF22V10CQZ(UES)' --write $<
+install_AddressAndDataLineDecoder_Mixed: AddressAndDataLineDecoder_Mixed.jed
 	minipro -p 'ATF22V10CQZ(UES)' --write $<
 
 clean:
