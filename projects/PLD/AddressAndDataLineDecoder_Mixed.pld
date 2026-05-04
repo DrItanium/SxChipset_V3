@@ -4,14 +4,22 @@ AddressAndDataLineDecoder
 IA0 IA1 IRD IWR IA3 IA2 IA5 IA4 BE0 BE1 V2 GND
 V3 V4 F16 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 
-/UA0 = /IA0 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD * IWR
-/UA1 = /IA1 * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD * IWR
-/UA2 = /IA2 * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD * IWR
-/UA3 = /IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD * IWR
-CS0 = IA3 * /IA4 * /IA5 
-CS1 = /IA3 * /IA4 * /IA5
-/UWR = /IWR * /IA4 * /IA5
-/URD = /IRD * /IA4 * /IA5
+; UA0 = OE0
+/UA0 = /IA0 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+; UA1 = OE1
+/UA1 = /IA1 * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+; UA2 = OE2
+/UA2 = /IA2 * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+; UA3 = OE3
+/UA3 = /IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
+; CS0 = ALE0
+CS0 =   IA3 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
+; URD = ALE1, we want to disable URD in CH351 mode when IRD is high
+URD =   IRD * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
+; UWR = OE4
+/UWR = /IWR * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
+; CS1 = OE5
+/CS1 =  IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
 
 
 
@@ -24,12 +32,12 @@ The new teensy base board has a different Address and Data Line decoder chip
 pinout.
 
 F16 is a detector circuit to determine if BE0 and BE1 are both low
-V3 V4 F16 OE5 OE4 ALE1 ALE0 OE3 OE2 OE1 OE0 VCC
-/OE0 = /IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
-/OE1 =  IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
-/OE2 = /IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
-/OE3 =  IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
-ALE0 = /IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
-ALE1 =  IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
-/OE4 = /IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
-/OE5 =  IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
+
+For output enable signals, we redefine the original configuration so that it
+will trigger low, otherwise it is high. 
+
+A[5:4] configuration
+0b00 -> CH351 mode (RD and WR)
+0b01 -> CH351 mode (CS and W/R)
+0b10 -> Port mode (RD and WR)
+0b11 -> Port mode (CS and W/R)
