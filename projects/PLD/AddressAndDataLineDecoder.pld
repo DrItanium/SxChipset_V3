@@ -4,13 +4,13 @@ AddressAndDataLineDecoder
 IA0 IA1 IRD IWR IA3 IA2 IA5 IA4 BE0 BE1 V2 GND
 V3 V4 F16 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 
-UA0 =   IA0 * /IA4 * /IA5
-UA1 =   IA1 * /IA4 * /IA5
-UA2 =   IA2 * /IA4 * /IA5
-UA3 =   IA3 * /IA4 * /IA5
+UA0 =   IA0
+UA1 =   IA1
+UA2 =   IA2
+UA3 =   IA3
 /CS0 = /IA3 * /IA4 * /IA5
-URD =   IRD * /IA4 * /IA5
-UWR =   IWR * /IA4 * /IA5
+URD =   IRD
+UWR =   IWR
 /CS1 =  IA3 * /IA4 * /IA5
 /F16 = /BE0 * /BE1
 
