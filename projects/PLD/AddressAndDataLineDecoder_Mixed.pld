@@ -5,21 +5,21 @@ IA0 IA1 IRD IWR IA3 IA2 IA5 IA4 BE0 BE1 V2 GND
 V3 V4 F16 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 
 ; UA0 = OE0
-/UA0 = /IA0 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
 ; UA1 = OE1
-/UA1 = /IA1 * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
 ; UA2 = OE2
-/UA2 = /IA2 * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
 ; UA3 = OE3
-/UA3 = /IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 *  IA4 * /IA5 * /IRD *  IWR
 ; CS0 = ALE0
-CS0 =   IA3 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
 ; URD = ALE1, we want to disable URD in CH351 mode when IRD is high
-URD =   IRD * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 *  IA3 *  IA4 * /IA5 *  IRD * /IWR
 ; UWR = OE4
-/UWR = /IWR * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
 ; CS1 = OE5
-/CS1 =  IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 *  IA3 *  IA4 * /IA5 * /IRD *  IWR
+/UA0 = /IA0 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
+/UA1 = /IA1 * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
+/UA2 = /IA2 * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
+/UA3 = /IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
+CS0 =   IA3 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
+URD =   IRD * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
+/UWR = /IWR * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
+/CS1 =  IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
 
 
 
