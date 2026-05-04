@@ -12,6 +12,8 @@ V3 V4 F16 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 ; URD = ALE1, we want to disable URD in CH351 mode when IRD is high
 ; UWR = OE4
 ; CS1 = OE5
+; IRD <-> W/R
+; IWR <-> CS
 /UA0 = /IA0 * /IA4 * /IA5 + /IA0 *  IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
 /UA1 = /IA1 * /IA4 * /IA5 + /IA1 *  IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
 /UA2 = /IA2 * /IA4 * /IA5 + /IA2 *  IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
