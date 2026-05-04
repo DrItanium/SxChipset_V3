@@ -5,9 +5,9 @@ AR
 
 Pin 23 = UA0          S0 = 0   S1 = 1
   1  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
-  2  -x-- ---- ---- ---- ---- ---- -x-- ---- ---- ---- ----
-  3  -x-- -x-- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
-  4  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+  2  -x-- ---- ---- ---- ---- ---- -x-- -x-- ---- ---- ----
+  3  -x-- ---- ---- ---- ---- ---- -x-- x--- ---- ---- ----
+  4  -x-- -x-- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
   5  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   6  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
   7  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -16,9 +16,9 @@ Pin 23 = UA0          S0 = 0   S1 = 1
 
 Pin 22 = UA1          S0 = 0   S1 = 1
  10  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 11  ---- -x-- ---- ---- ---- ---- -x-- ---- ---- ---- ----
- 12  x--- -x-- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
- 13  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 11  ---- -x-- ---- ---- ---- ---- -x-- -x-- ---- ---- ----
+ 12  ---- -x-- ---- ---- ---- ---- -x-- x--- ---- ---- ----
+ 13  x--- -x-- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
  14  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  15  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  16  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -29,9 +29,9 @@ Pin 22 = UA1          S0 = 0   S1 = 1
 
 Pin 21 = UA2          S0 = 0   S1 = 1
  21  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 22  ---- ---- ---- ---- ---- -x-- -x-- ---- ---- ---- ----
- 23  -x-- x--- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
- 24  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 22  ---- ---- ---- ---- ---- -x-- -x-- -x-- ---- ---- ----
+ 23  ---- ---- ---- ---- ---- -x-- -x-- x--- ---- ---- ----
+ 24  -x-- x--- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
  25  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  26  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  27  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -44,9 +44,9 @@ Pin 21 = UA2          S0 = 0   S1 = 1
 
 Pin 20 = UA3          S0 = 0   S1 = 1
  34  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 35  ---- ---- ---- ---- -x-- ---- -x-- ---- ---- ---- ----
- 36  x--- x--- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
- 37  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+ 35  ---- ---- ---- ---- -x-- ---- -x-- -x-- ---- ---- ----
+ 36  ---- ---- ---- ---- -x-- ---- -x-- x--- ---- ---- ----
+ 37  x--- x--- -x-- x--- -x-- -x-- x--- -x-- ---- ---- ----
  38  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  39  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  40  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -61,7 +61,7 @@ Pin 20 = UA3          S0 = 0   S1 = 1
 
 Pin 19 = CS0          S0 = 1   S1 = 1
  49  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 50  ---- ---- ---- ---- x--- ---- -x-- ---- ---- ---- ----
+ 50  ---- ---- ---- ---- x--- ---- -x-- -x-- ---- ---- ----
  51  -x-- -x-- x--- -x-- x--- -x-- x--- -x-- ---- ---- ----
  52  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  53  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -80,7 +80,7 @@ Pin 19 = CS0          S0 = 1   S1 = 1
 
 Pin 18 = URD          S0 = 1   S1 = 1
  66  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 67  ---- ---- x--- ---- ---- ---- -x-- ---- ---- ---- ----
+ 67  ---- ---- x--- ---- ---- ---- -x-- -x-- ---- ---- ----
  68  x--- -x-- x--- -x-- x--- -x-- x--- -x-- ---- ---- ----
  69  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  70  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -99,7 +99,7 @@ Pin 18 = URD          S0 = 1   S1 = 1
 
 Pin 17 = UWR          S0 = 0   S1 = 1
  83  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 84  ---- ---- ---- -x-- ---- ---- -x-- ---- ---- ---- ----
+ 84  ---- ---- ---- -x-- ---- ---- -x-- -x-- ---- ---- ----
  85  -x-- x--- -x-- x--- x--- -x-- x--- -x-- ---- ---- ----
  86  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  87  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -116,7 +116,7 @@ Pin 17 = UWR          S0 = 0   S1 = 1
 
 Pin 16 = CS1          S0 = 0   S1 = 1
  98  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 99  ---- ---- ---- ---- x--- ---- -x-- ---- ---- ---- ----
+ 99  ---- ---- ---- ---- x--- ---- -x-- -x-- ---- ---- ----
 100  x--- x--- -x-- x--- x--- -x-- x--- -x-- ---- ---- ----
 101  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
 102  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
