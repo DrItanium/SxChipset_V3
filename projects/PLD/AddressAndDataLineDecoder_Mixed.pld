@@ -14,15 +14,13 @@ V3 V4 F16 CS1 UWR URD CS0 UA3 UA2 UA1 UA0 VCC
 ; CS1 = OE5
 ; IRD <-> W/R
 ; IWR <-> CS
-/UA0 = /IA0 * /IA4 * /IA5 + /IA0 *  IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
-/UA1 = /IA1 * /IA4 * /IA5 + /IA1 *  IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
-/UA2 = /IA2 * /IA4 * /IA5 + /IA2 *  IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
-/UA3 = /IA3 * /IA4 * /IA5 + /IA3 *  IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR
-CS0 =   IA3 * /IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
-URD =   IRD * /IA4 * /IA5 +  IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 *  IRD * /IWR
-/UWR = /IWR * /IA4 * /IA5 + /IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
-/CS1 =  IA3 * /IA4 * /IA5 +  IA0 *  IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR
+/UA0 = /IA0 * /IA4 * /IA5 + /IA0 *  IA4 * /IA5 + /IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 * /IA1 * /IA2 * /IA3 *  IA4 *  IA5 * /IRD * /IWR
+/UA1 = /IA1 * /IA4 * /IA5 + /IA1 *  IA4 * /IA5 +  IA0 * /IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR +  IA0 * /IA1 * /IA2 * /IA3 *  IA4 *  IA5 * /IRD * /IWR
+/UA2 = /IA2 * /IA4 * /IA5 + /IA2 *  IA4 * /IA5 + /IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 *  IA1 * /IA2 * /IA3 *  IA4 *  IA5 * /IRD * /IWR
+/UA3 = /IA3 * /IA4 * /IA5 + /IA3 *  IA4 * /IA5 +  IA0 *  IA1 * /IA2 * /IA3 * /IA4 *  IA5 * /IRD *  IWR +  IA0 *  IA1 * /IA2 * /IA3 *  IA4 *  IA5 * /IRD * /IWR
 
+/UWR =  IRD * /IA4 * /IA5 +  IRD * IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD * /IWR
+/CS1 =  IA3 * /IA4 * /IA5 + /IWR * IA4 * /IA5 + /IA0 * /IA1 * /IA2 *  IA3 * /IA4 *  IA5 * /IRD *  IWR + /IA0 * /IA1 * /IA2 *  IA3 *  IA4 *  IA5 * /IRD * /IWR
 
 
 
