@@ -79,6 +79,7 @@ volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
+constexpr bool RealtimeShellActive = false;
 
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
@@ -86,6 +87,25 @@ Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
 }
+
+struct TimeTracker {
+    TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
+    ~TimeTracker() {
+        auto endTime = getCurrentCycleCount();
+#ifdef USB_TRIPLE_SERIAL
+        if constexpr (RealtimeShellActive) {
+#endif
+            Serial.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
+#ifdef USB_TRIPLE_SERIAL
+        } else {
+            SerialUSB1.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
+        }
+#endif
+    }
+    private:
+    const char* _prefix;
+    uint32_t _startTime;
+};
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
  * Teensy has no way of knowing this configuration so it is a compile time
@@ -1052,21 +1072,13 @@ struct i960Interface {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
-  struct TimeTracker {
-      TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
-      ~TimeTracker() {
-          auto endTime = getCurrentCycleCount();
-          Serial.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
-      }
-      private:
-        const char* _prefix;
-        uint32_t _startTime;
-  };
+  template<bool configureDataLineDirection = true>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
-      TimeTracker tracker("write8");
       /// @todo once new board comes in we can implement the fixed direction
       /// design
-      EBIInterface::setDataLinesDirection<OUTPUT>();
+      if constexpr (configureDataLineDirection) {
+        EBIInterface::setDataLinesDirection<OUTPUT>();
+      }
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
 
@@ -1078,13 +1090,14 @@ struct i960Interface {
       // update the address
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
-
+  template<bool configureDataLineDirection = true>
   static inline uint8_t
   read8(uint8_t address) noexcept {
-      TimeTracker tracker("read8");
       // the CH351 has some very strict requirements
       // This function will take at least 230 ns to complete
-      EBIInterface::setDataLinesDirection<INPUT>();
+      if constexpr (configureDataLineDirection) {
+        EBIInterface::setDataLinesDirection<INPUT>();
+      }
       EBIInterface::setAddress(address);
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       digitalWriteFast(Pin::EBI_RD, LOW);
@@ -1196,7 +1209,7 @@ public:
   writeDataLines(uint16_t value) noexcept {
       constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8(baseAddress, static_cast<uint8_t>(value)); 
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
+      write8<false>(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
   static uint16_t
   readDataLines() noexcept {
@@ -1651,6 +1664,7 @@ inline bool shouldServiceTransaction() noexcept {
         return adsTriggered;
     }
 }
+#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
@@ -1675,8 +1689,14 @@ tryDoTransaction() noexcept {
         }
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
+#ifdef TrackTransactionLength
+        TimeTracker q("Read Transaction Length");
+#endif
             i960Interface::doMemoryTransaction<true>();
         } else {
+#ifdef TrackTransactionLength
+        TimeTracker q("Write Transaction Length");
+#endif
             i960Interface::doMemoryTransaction<false>();
         }
     } 
@@ -1766,7 +1786,9 @@ namespace RealtimeShell {
 void
 processRealtimeShell() noexcept {
 #ifdef USB_TRIPLE_SERIAL
-    RealtimeShell::runService();
+    if constexpr (RealtimeShellActive) {
+        RealtimeShell::runService();
+    }
 #endif
 }
 
@@ -1775,7 +1797,9 @@ processRealtimeShell() noexcept {
 void
 configureShells() noexcept {
 #ifdef USB_TRIPLE_SERIAL
-    RealtimeShell::begin();
+    if constexpr (RealtimeShellActive) {
+        RealtimeShell::begin();
+    }
 #endif
 }
 
