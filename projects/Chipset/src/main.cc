@@ -1209,18 +1209,18 @@ public:
   writeDataLines(uint16_t value) noexcept {
       constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8(baseAddress, static_cast<uint8_t>(value)); 
-      write8<false>(baseAddress+1, static_cast<uint8_t>(value >> 8));
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
   static uint16_t
   readDataLines() noexcept {
       uint16_t value = 0;
       constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
-      value |= static_cast<uint16_t>(read8(baseAddress));
-      value |= static_cast<uint16_t>(read8(baseAddress+1)) << 8;
+      value |= static_cast<uint16_t>(read8<false>(baseAddress));
+      value |= static_cast<uint16_t>(read8<false>(baseAddress+1)) << 8;
       return value;
   }
-  static uint16_t readLo8() noexcept { return read8(dataLines.getDataPortReadAddressBase()); }
-  static uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8(dataLines.getDataPortReadAddressBase()+1)) << 8; }
+  static uint16_t readLo8() noexcept { return read8<false>(dataLines.getDataPortReadAddressBase()); }
+  static uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8<false>(dataLines.getDataPortReadAddressBase()+1)) << 8; }
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1257,6 +1257,7 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
+      EBIInterface::setDataLinesDirection<INPUT>();
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           // the i960Sx exposes two byte enable signals, BE0 and BE1
           // Each signal denotes if we should write that byte value. 
