@@ -1188,8 +1188,9 @@ public:
   static SplitWord32
   getAddress24() noexcept {
       SplitWord32 value;
+      EBIInterface::setDataLinesDirection<INPUT>();
       for (int i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
-          value.bytes[i] = read8(k);
+          value.bytes[i] = read8<false>(k);
       }
       return value;
   }
@@ -1257,7 +1258,7 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      EBIInterface::setDataLinesDirection<INPUT>();
+      //EBIInterface::setDataLinesDirection<INPUT>();
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           // the i960Sx exposes two byte enable signals, BE0 and BE1
           // Each signal denotes if we should write that byte value. 
