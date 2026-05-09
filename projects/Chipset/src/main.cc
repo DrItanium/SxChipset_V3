@@ -83,7 +83,9 @@ bool cpuIsRunning = false;
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
-
+inline uint32_t getCurrentCycleCount() noexcept {
+    return ARM_DWT_CYCCNT;
+}
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
  * Teensy has no way of knowing this configuration so it is a compile time
@@ -195,7 +197,7 @@ struct TimingRelatedThings {
     void update() noexcept {
         _currentMillis = millis();
         _currentMicros = micros();
-        _currentCycle = ARM_DWT_CYCCNT;
+        _currentCycle = getCurrentCycleCount();
     }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset) {
@@ -1050,38 +1052,47 @@ struct i960Interface {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
-
-  template<InterfaceTimingDescription decl = WriteConfiguration>
+  struct TimeTracker {
+      TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
+      ~TimeTracker() {
+          auto endTime = getCurrentCycleCount();
+          Serial.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
+      }
+      private:
+        const char* _prefix;
+        uint32_t _startTime;
+  };
   static inline void write8(uint8_t address, uint8_t value) noexcept {
+      TimeTracker tracker("write8");
       /// @todo once new board comes in we can implement the fixed direction
       /// design
       EBIInterface::setDataLinesDirection<OUTPUT>();
       EBIInterface::setAddress(address);
       EBIInterface::setDataLines(value);
 
-      fixedDelayNanoseconds<decl.addressWait>();
-      fixedDelayNanoseconds<decl.setupTime>(); // setup time (tDS), normally 30
+      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
       digitalWriteFast(Pin::EBI_WR, LOW);
-      fixedDelayNanoseconds<decl.holdTime>(); // tWL hold for at least 80ns
+      fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       digitalWriteFast(Pin::EBI_WR, HIGH);
       // update the address
-      fixedDelayNanoseconds<decl.afterTime>(); // data hold after WR + tWH + breathe (50ns)
+      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
-  template<InterfaceTimingDescription decl = ReadConfiguration>
   static inline uint8_t
   read8(uint8_t address) noexcept {
+      TimeTracker tracker("read8");
       // the CH351 has some very strict requirements
       // This function will take at least 230 ns to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       EBIInterface::setAddress(address);
-      fixedDelayNanoseconds<decl.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       digitalWriteFast(Pin::EBI_RD, LOW);
-      fixedDelayNanoseconds<decl.setupTime>(); // wait for things to get selected properly
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<decl.holdTime>();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<decl.afterTime>();
+      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
 
@@ -1098,6 +1109,8 @@ struct i960Interface {
           // lower 16-bits are for the i960 read port
           write8(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
           write8(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
+          write8(dataLines.getDataPortBaseAddress() + 0, 0);
+          write8(dataLines.getDataPortBaseAddress() + 1, 0);
           // upper 16-bits are for the i960 write port
           write8(dataLines.getConfigPortBaseAddress() + 2, 0);
           write8(dataLines.getConfigPortBaseAddress() + 3, 0);
