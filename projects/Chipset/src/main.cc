@@ -1258,7 +1258,6 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      //EBIInterface::setDataLinesDirection<INPUT>();
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           // the i960Sx exposes two byte enable signals, BE0 and BE1
           // Each signal denotes if we should write that byte value. 
