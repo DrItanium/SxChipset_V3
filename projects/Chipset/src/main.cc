@@ -87,6 +87,9 @@ Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
 }
+inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
+    return ((F_CPU_ACTUAL>>16) * nsec) / (1000000000UL>>16);
+}
 
 struct TimeTracker {
     TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
@@ -1197,7 +1200,7 @@ public:
   }
   static inline bool
   isBurstLast() noexcept {
-    // takes between 25-26 arm cycles
+    //TimeTracker tracker(__PRETTY_FUNCTION__);
     return digitalReadFast(Pin::BLAST) == LOW;
   }
   static inline bool
