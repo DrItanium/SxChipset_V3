@@ -80,15 +80,7 @@ volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
-using ReadOperation = std::function<void(void)>;
-using WriteOperation = std::function<void(void)>;
 
-void defaultReadOperation();
-void defaultWriteOperation();
-void trackWriteOperation();
-void trackReadOperation();
-ReadOperation onRead = defaultReadOperation;
-WriteOperation onWrite = defaultWriteOperation;
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
@@ -113,18 +105,6 @@ struct TimeTracker {
     private:
     const char* _prefix;
     uint32_t _startTime;
-};
-struct TimeTrackerWithCallback {
-    TimeTrackerWithCallback(std::function<void(uint32_t)> callback) : _startTime(getCurrentCycleCount()), _callback(callback) { }
-    ~TimeTrackerWithCallback() {
-        auto endTime = getCurrentCycleCount();
-        if (_callback) {
-            _callback(endTime - _startTime);
-        }
-    }
-    private:
-        std::function<void(uint32_t)> _callback;
-        uint32_t _startTime;
 };
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
@@ -816,77 +796,7 @@ private:
     // layout for this 16-byte page is:
     //
 };
-class DebugExecutionHandler {
-    private:
-        static inline ReadOperation readTable[256] = { 0 };
-        static inline WriteOperation writeTable[256] = { 0 };
-    public:
-        DebugExecutionHandler() = default;
-        void begin() {
-            static bool initialized = false;
-            if (!initialized) {
-                initialized = true;
-                for (int i = 0; i < 256; ++i) {
-                    readTable[i] = defaultReadOperation;
-                    writeTable[i] = defaultWriteOperation;
-                }
-                readTable[1] = trackReadOperation;
-                readTable[2] = [this]() {
-                    TimeTrackerWithCallback tracker([this](uint32_t value) { readDurationTracking[value]++; });
-                    defaultReadOperation();
-                };
-                writeTable[1] = trackWriteOperation;
-                writeTable[2] = [this]() {
-                    TimeTrackerWithCallback tracker([this](uint32_t value) { writeDurationTracking[value]++; });
-                    defaultWriteOperation();
-                };
-            }
-            clear();
-        }
-        void clear() {
-            readDurationTracking.clear();
-            writeDurationTracking.clear();
-            _backingStore.clear();
-            onFinish();
-        }
-        void setWord(uint8_t offset, uint16_t value) noexcept { _backingStore.setWord(offset, value); }
-        uint16_t getWord(uint8_t offset) const noexcept { return _backingStore.getWord(offset); }
-        void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept { _backingStore.setWord(offset, value, updateLo, updateHi); }
-        void update() {
-            _backingStore.update();
-        }
-        void report() {
-        }
-        void onFinish() {
-            // word 0 => target function to run (upper byte is write, lower byte is read)
-            // word 1 => tracking control. Write a 1 to clear tracking data and
-            // start processing (a zero will then be filled in). 
-            // Write a 2 to dump information to USBSerial1 and then overwrite with zero
-            auto word = _backingStore.getWord(0);
-            onRead = readTable[static_cast<uint8_t>(word)];
-            onWrite = writeTable[static_cast<uint8_t>(word >> 8)];
-            switch (_backingStore.getWord(1)) {
-                case 1:
-                    readDurationTracking.clear();
-                    writeDurationTracking.clear();
-                    _backingStore.setWord(1, 0);
-                    break;
-                case 2:
-                    report();
-                    _backingStore.setWord(1, 0);
-                    break;
-                default:
-                    break;
-            }
 
-        }
-    private:
-        MemoryCellBlock _backingStore;
-        std::map<uint32_t, uint32_t> readDurationTracking;
-        std::map<uint32_t, uint32_t> writeDurationTracking;
-};
-
-DebugExecutionHandler execHandler;
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 CapacityInformation capacityInfo;
@@ -1434,9 +1344,6 @@ public:
           case 0x50 ... 0x5F:
               doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
               break;
-          case 0x60 ... 0x6F:
-              doMemoryCellTransaction<isReadTransaction>(execHandler, lineOffset);
-              break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -1630,7 +1537,6 @@ void setupMemory() noexcept {
   for (auto& cell : sramCache2) {
       cell.clear();
   }
-  execHandler.begin();
 }
 void
 setupRTC() noexcept {
@@ -1756,25 +1662,7 @@ inline bool shouldServiceTransaction() noexcept {
         return adsTriggered;
     }
 }
-void 
-trackReadOperation() {
-    TimeTracker q("Read Transaction Length");
-    i960Interface::doMemoryTransaction<true>();
-}
-void 
-defaultReadOperation() {
-    i960Interface::doMemoryTransaction<true>();
-}
-void 
-trackWriteOperation() {
-    TimeTracker q("Write Transaction Length");
-    i960Interface::doMemoryTransaction<false>();
-}
-void 
-defaultWriteOperation() {
-    i960Interface::doMemoryTransaction<false>();
-}
-//#define TrackTransactionLength
+#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
@@ -1799,9 +1687,15 @@ tryDoTransaction() noexcept {
         }
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
-            onRead();
+#ifdef TrackTransactionLength
+            TimeTracker q("Read Transaction Length");
+#endif
+            i960Interface::doMemoryTransaction<true>();
         } else {
-            onWrite();
+#ifdef TrackTransactionLength
+            TimeTracker q("Write Transaction Length");
+#endif
+            i960Interface::doMemoryTransaction<false>();
         }
     } 
 }
@@ -1824,8 +1718,4 @@ loop() {
     tryDoTransaction();
     tryDoTransaction();
 }
-
-
-
-
 
