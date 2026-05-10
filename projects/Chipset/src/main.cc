@@ -806,8 +806,24 @@ private:
 };
 
 class DebugExecutionHandler {
+    private:
+        static inline ReadOperation readTable[256] = { 0 };
+        static inline WriteOperation writeTable[256] = { 0 };
     public:
         DebugExecutionHandler() = default;
+        void begin() {
+            static bool initialized = false;
+            if (!initialized) {
+                initialized = true;
+                for (int i = 0; i < 256; ++i) {
+                    readTable[i] = defaultReadOperation;
+                    writeTable[i] = defaultWriteOperation;
+                }
+                readTable[1] = trackReadOperation;
+                writeTable[1] = trackWriteOperation;
+            }
+            clear();
+        }
         void clear() {
             _backingStore.clear();
             onFinish();
@@ -819,22 +835,9 @@ class DebugExecutionHandler {
             _backingStore.update();
         }
         void onFinish() {
-            switch (_backingStore.getWord(0)) {
-                case 1:
-                    onRead = trackReadOperation;
-                    break;
-                default:
-                    onRead = defaultReadOperation;
-                    break;
-            }
-            switch (_backingStore.getWord(1)) {
-                case 1:
-                    onWrite = trackWriteOperation;
-                    break;
-                default:
-                    onWrite = defaultWriteOperation;
-                    break;
-            }
+            auto word = _backingStore.getWord(0);
+            onRead = readTable[static_cast<uint8_t>(word)];
+            onWrite = writeTable[static_cast<uint8_t>(word >> 8)];
         }
     private:
         MemoryCellBlock _backingStore;
@@ -1584,7 +1587,7 @@ void setupMemory() noexcept {
   for (auto& cell : sramCache2) {
       cell.clear();
   }
-  execHandler.clear();
+  execHandler.begin();
 }
 void
 setupRTC() noexcept {
