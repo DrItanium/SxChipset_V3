@@ -876,7 +876,6 @@ class DebugExecutionHandler {
                     _backingStore.setWord(1, 0);
                     break;
                 default:
-                    _backingStore.setWord(1, 0);
                     break;
             }
 
