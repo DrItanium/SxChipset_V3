@@ -80,8 +80,8 @@ volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
-using ReadOperation = void (*)(void);
-using WriteOperation = void (*)(void);
+using ReadOperation = std::function<void(void)>;
+using WriteOperation = std::function<void(void)>;
 
 void defaultReadOperation();
 void defaultWriteOperation();
@@ -113,6 +113,18 @@ struct TimeTracker {
     private:
     const char* _prefix;
     uint32_t _startTime;
+};
+struct TimeTrackerWithCallback {
+    TimeTrackerWithCallback(std::function<void(uint32_t)> callback) : _startTime(getCurrentCycleCount()), _callback(callback) { }
+    ~TimeTrackerWithCallback() {
+        auto endTime = getCurrentCycleCount();
+        if (_callback) {
+            _callback(endTime - _startTime);
+        }
+    }
+    private:
+        std::function<void(uint32_t)> _callback;
+        uint32_t _startTime;
 };
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
@@ -804,7 +816,6 @@ private:
     // layout for this 16-byte page is:
     //
 };
-
 class DebugExecutionHandler {
     private:
         static inline ReadOperation readTable[256] = { 0 };
@@ -820,11 +831,21 @@ class DebugExecutionHandler {
                     writeTable[i] = defaultWriteOperation;
                 }
                 readTable[1] = trackReadOperation;
+                readTable[2] = [this]() {
+                    TimeTrackerWithCallback tracker([this](uint32_t value) { readDurationTracking[value]++; });
+                    defaultReadOperation();
+                };
                 writeTable[1] = trackWriteOperation;
+                writeTable[2] = [this]() {
+                    TimeTrackerWithCallback tracker([this](uint32_t value) { writeDurationTracking[value]++; });
+                    defaultWriteOperation();
+                };
             }
             clear();
         }
         void clear() {
+            readDurationTracking.clear();
+            writeDurationTracking.clear();
             _backingStore.clear();
             onFinish();
         }
@@ -834,13 +855,36 @@ class DebugExecutionHandler {
         void update() {
             _backingStore.update();
         }
+        void report() {
+        }
         void onFinish() {
+            // word 0 => target function to run (upper byte is write, lower byte is read)
+            // word 1 => tracking control. Write a 1 to clear tracking data and
+            // start processing (a zero will then be filled in). 
+            // Write a 2 to dump information to USBSerial1 and then overwrite with zero
             auto word = _backingStore.getWord(0);
             onRead = readTable[static_cast<uint8_t>(word)];
             onWrite = writeTable[static_cast<uint8_t>(word >> 8)];
+            switch (_backingStore.getWord(1)) {
+                case 1:
+                    readDurationTracking.clear();
+                    writeDurationTracking.clear();
+                    _backingStore.setWord(1, 0);
+                    break;
+                case 2:
+                    report();
+                    _backingStore.setWord(1, 0);
+                    break;
+                default:
+                    _backingStore.setWord(1, 0);
+                    break;
+            }
+
         }
     private:
         MemoryCellBlock _backingStore;
+        std::map<uint32_t, uint32_t> readDurationTracking;
+        std::map<uint32_t, uint32_t> writeDurationTracking;
 };
 
 DebugExecutionHandler execHandler;
@@ -1652,8 +1696,6 @@ triggerSystemTimer() noexcept {
     }
 }
 
-void configureShells();
-void processRealtimeShell() noexcept;
 void handleAVRSerialConnection() noexcept;
 void 
 setup() {
@@ -1687,7 +1729,6 @@ setup() {
     while (!Serial) {
         delay(10);
     }
-    configureShells();
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
@@ -1783,87 +1824,9 @@ loop() {
     handleAVRSerialConnection();
     tryDoTransaction();
     tryDoTransaction();
-    processRealtimeShell();
-    tryDoTransaction();
-    tryDoTransaction();
-}
-#ifdef USB_TRIPLE_SERIAL
-namespace RealtimeShell {
-    static int ioRead(ush_object* self, char* ch) {
-        if (SerialUSB1.available() > 0) {
-            *ch = SerialUSB1.read();
-            return 1;
-        }
-        return 0;
-    }
-
-    static int ioWrite(ush_object* self, char ch) {
-        return (SerialUSB1.write(ch) == 1);
-    }
-
-    const ush_io_interface ioInterface = { .read = ioRead, .write = ioWrite, };
-    char inputBuffer[256];
-    char outputBuffer[256];
-    constexpr auto PATH_MAX_SIZE = 256;
-    ush_object ush;
-    const ush_descriptor descriptor = {
-        .io = &ioInterface,
-        .input_buffer = inputBuffer,
-        .input_buffer_size = sizeof(inputBuffer),
-        .output_buffer = outputBuffer,
-        .output_buffer_size = sizeof(outputBuffer),
-        .path_max_length = PATH_MAX_SIZE,
-        .hostname = "chipset_realtime",
-    };
-    size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-        static const char* message = "Teensy Chipset Realtime Console\r\n";
-        *data = (uint8_t*)message;
-        return strlen(message);
-    }
-    static const ush_file_descriptor rootFiles[] {
-        {
-            .name = "info.txt",
-            .description = nullptr,
-            .help = nullptr,
-            .exec = nullptr,
-            .get_data = infoGetDataCallback,
-        }
-    };
-    static const ush_file_descriptor devFiles[] {
-        INTERFACE_ENGINE_COMMON_DEVICES,
-    };
-    static ush_node_object root;
-    static ush_node_object dev;
-    void begin() {
-        ush_init(&ush, &descriptor);
-        InterfaceEngine::installCommonCommands(&ush);
-        InterfaceEngine::installI960Commands(&ush);
-        ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
-        ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
-        InterfaceEngine::installEepromDeviceDirectory(&ush);
-        InterfaceEngine::installI960Devices(&ush);
-    }
-    void runService() noexcept { ush_service(&ush); }
-}
-#endif
-
-void
-processRealtimeShell() noexcept {
-#ifdef USB_TRIPLE_SERIAL
-    if constexpr (RealtimeShellActive) {
-        RealtimeShell::runService();
-    }
-#endif
 }
 
 
 
-void
-configureShells() noexcept {
-#ifdef USB_TRIPLE_SERIAL
-    if constexpr (RealtimeShellActive) {
-        RealtimeShell::begin();
-    }
-#endif
-}
+
 
