@@ -80,7 +80,15 @@ volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
+using ReadOperation = void (*)(void);
+using WriteOperation = void (*)(void);
 
+void defaultReadOperation();
+void defaultWriteOperation();
+void trackWriteOperation();
+void trackReadOperation();
+ReadOperation onRead = defaultReadOperation;
+WriteOperation onWrite = defaultWriteOperation;
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
@@ -797,6 +805,42 @@ private:
     //
 };
 
+class DebugExecutionHandler {
+    public:
+        DebugExecutionHandler() = default;
+        void clear() {
+            _backingStore.clear();
+            onFinish();
+        }
+        void setWord(uint8_t offset, uint16_t value) noexcept { _backingStore.setWord(offset, value); }
+        uint16_t getWord(uint8_t offset) const noexcept { return _backingStore.getWord(offset); }
+        void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept { _backingStore.setWord(offset, value, updateLo, updateHi); }
+        void update() {
+            _backingStore.update();
+        }
+        void onFinish() {
+            switch (_backingStore.getWord(0)) {
+                case 1:
+                    onRead = trackReadOperation;
+                    break;
+                default:
+                    onRead = defaultReadOperation;
+                    break;
+            }
+            switch (_backingStore.getWord(1)) {
+                case 1:
+                    onWrite = trackWriteOperation;
+                    break;
+                default:
+                    onWrite = defaultWriteOperation;
+                    break;
+            }
+        }
+    private:
+        MemoryCellBlock _backingStore;
+};
+
+DebugExecutionHandler execHandler;
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
 CapacityInformation capacityInfo;
@@ -1344,6 +1388,9 @@ public:
           case 0x50 ... 0x5F:
               doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
               break;
+          case 0x60 ... 0x6F:
+              doMemoryCellTransaction<isReadTransaction>(execHandler, lineOffset);
+              break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -1537,6 +1584,7 @@ void setupMemory() noexcept {
   for (auto& cell : sramCache2) {
       cell.clear();
   }
+  execHandler.clear();
 }
 void
 setupRTC() noexcept {
@@ -1665,7 +1713,25 @@ inline bool shouldServiceTransaction() noexcept {
         return adsTriggered;
     }
 }
-#define TrackTransactionLength
+void 
+trackReadOperation() {
+    TimeTracker q("Read Transaction Length");
+    i960Interface::doMemoryTransaction<true>();
+}
+void 
+defaultReadOperation() {
+    i960Interface::doMemoryTransaction<true>();
+}
+void 
+trackWriteOperation() {
+    TimeTracker q("Write Transaction Length");
+    i960Interface::doMemoryTransaction<false>();
+}
+void 
+defaultWriteOperation() {
+    i960Interface::doMemoryTransaction<false>();
+}
+//#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
@@ -1690,15 +1756,9 @@ tryDoTransaction() noexcept {
         }
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
-#ifdef TrackTransactionLength
-        TimeTracker q("Read Transaction Length");
-#endif
-            i960Interface::doMemoryTransaction<true>();
+            onRead();
         } else {
-#ifdef TrackTransactionLength
-        TimeTracker q("Write Transaction Length");
-#endif
-            i960Interface::doMemoryTransaction<false>();
+            onWrite();
         }
     } 
 }
