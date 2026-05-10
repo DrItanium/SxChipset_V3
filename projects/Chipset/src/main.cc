@@ -1187,6 +1187,7 @@ public:
   }
   static SplitWord32
   getAddress24() noexcept {
+      // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
       for (int i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
@@ -1196,6 +1197,7 @@ public:
   }
   static inline bool
   isBurstLast() noexcept {
+    // takes between 25-26 arm cycles
     return digitalReadFast(Pin::BLAST) == LOW;
   }
   static inline bool
@@ -1662,7 +1664,7 @@ inline bool shouldServiceTransaction() noexcept {
         return adsTriggered;
     }
 }
-#define TrackTransactionLength
+//#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
