@@ -1305,6 +1305,13 @@ public:
   }
   template<MemoryCell MC>
   static void
+  writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, WriteActionKind kind) noexcept {
+      digitalToggleFast(Pin::READY);
+      doWriteAction(target, offset, dataLines, kind);
+      waitForReadySignal();
+  }
+  template<MemoryCell MC>
+  static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           // the i960Sx exposes two byte enable signals, BE0 and BE1
@@ -1333,14 +1340,10 @@ public:
           auto kind = determineWriteActionKind();
           auto dataLines = readDataLines(kind);
           if (isBurstLast()) {
-              digitalToggleFast(Pin::READY);
-              doWriteAction(target, wordOffset, dataLines, kind);
-              waitForReadySignal();
+              writeActionCycle(target, wordOffset, dataLines, kind);
               return;
           } else {
-              digitalToggleFast(Pin::READY);
-              doWriteAction(target, wordOffset, dataLines, kind);
-              waitForReadySignal();
+              writeActionCycle(target, wordOffset, dataLines, kind);
           }
       }
   }
