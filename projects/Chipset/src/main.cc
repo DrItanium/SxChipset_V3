@@ -1346,8 +1346,10 @@ public:
           auto kind = determineWriteActionKind();
           auto dataLines = readDataLines(kind);
           if (isBurstLast()) {
+              digitalToggleFast(Pin::READY);
               doWriteAction(target, wordOffset, dataLines, kind);
-              break;
+              waitForReadySignal();
+              return;
           } else {
               digitalToggleFast(Pin::READY);
               doWriteAction(target, wordOffset, dataLines, kind);
@@ -1356,7 +1358,6 @@ public:
 
 #endif
       }
-      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
