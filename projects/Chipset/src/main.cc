@@ -1274,6 +1274,35 @@ public:
           return WriteActionKind::Hi8;
       }
   }
+  static uint16_t readDataLines(WriteActionKind kind) noexcept {
+      switch (kind) {
+          case WriteActionKind::Full16:
+              return readDataLines();
+          case WriteActionKind::Low8:
+              return readLo8();
+          case WriteActionKind::Hi8:
+              return readHi8();
+          default:
+              return 0;
+      }
+  }
+  template<MemoryCell MC>
+  static void
+  doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, WriteActionKind kind) noexcept {
+      switch (kind) {
+          case WriteActionKind::Full16:
+              target.setWord(offset, dataLines);
+              break;
+          case WriteActionKind::Low8:
+              target.setWord(offset, dataLines, true, false);
+              break;
+          case WriteActionKind::Hi8:
+              target.setWord(offset, dataLines, false, true);
+              break;
+          default:
+              break;
+      }
+  }
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
@@ -1314,34 +1343,14 @@ public:
           } 
           signalReady();
 #else
+          auto kind = determineWriteActionKind();
+          auto dataLines = readDataLines(kind);
           if (isBurstLast()) {
-              if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
-                  target.setWord(wordOffset, readDataLines());
-              } else if (byteEnableLow()) {
-                  target.setWord(wordOffset, readLo8(), true, false);
-              } else {
-                  target.setWord(wordOffset, readHi8(), false, true);
-              }
+              doWriteAction(target, wordOffset, dataLines, kind);
               break;
           } else {
-              auto dataLines = readDataLines();
-              auto kind = determineWriteActionKind();
-              // okay so we are safe to do things a tad differently for the
-              // burst case
               digitalToggleFast(Pin::READY);
-              // then dispatch the write operation so we can actually keep the
-              // flow going
-              switch (kind) {
-                  case WriteActionKind::Full16:
-                      target.setWord(wordOffset, dataLines);
-                      break;
-                  case WriteActionKind::Low8:
-                      target.setWord(wordOffset, dataLines, true, false);
-                      break;
-                  case WriteActionKind::Hi8:
-                      target.setWord(wordOffset, dataLines, false, true);
-                      break;
-              }
+              doWriteAction(target, wordOffset, dataLines, kind);
               waitForReadySignal();
           }
 
