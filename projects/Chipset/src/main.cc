@@ -1260,27 +1260,51 @@ public:
       }
       signalReady();
   }
-  enum class WriteActionKind : uint8_t {
+  enum class ActionKind : uint8_t {
       Full16,
       Low8,
       Hi8,
   };
-  static inline WriteActionKind determineWriteActionKind() noexcept {
+  using WriteActionKind = ActionKind;
+  static inline ActionKind determineActionKind() noexcept {
+      // the i960Sx exposes two byte enable signals, BE0 and BE1
+      // Each signal denotes if we should write that byte value. 
+      //
+      // Previously, we were always reading BE0 and BE1 separately
+      //
+      // Now, using an external GAL chip, we have two different signals:
+      // -- FULL16_ENABLE
+      // -- BE0
+      // If Full16_ENABLE is low then stop there and read both halves and
+      // write it out
+      // If it is false then check BE0 and see if it is low. If it is then
+      // only read the lower half and update only that byte.
+      // Finally, if we get to the third clause then it means that BE1 is
+      // low and thus we need to read the upper byte line and write only
+      // that out. This seems to improve performance quite a bit
+      //
+      // Basically we only pay for reading at most two signals and only if
+      // the first signal comes back high.
+      //
+      // This is possible because it is impossible for both enable signals
+      // to be high during a legal transaction. The only time that BE0 and
+      // BE1 are high is outside a given transaction or when FAIL is setup.
+      // So this is a safe optimization.
       if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
-          return WriteActionKind::Full16;
+          return ActionKind::Full16;
       } else if (byteEnableLow()) {
-          return WriteActionKind::Low8;
+          return ActionKind::Low8;
       } else {
-          return WriteActionKind::Hi8;
+          return ActionKind::Hi8;
       }
   }
-  static uint16_t readDataLines(WriteActionKind kind) noexcept {
+  static uint16_t readDataLines(ActionKind kind) noexcept {
       switch (kind) {
-          case WriteActionKind::Full16:
+          case ActionKind::Full16:
               return readDataLines();
-          case WriteActionKind::Low8:
+          case ActionKind::Low8:
               return readLo8();
-          case WriteActionKind::Hi8:
+          case ActionKind::Hi8:
               return readHi8();
           default:
               return 0;
@@ -1288,15 +1312,15 @@ public:
   }
   template<MemoryCell MC>
   static void
-  doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, WriteActionKind kind) noexcept {
+  doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
       switch (kind) {
-          case WriteActionKind::Full16:
+          case ActionKind::Full16:
               target.setWord(offset, dataLines);
               break;
-          case WriteActionKind::Low8:
+          case ActionKind::Low8:
               target.setWord(offset, dataLines, true, false);
               break;
-          case WriteActionKind::Hi8:
+          case ActionKind::Hi8:
               target.setWord(offset, dataLines, false, true);
               break;
           default:
@@ -1305,10 +1329,13 @@ public:
   }
   template<MemoryCell MC>
   static inline void
-  writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, WriteActionKind kind) noexcept {
+  writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
       digitalToggleFast(Pin::READY);
       // perform the write operation itself after we got the data off the bus
-      // and told the i960 that we want the next block of data
+      // and told the i960 that we want the next block of data. This design
+      // allows the i960 to be informed of the need first and then we use the
+      // time in between the ready signal toggle and the wait for it to finish
+      // to carry out the operation. 
       doWriteAction(target, offset, dataLines, kind);
       waitForReadySignal();
   }
@@ -1316,30 +1343,7 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          // the i960Sx exposes two byte enable signals, BE0 and BE1
-          // Each signal denotes if we should write that byte value. 
-          //
-          // Previously, we were always reading BE0 and BE1 separately
-          //
-          // Now, using an external GAL chip, we have two different signals:
-          // -- FULL16_ENABLE
-          // -- BE0
-          // If Full16_ENABLE is low then stop there and read both halves and
-          // write it out
-          // If it is false then check BE0 and see if it is low. If it is then
-          // only read the lower half and update only that byte.
-          // Finally, if we get to the third clause then it means that BE1 is
-          // low and thus we need to read the upper byte line and write only
-          // that out. This seems to improve performance quite a bit
-          //
-          // Basically we only pay for reading at most two signals and only if
-          // the first signal comes back high.
-          //
-          // This is possible because it is impossible for both enable signals
-          // to be high during a legal transaction. The only time that BE0 and
-          // BE1 are high is outside a given transaction or when FAIL is setup.
-          // So this is a safe optimization.
-          auto kind = determineWriteActionKind();
+          auto kind = determineActionKind();
           auto dataLines = readDataLines(kind);
           // we keep the burst last check here so the compiler won't get too
           // creative with optimizations. The duplication is necessary since
