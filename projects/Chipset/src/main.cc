@@ -1330,19 +1330,6 @@ public:
           // to be high during a legal transaction. The only time that BE0 and
           // BE1 are high is outside a given transaction or when FAIL is setup.
           // So this is a safe optimization.
-#if 0
-          if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
-              target.setWord(wordOffset, readDataLines());
-          } else if (byteEnableLow()) {
-              target.setWord(wordOffset, readLo8(), true, false);
-          } else {
-              target.setWord(wordOffset, readHi8(), false, true);
-          }
-          if (isBurstLast()) {
-              break;
-          } 
-          signalReady();
-#else
           auto kind = determineWriteActionKind();
           auto dataLines = readDataLines(kind);
           if (isBurstLast()) {
@@ -1355,8 +1342,6 @@ public:
               doWriteAction(target, wordOffset, dataLines, kind);
               waitForReadySignal();
           }
-
-#endif
       }
   }
   template<bool isReadTransaction, MemoryCell MC>
