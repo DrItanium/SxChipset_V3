@@ -1304,9 +1304,11 @@ public:
       }
   }
   template<MemoryCell MC>
-  static void
+  static inline void
   writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, WriteActionKind kind) noexcept {
       digitalToggleFast(Pin::READY);
+      // perform the write operation itself after we got the data off the bus
+      // and told the i960 that we want the next block of data
       doWriteAction(target, offset, dataLines, kind);
       waitForReadySignal();
   }
@@ -1339,6 +1341,13 @@ public:
           // So this is a safe optimization.
           auto kind = determineWriteActionKind();
           auto dataLines = readDataLines(kind);
+          // we keep the burst last check here so the compiler won't get too
+          // creative with optimizations. The duplication is necessary since
+          // isBurstLast will be invalid by the time we return from
+          // writeActionCycle. If the writeActionCycle function includes the
+          // lookup logic then it becomes possible that the compiler could
+          // rearrange where the isBurstLast call takes place. This design
+          // forces the matter
           if (isBurstLast()) {
               writeActionCycle(target, wordOffset, dataLines, kind);
               return;
