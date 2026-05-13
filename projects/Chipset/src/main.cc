@@ -1167,6 +1167,7 @@ public:
       } else {
           while (!readyTriggered);
       }
+      digitalWriteFast(Pin::READY, HIGH);
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
@@ -1175,7 +1176,8 @@ public:
           readyTriggered = false;
       }
       // run and block until we get the completion pulse
-      digitalToggleFast(Pin::READY);
+      //digitalToggleFast(Pin::READY);
+      digitalWriteFast(Pin::READY, LOW);
       waitForReadySignal();
       fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
