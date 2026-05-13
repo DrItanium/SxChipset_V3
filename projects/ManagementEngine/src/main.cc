@@ -249,7 +249,7 @@ configureReadyPulseGenerator() noexcept {
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm)); 
   TCB1.CCMP = 1; // two cycles
   TCB1.CNT = 1; // 
-  TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB1.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input 
   TCB1.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby
@@ -286,7 +286,7 @@ configureINT0PulseGenerator(Event& clk1out, Event& router) noexcept {
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB4_bm)); 
   TCB4.CCMP = 1; // two cycles
   TCB4.CNT = 1; // 
-  TCB4.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB4.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input and either edge detect
   TCB4.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB4.CTRLA = TCB_RUNSTDBY_bm | // run in standby
@@ -323,7 +323,7 @@ configureINT2PulseGenerator(Event& clk1out, Event& router) noexcept {
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB3_bm)); 
   TCB3.CCMP = 1; // two cycles
   TCB3.CNT = 1; // 
-  TCB3.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input
+  TCB3.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input and either edge detect
   TCB3.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB3.CTRLA = TCB_RUNSTDBY_bm | // run in standby
