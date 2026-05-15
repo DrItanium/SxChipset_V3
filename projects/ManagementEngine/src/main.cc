@@ -247,14 +247,16 @@ configureReadyPulseGenerator() noexcept {
   // okay, so start configuring the secondary single shot setup
   // make sure we output TCB1 to PA3
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm)); 
-  TCB1.CCMP = 1; // two cycles
-  TCB1.CNT = 1; // 
+  TCB1.CCMP = 2; // three cycles
+  TCB1.CNT = 2; // Start at the same as compare to deactivate the counter until
+                // next trigger
   TCB1.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input 
   TCB1.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby
                TCB_ENABLE_bm | // enable
-               TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
+               TCB_CLKSEL_DIV1_gc; // 24MHz instead of 12MHz
+               //TCB_CLKSEL_EVENT_gc; // clock comes from EVSYS
 }
 void
 configureDivideByTwoClockGenerator() noexcept {
