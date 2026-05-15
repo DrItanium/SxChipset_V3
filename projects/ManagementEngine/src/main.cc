@@ -250,7 +250,7 @@ configureReadyPulseGenerator() noexcept {
   TCB1.CCMP = 2; // three cycles
   TCB1.CNT = 2; // Start at the same as compare to deactivate the counter until
                 // next trigger
-  TCB1.EVCTRL = TCB_CAPTEI_bm; // enable EVSYS input 
+  TCB1.EVCTRL = TCB_CAPTEI_bm | TCB_EDGE_bm; // enable EVSYS input 
   TCB1.CTRLB = TCB_CNTMODE_SINGLE_gc | // enable single shot mode
                TCB_CCMPEN_bm; // enable output via GPIO
   TCB1.CTRLA = TCB_RUNSTDBY_bm | // run in standby

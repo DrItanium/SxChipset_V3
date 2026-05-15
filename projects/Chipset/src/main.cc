@@ -1167,7 +1167,7 @@ public:
       } else {
           while (!readyTriggered);
       }
-      digitalToggleFast(Pin::READY);
+      //digitalToggleFast(Pin::READY);
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
@@ -1726,7 +1726,7 @@ inline bool shouldServiceTransaction() noexcept {
         return adsTriggered;
     }
 }
-//#define TrackTransactionLength
+#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
