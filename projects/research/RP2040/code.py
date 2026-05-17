@@ -51,11 +51,11 @@ readyTranslatorSM = adafruit_pioasm.assemble(
         """
 .program readyTranslator
     wait 0 pin 0 ; wait for READY OUT to go low
-    wait 1 pin 0 ; wait for READY OUT to go high
     set pins 0   ; make READY low
-    wait 0 pin 0 ; wait for READY OUT to go low
     wait 1 pin 0 ; wait for READY OUT to go high
+    wait 0 pin 0 ; wait for READY OUT to go low
     set pins 1   ; toggle READY
+    wait 1 pin 0 ; wait for READY OUT to go high
     """
     )
 
