@@ -46,14 +46,19 @@ adsDetect = rp2pio.StateMachine(
 # this SM is responsible for detecting the READY pulse generated from the
 # AVR128DB64. It converts it into a level signal instead. This eliminates some
 # overhead from firing an interrupt. Instead, it is positional code.
+
+# it is important to note that we "toggle" the output pin after detecting the
+# falling edge of the output pulse from the AVR's single shot generator.
+# Previously, it was after waiting for it to go high. But that actually impacts
+# performance quite a bit. 
 readyTranslatorSM = adafruit_pioasm.assemble(
         """
 .program readyTranslator
     wait 0 pin 0 ; wait for READY OUT to go low
-    set pins 0   ; make READY low
+    set pins 0   ; Denote that the pulse has been sent off
     wait 1 pin 0 ; wait for READY OUT to go high
     wait 0 pin 0 ; wait for READY OUT to go low
-    set pins 1   ; toggle READY
+    set pins 1   ; Denote that the pulse has been sent off
     wait 1 pin 0 ; wait for READY OUT to go high
     """
     )
@@ -73,7 +78,10 @@ readyTranslator = rp2pio.StateMachine(
 # D6: Ready Output
 # D9: ADS Input
 # D10: DEN Input
-# D11: Transaction Start
+# D11: In Transaction
+# D12: In Address State
+# D13: In Idle State
+# A0:  System Warm Up
 
 # Since CircuitPython is very slow to boot we need to denote that it is up and
 # running!
