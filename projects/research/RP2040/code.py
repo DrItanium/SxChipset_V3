@@ -8,10 +8,8 @@ import adafruit_pioasm
 import array
 
 # D12 is the System Up pin
-systemWarmUp = digitalio.DigitalInOut(board.D12)
+systemWarmUp = digitalio.DigitalInOut(board.A0)
 systemWarmUp.switch_to_output(True)
-led = digitalio.DigitalInOut(board.D13)
-led.switch_to_output(True)
 
 # now that we have a successful setup for feedback testing, it is necessary to
 # setup a state machine for processing a series of independent requests for the
@@ -22,11 +20,12 @@ transactionStartSM = adafruit_pioasm.assemble(
         """
 .program transaction_start
     wait 0 pin 0 ; wait for ADS to go low
+    set pins 0b101 ; address state enter
     wait 1 pin 0 ; then wait for it to go high again
     wait 0 pin 1 ; then wait for DEN to go low
-    set pins 0   ; The falling edge becomes the interrupt source
+    set pins 0b110   ; The falling edge becomes the interrupt source
     wait 1 pin 1 ; wait until DEN goes high again
-    set pins 1      ; Then pull it high
+    set pins 0b011      ; Then pull it high
     """
     )
 # we reserve D9, D10, and D11 for this state machine
@@ -39,9 +38,9 @@ adsDetect = rp2pio.StateMachine(
         first_in_pin = board.D9,
         in_pin_count = 2,
         first_set_pin = board.D11,
-        set_pin_count = 1,
-        initial_set_pin_state = 1,
-        initial_set_pin_direction = 1,
+        set_pin_count = 3,
+        initial_set_pin_state = 0b011,
+        initial_set_pin_direction = 0b111,
         )
 
 # this SM is responsible for detecting the READY pulse generated from the
@@ -79,6 +78,5 @@ readyTranslator = rp2pio.StateMachine(
 # Since CircuitPython is very slow to boot we need to denote that it is up and
 # running!
 systemWarmUp.value = False
-led.value = False
 while True:
     time.sleep(1)
