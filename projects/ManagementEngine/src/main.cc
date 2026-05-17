@@ -9,6 +9,11 @@
 #include "InterfaceEngineCommon.h"
 #include "i960CommonInterface.h"
 
+// TODO: 
+// - Use PER_CLK/2 for the interrupt generators instead of TCA0 when it makes sense
+// -- Free up Event Channel 0
+// -- Tie TCA0.WO2 to the CCLs for Interrupt pulse generation instead of event channel
+// -- Disable outputting CLK1 on PA0
 // Mapped/Registered Peripherals
 // TCA0: CLK/2 generator (CLK1OUT)
 // TCA1:
@@ -246,6 +251,16 @@ void
 configureReadyPulseGenerator() noexcept {
   // okay, so start configuring the secondary single shot setup
   // make sure we output TCB1 to PA3
+  //
+  // Also, by using the 24MHz source we need to make sure that it isn't too
+  // long and also isn't too short as to prevent the i960 from seeing the pulse
+  // correctly!
+  // If it is too long then the i960 interprets it as the next ready after this
+  // one... which breaks the sync...
+  // 
+  // Also, there is a delay of 2-3 TCBx cycles before we start. Enabling async
+  // mode will cause problems as we need to synchronize the teensy input signal
+  // with CLK2.
   PORTMUX.TCBROUTEA = (PORTMUX.TCBROUTEA & ~(PORTMUX_TCB1_bm)); 
   TCB1.CCMP = 2; // three cycles
   TCB1.CNT = 2; // Start at the same as compare to deactivate the counter until
