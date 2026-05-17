@@ -1195,18 +1195,20 @@ public:
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
+      // apparently, you can burst read from the CH351! I have confirmed this
+      // through testing
+      digitalWriteFast(Pin::EBI_RD, LOW);
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
           EBIInterface::setAddress(k);
           fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-          digitalWriteFast(Pin::EBI_RD, LOW);
           fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
           value.bytes[i] = EBIInterface::readDataLines();
           fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-          digitalWriteFast(Pin::EBI_RD, HIGH);
-          fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       }
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       digitalToggleFast(Pin::ADDRESS_CAPTURE);
-      return SplitWord32{value};
+      return value;
   }
   static inline bool
   isBurstLast() noexcept {
