@@ -1191,13 +1191,22 @@ public:
   }
   static SplitWord32
   getAddress24() noexcept {
+      digitalToggleFast(Pin::ADDRESS_CAPTURE);
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
-          value.bytes[i] = read8<false>(k);
+          EBIInterface::setAddress(k);
+          fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+          digitalWriteFast(Pin::EBI_RD, LOW);
+          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+          value.bytes[i] = EBIInterface::readDataLines();
+          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+          digitalWriteFast(Pin::EBI_RD, HIGH);
+          fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       }
-      return value;
+      digitalToggleFast(Pin::ADDRESS_CAPTURE);
+      return SplitWord32{value};
   }
   static inline bool
   isBurstLast() noexcept {
@@ -1680,6 +1689,7 @@ setup() {
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
     outputPin(Pin::INT960_3, HIGH);
+    outputPin(Pin::ADDRESS_CAPTURE, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::FULL16_ENABLE);
