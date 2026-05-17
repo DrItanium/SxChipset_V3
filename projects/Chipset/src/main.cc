@@ -807,27 +807,27 @@ RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 RawFilesystemInterface sdcardInterface;
-struct CH351 {
+struct CH351 final {
   constexpr explicit CH351(uint8_t baseAddress) noexcept
     : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
   }
-  constexpr auto getBaseAddress() const noexcept {
+  [[nodiscard]] constexpr auto getBaseAddress() const noexcept {
     return _baseAddress;
   }
-  constexpr auto getDataPortBaseAddress() const noexcept {
+  [[nodiscard]] constexpr auto getDataPortBaseAddress() const noexcept {
     return _dataPortBaseAddress;
   }
-  constexpr auto getDataPortReadAddressBase() const noexcept {
+  [[nodiscard]] constexpr auto getDataPortReadAddressBase() const noexcept {
       if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
           return _dataPortBaseAddress + 2;
       } else {
           return _dataPortBaseAddress;
       }
   }
-  constexpr auto getDataPortWriteAddressBase() const noexcept {
+  [[nodiscard]] constexpr auto getDataPortWriteAddressBase() const noexcept {
       return _dataPortBaseAddress;
   }
-  constexpr auto getConfigPortBaseAddress() const noexcept {
+  [[nodiscard]] constexpr auto getConfigPortBaseAddress() const noexcept {
     return _cfgPortBaseAddress;
   }
 private:
@@ -1194,7 +1194,7 @@ public:
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
-      for (int i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
+      for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
           value.bytes[i] = read8<false>(k);
       }
       return value;
