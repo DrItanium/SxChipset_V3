@@ -1189,9 +1189,12 @@ public:
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+  template<bool EnableAddressCapture = false>
   static SplitWord32
   getAddress24() noexcept {
-      digitalToggleFast(Pin::ADDRESS_CAPTURE);
+      if constexpr (EnableAddressCapture) {
+          digitalToggleFast(Pin::ADDRESS_CAPTURE);
+      }
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
@@ -1199,6 +1202,7 @@ public:
       // through testing
       digitalWriteFast(Pin::EBI_RD, LOW);
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
+          // just set the address and wait
           EBIInterface::setAddress(k);
           fixedDelayNanoseconds<ReadConfiguration.addressWait>();
           fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
@@ -1207,7 +1211,9 @@ public:
       }
       digitalWriteFast(Pin::EBI_RD, HIGH);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-      digitalToggleFast(Pin::ADDRESS_CAPTURE);
+      if constexpr (EnableAddressCapture) {
+          digitalToggleFast(Pin::ADDRESS_CAPTURE);
+      }
       return value;
   }
   static inline bool
