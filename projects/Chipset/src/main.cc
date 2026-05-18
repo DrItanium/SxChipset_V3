@@ -1201,7 +1201,6 @@ public:
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
-      //digitalWriteFast(Pin::EBI_RD, LOW);
       digitalToggleFast(Pin::EBI_RD);
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
           // just set the address and wait
@@ -1212,7 +1211,6 @@ public:
           fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       }
       digitalToggleFast(Pin::EBI_RD);
-      //digitalWriteFast(Pin::EBI_RD, HIGH);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return value;
   }
