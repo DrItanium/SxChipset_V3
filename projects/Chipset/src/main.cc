@@ -1274,10 +1274,12 @@ public:
 
   static void
   writeDataLines(uint16_t value) noexcept {
+#if 1
       constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
-      write8(baseAddress, value);
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
-
+      write8<false>(baseAddress, value);
+      write8<false>(baseAddress+1, static_cast<uint8_t>(value >> 8));
+#else
+#endif
   }
   template<MemoryCell MC>
   static void
@@ -1493,6 +1495,11 @@ public:
               i960Interface::configureDataLinesForRead();
           } else {
               i960Interface::configureDataLinesForWrite();
+          }
+      } else {
+          if constexpr (isReadTransaction) {
+              // this will stay this way for the rest of the transaction
+              EBIInterface::setDataLinesDirection<OUTPUT>();
           }
       }
       switch (address.components.targetBlock) {
