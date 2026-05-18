@@ -1193,7 +1193,6 @@ public:
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
-  template<bool EnableAddressCapture = false>
   static SplitWord32
   getAddress24() noexcept {
       // this takes around 400 ARM cycles to complete
