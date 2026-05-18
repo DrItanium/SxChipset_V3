@@ -1300,8 +1300,8 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
-      auto currentWord = target.getWord((offset >> 1));
-      for (uint8_t wordOffset = (offset >> 1); ;) {
+      //auto currentWord = target.getWord((offset >> 1));
+      for (uint16_t wordOffset = (offset >> 1), currentWord = target.getWord((offset >> 1)); ;) {
           // write the current word
           writeDataLines(currentWord);
           if (isBurstLast()) {
