@@ -1274,11 +1274,24 @@ public:
 
   static void
   writeDataLines(uint16_t value) noexcept {
-#if 1
+#if 0
       constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
       write8<false>(baseAddress, value);
       write8<false>(baseAddress+1, static_cast<uint8_t>(value >> 8));
 #else
+      SplitWord16 sp{value};
+      for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
+          EBIInterface::setAddress(j);
+          EBIInterface::setDataLines(sp.bytes[i]);
+          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+          digitalWriteFast(Pin::EBI_WR, LOW);
+          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+          digitalWriteFast(Pin::EBI_WR, HIGH);
+          fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
+      }
+
+
 #endif
   }
   template<MemoryCell MC>
