@@ -1274,19 +1274,19 @@ public:
   static void
   writeDataLines(uint16_t value) noexcept {
       SplitWord16 sp{value};
+      digitalToggleFast(Pin::EBI_WR); // when using toggle fast some extra
+                                      // delay time is necessary of around
+                                      // 20ns (guess). Use of lower values
+                                      // resulted in an unstable system
       for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
           EBIInterface::setAddress(j);
-          EBIInterface::setDataLines(sp.bytes[i]);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+          EBIInterface::setDataLines(sp.bytes[i]);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          digitalToggleFast(Pin::EBI_WR); // when using toggle fast some extra
-                                          // delay time is necessary of around
-                                          // 20ns (guess). Use of lower values
-                                          // resulted in an unstable system
           fixedDelayNanoseconds<WriteConfiguration.holdTime + 20>(); // tWL hold for at least 80ns
-          digitalToggleFast(Pin::EBI_WR);
-          fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
       }
+      digitalToggleFast(Pin::EBI_WR);
+      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
   template<MemoryCell MC>
   static void
