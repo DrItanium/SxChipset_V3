@@ -1111,12 +1111,16 @@ struct i960Interface {
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
+private:
+  static inline SplitWord16 _previouslyWrittenValue;
+public:
 
   static void
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
       _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+      _previouslyWrittenValue.clear();
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -1223,23 +1227,9 @@ public:
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  static void
-  writeDataLines(uint16_t value) noexcept {
-      constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
-      write8(baseAddress, static_cast<uint8_t>(value)); 
-      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
-  }
   static uint16_t
   readDataLines() noexcept {
-#if 0
-      uint16_t value = 0;
-      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
-      value |= static_cast<uint16_t>(read8<false>(baseAddress));
-      value |= static_cast<uint16_t>(read8<false>(baseAddress+1)) << 8;
-      return value;
-#else
       SplitWord16 value;
-   //   digitalWriteFast(Pin::EBI_RD, LOW);
       for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
           EBIInterface::setAddress(k);
           fixedDelayNanoseconds<ReadConfiguration.addressWait>();
@@ -1247,17 +1237,8 @@ public:
           value.bytes[i] = EBIInterface::readDataLines();
           fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       }
-    //  digitalWriteFast(Pin::EBI_RD, HIGH);
-     // fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-      // since we always read an address first, it is safe to not configure the data
-      // line directions
       return value.value;
-#endif
   }
-#if 0
-  static uint16_t readLo8() noexcept { return read8<false>(dataLines.getDataPortReadAddressBase()); }
-  static uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8<false>(dataLines.getDataPortReadAddressBase()+1)) << 8; }
-#else
   static uint16_t readLo8() noexcept {
       uint16_t value;
       EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
@@ -1276,7 +1257,6 @@ public:
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       return value;
   }
-#endif
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1290,6 +1270,14 @@ public:
       signalReady();
     }
     signalReady();
+  }
+
+  static void
+  writeDataLines(uint16_t value) noexcept {
+      constexpr auto baseAddress = dataLines.getDataPortWriteAddressBase();
+      write8(baseAddress, value);
+      write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
+
   }
   template<MemoryCell MC>
   static void

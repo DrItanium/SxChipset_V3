@@ -47,6 +47,7 @@ union SplitWord16 {
     [[nodiscard]] inline constexpr uint16_t getWord(uint8_t) const noexcept { return value; }
     void update() noexcept { }
     void onFinish() noexcept { }
+    constexpr SplitWord16(uint16_t v= 0) noexcept : value(v) { }
 };
 union SplitWord32 {
     uint8_t bytes[4];
