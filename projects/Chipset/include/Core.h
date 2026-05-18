@@ -29,6 +29,25 @@ template<typename T>
 struct TreatAs final {
     using underlying_type = T;
 };
+union SplitWord16 {
+    uint16_t value;
+    uint8_t bytes[2];
+    void clear() noexcept { value = 0 ; }
+    inline void setWord(uint8_t, uint16_t value, bool updateLo, bool updateHi) noexcept {
+        if (updateLo) {
+            bytes[0] = static_cast<uint8_t>(value);
+        }
+        if (updateHi) {
+            bytes[1] = static_cast<uint8_t>(value);
+        }
+    }
+    inline void setWord(uint8_t, uint16_t val) noexcept {
+        value = val;
+    }
+    [[nodiscard]] inline constexpr uint16_t getWord(uint8_t) const noexcept { return value; }
+    void update() noexcept { }
+    void onFinish() noexcept { }
+};
 union SplitWord32 {
     uint8_t bytes[4];
     uint16_t shorts[2];

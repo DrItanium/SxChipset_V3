@@ -1192,9 +1192,6 @@ public:
   template<bool EnableAddressCapture = false>
   static SplitWord32
   getAddress24() noexcept {
-      if constexpr (EnableAddressCapture) {
-          digitalToggleFast(Pin::ADDRESS_CAPTURE);
-      }
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
@@ -1211,9 +1208,6 @@ public:
       }
       digitalWriteFast(Pin::EBI_RD, HIGH);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-      if constexpr (EnableAddressCapture) {
-          digitalToggleFast(Pin::ADDRESS_CAPTURE);
-      }
       return value;
   }
   static inline bool
@@ -1244,7 +1238,7 @@ public:
       value |= static_cast<uint16_t>(read8<false>(baseAddress+1)) << 8;
       return value;
 #else
-      SplitWord32 value;
+      SplitWord16 value;
    //   digitalWriteFast(Pin::EBI_RD, LOW);
       for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
           EBIInterface::setAddress(k);
@@ -1257,7 +1251,7 @@ public:
      // fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       // since we always read an address first, it is safe to not configure the data
       // line directions
-      return value.shorts[0];
+      return value.value;
 #endif
   }
 #if 0
@@ -1738,7 +1732,6 @@ setup() {
     outputPin(Pin::INT960_1, LOW);
     outputPin(Pin::INT960_2, LOW);
     outputPin(Pin::INT960_3, HIGH);
-    outputPin(Pin::ADDRESS_CAPTURE, HIGH);
     inputPin(Pin::BE0);
     inputPin(Pin::BE1);
     inputPin(Pin::FULL16_ENABLE);
