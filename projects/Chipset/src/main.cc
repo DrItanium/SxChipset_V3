@@ -1201,7 +1201,8 @@ public:
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      //digitalWriteFast(Pin::EBI_RD, LOW);
+      digitalToggleFast(Pin::EBI_RD);
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
           // just set the address and wait
           EBIInterface::setAddress(k);
@@ -1210,7 +1211,8 @@ public:
           value.bytes[i] = EBIInterface::readDataLines();
           fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       }
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      digitalToggleFast(Pin::EBI_RD);
+      //digitalWriteFast(Pin::EBI_RD, HIGH);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return value;
   }
@@ -1395,7 +1397,6 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      //digitalWriteFast(Pin::EBI_RD, LOW);
       digitalToggleFast(Pin::EBI_RD);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
@@ -1414,7 +1415,6 @@ public:
               writeActionCycle(target, wordOffset, dataLines, kind);
           }
       }
-      //digitalWriteFast(Pin::EBI_RD, HIGH);
       digitalToggleFast(Pin::EBI_RD);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
   }
