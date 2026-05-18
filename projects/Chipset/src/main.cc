@@ -1285,13 +1285,13 @@ public:
           EBIInterface::setDataLines(sp.bytes[i]);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          digitalWriteFast(Pin::EBI_WR, LOW);
-          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-          digitalWriteFast(Pin::EBI_WR, HIGH);
+          digitalToggleFast(Pin::EBI_WR); // when using toggle fast some extra
+                                          // delay time is necessary of around
+                                          // 20ns (guess)
+          fixedDelayNanoseconds<WriteConfiguration.holdTime + 20>(); // tWL hold for at least 80ns
+          digitalToggleFast(Pin::EBI_WR);
           fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
       }
-
-
 #endif
   }
   template<MemoryCell MC>
