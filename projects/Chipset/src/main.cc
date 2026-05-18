@@ -1283,7 +1283,7 @@ public:
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           EBIInterface::setDataLines(sp.bytes[i]);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          fixedDelayNanoseconds<WriteConfiguration.holdTime + 20>(); // tWL hold for at least 80ns
+          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
       digitalToggleFast(Pin::EBI_WR);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
