@@ -1216,31 +1216,6 @@ public:
       }
       return value;
   }
-  static uint16_t
-  readDataLines() noexcept {
-#if 0
-      uint16_t value = 0;
-      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
-      value |= static_cast<uint16_t>(read8<false>(baseAddress));
-      value |= static_cast<uint16_t>(read8<false>(baseAddress+1)) << 8;
-      return value;
-#else
-      SplitWord32 value;
-      digitalWriteFast(Pin::EBI_RD, LOW);
-      for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
-          EBIInterface::setAddress(k);
-          fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-          value.bytes[i] = EBIInterface::readDataLines();
-          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      }
-      digitalWriteFast(Pin::EBI_RD, HIGH);
-      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-      // since we always read an address first, it is safe to not configure the data
-      // line directions
-      return value.shorts[0];
-#endif
-  }
   static inline bool
   isBurstLast() noexcept {
     //TimeTracker tracker(__PRETTY_FUNCTION__);
@@ -1260,8 +1235,54 @@ public:
       write8(baseAddress, static_cast<uint8_t>(value)); 
       write8(baseAddress+1, static_cast<uint8_t>(value >> 8));
   }
+  static uint16_t
+  readDataLines() noexcept {
+#if 0
+      uint16_t value = 0;
+      constexpr auto baseAddress = dataLines.getDataPortReadAddressBase();
+      value |= static_cast<uint16_t>(read8<false>(baseAddress));
+      value |= static_cast<uint16_t>(read8<false>(baseAddress+1)) << 8;
+      return value;
+#else
+      SplitWord32 value;
+   //   digitalWriteFast(Pin::EBI_RD, LOW);
+      for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
+          EBIInterface::setAddress(k);
+          fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+          value.bytes[i] = EBIInterface::readDataLines();
+          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      }
+    //  digitalWriteFast(Pin::EBI_RD, HIGH);
+     // fixedDelayNanoseconds<ReadConfiguration.afterTime>();
+      // since we always read an address first, it is safe to not configure the data
+      // line directions
+      return value.shorts[0];
+#endif
+  }
+#if 0
   static uint16_t readLo8() noexcept { return read8<false>(dataLines.getDataPortReadAddressBase()); }
   static uint16_t readHi8() noexcept { return static_cast<uint16_t>(read8<false>(dataLines.getDataPortReadAddressBase()+1)) << 8; }
+#else
+  static uint16_t readLo8() noexcept {
+      uint16_t value;
+      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
+  }
+  static uint16_t readHi8() noexcept {
+      uint16_t value;
+      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
+  }
+#endif
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1377,6 +1398,7 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
+      digitalWriteFast(Pin::EBI_RD, LOW);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
           auto dataLines = readDataLines(kind);
@@ -1389,11 +1411,13 @@ public:
           // forces the matter
           if (isBurstLast()) {
               writeActionCycle(target, wordOffset, dataLines, kind);
-              return;
+              break;
           } else {
               writeActionCycle(target, wordOffset, dataLines, kind);
           }
       }
+      digitalWriteFast(Pin::EBI_RD, HIGH);
+      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
