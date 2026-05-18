@@ -1395,7 +1395,8 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      //digitalWriteFast(Pin::EBI_RD, LOW);
+      digitalToggleFast(Pin::EBI_RD);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
           auto dataLines = readDataLines(kind);
@@ -1413,7 +1414,8 @@ public:
               writeActionCycle(target, wordOffset, dataLines, kind);
           }
       }
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      //digitalWriteFast(Pin::EBI_RD, HIGH);
+      digitalToggleFast(Pin::EBI_RD);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
   }
   template<bool isReadTransaction, MemoryCell MC>
