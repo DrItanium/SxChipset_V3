@@ -1274,10 +1274,18 @@ public:
   static void
   writeDataLines(uint16_t value) noexcept {
       SplitWord16 sp{value};
-      digitalToggleFast(Pin::EBI_WR); // when using toggle fast some extra
-                                      // delay time is necessary of around
-                                      // 20ns (guess). Use of lower values
-                                      // resulted in an unstable system
+      // burst writes do work, you just have to be very careful. First you must
+      // update the address lines and wait. After the wait period has expired,
+      // it is safe to update the data lines. The hold time of 10ns before
+      // restarting the loop is also very safe as well. It is very important to
+      // make sure that we are writing to the upper piece before we turn off
+      // write mode.
+      //
+      // What we are doing is overlaying the act of setting things up with
+      // toggling the write pin. What needs to be checked is if more delays are
+      // necessary to preven asserts and such. My hope is that it isn't a
+      // problem now since the toggles happen far less frequently.
+      digitalToggleFast(Pin::EBI_WR); 
       for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
           EBIInterface::setAddress(j);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
