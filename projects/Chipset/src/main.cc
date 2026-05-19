@@ -1818,7 +1818,7 @@ void
 loop() {
     tryDoTransaction();
     tryDoTransaction();
-    handleAVRSerialConnection();
+//    handleAVRSerialConnection();
     tryDoTransaction();
     tryDoTransaction();
 }
