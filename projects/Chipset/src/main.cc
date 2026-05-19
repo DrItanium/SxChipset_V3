@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <optional>
 
-#include <SPI.h>
 #include <Wire.h>
 #include <SD.h>
 #include <NativeEthernet.h>
@@ -1111,16 +1110,12 @@ struct i960Interface {
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
-private:
-  static inline SplitWord16 _previouslyWrittenValue;
-public:
 
   static void
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
       _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
-      _previouslyWrittenValue.clear();
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -1171,7 +1166,6 @@ public:
       } else {
           while (!readyTriggered);
       }
-      //digitalToggleFast(Pin::READY);
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
@@ -1215,7 +1209,6 @@ public:
   }
   static inline bool
   isBurstLast() noexcept {
-    //TimeTracker tracker(__PRETTY_FUNCTION__);
     return digitalReadFast(Pin::BLAST) == LOW;
   }
   static inline bool
@@ -1300,7 +1293,6 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
-      //auto currentWord = target.getWord((offset >> 1));
       for (uint16_t wordOffset = (offset >> 1), currentWord = target.getWord((offset >> 1)); ;) {
           // write the current word
           writeDataLines(currentWord);
@@ -1768,7 +1760,6 @@ setup() {
     setupMemory();
     setupRTC();
     setupSDCard();
-    SPI.begin();
     setupRandomSeed();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
