@@ -1839,10 +1839,15 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         bool begin();
         void end();
     private:
-        uint8_t _ads, _adsFlexPin = 0;
-        uint8_t _den, _denFlexPin = 0;
-        uint8_t _transactionPin, _transactionFlexPin = 0;
+        uint8_t _ads, _adsFlexPin = 0xff;
+        uint8_t _den, _denFlexPin = 0xff;
+        uint8_t _transactionPin, _transactionFlexPin = 0xff;
         FlexIOHandler* _ioDevice = nullptr;
+        uint8_t _stateMachineTimer = 0xff;
+        uint8_t _state0 = 0xff;
+        uint8_t _state1 = 0xff;
+        uint8_t _state2 = 0xff;
+        uint8_t _state3 = 0xff;
 };
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
 
@@ -1853,12 +1858,29 @@ FlexIOTransactionDetector::end() {
 
 bool
 FlexIOTransactionDetector::begin() {
+    // all of these should be unique
+    if (_ads == _den || _ads == _transactionPin || _den == _transactionPin) {
+        return false;
+    }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
     if (!_ioDevice) {
         return false;
     }
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
+    if (_denFlexPin == 0xff) {
+        return false;
+    }
     _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
+    if (_transactionFlexPin == 0xff) {
+        return false;
+    }
+    // not enough sanity checking yet but for testing purposes this is fine
+    auto* p = &_ioDevice->port();
+    _stateMachineTimer = _ioDevice->requestTimers(1);
+    _state0 = _ioDevice->requestShifter();
+    _state1 = _ioDevice->requestShifter();
+    _state2 = _ioDevice->requestShifter();
+    _state3 = _ioDevice->requestShifter();
     return true;
 }
 bool
