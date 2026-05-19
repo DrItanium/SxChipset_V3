@@ -56,19 +56,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "i960CommonInterface.h"
 #include <fileuids.h>
 
-// the dsb instruction makes sure that all instructions in the pipeline
-// complete before this instruction finishes. Very necessary to prevent reads
-// and writes to peripherals to complete when we want them to. Using this
-// instruction also seems to increase performance in some cases. 
-//
-// Use sparingly because in some cases it will reduce performance if used
-// too often on the Cortex-M7.
-#define SynchronizeData asm volatile ("dsb" ::: "memory")
-#define SynchronizeInstructions asm volatile ("isb" ::: "memory")
-// Thanks to an interactive session with copilot I am realizing that while the
-// CH351 has some real limitations when it comes to write operations. There are
-// minimum hold times in between writes. Which is around 50 ns
-//
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
