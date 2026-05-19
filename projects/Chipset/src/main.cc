@@ -1964,6 +1964,10 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
+    p->TIMCMP[_stateMachineTimer] = 0; // fastest baud rate available
+    p->TIMCFG[_stateMachineTimer] = 0; // always enabled
+    p->TIMCTL[_stateMachineTimer] = FLEXIO_TIMCTL_MODE_16BIT;
+
     return true;
 }
 bool
