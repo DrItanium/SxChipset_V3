@@ -1855,7 +1855,9 @@ void
 FlexIOTransactionDetector::end() {
 
 }
-
+constexpr bool validFlexIOResult(uint8_t input) {
+    return input != 0xff;
+}
 bool
 FlexIOTransactionDetector::begin() {
     // all of these should be unique
@@ -1863,24 +1865,64 @@ FlexIOTransactionDetector::begin() {
         return false;
     }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
-    if (!_ioDevice) {
+    if (!_ioDevice || !validFlexIOResult(_adsFlexPin)) {
         return false;
     }
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
-    if (_denFlexPin == 0xff) {
+    if (!validFlexIOResult(_denFlexPin)) {
         return false;
     }
     _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
-    if (_transactionFlexPin == 0xff) {
+    if (!validFlexIOResult(_transactionFlexPin)) {
         return false;
     }
     // not enough sanity checking yet but for testing purposes this is fine
     auto* p = &_ioDevice->port();
     _stateMachineTimer = _ioDevice->requestTimers(1);
+    if (!validFlexIOResult(_stateMachineTimer)) { return false; }
     _state0 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state0)) { return false; }
     _state1 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state1)) { return false; }
     _state2 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state2)) { return false; }
     _state3 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state3)) { return false; }
+    uint32_t outputConfiguration;
+    switch (_transactionFlexPin) {
+        case 0:
+            outputConfiguration = FLEXIO_SHIFTCFG_SSTART(0b01);
+            break;
+        case 1:
+            outputConfiguration = FLEXIO_SHIFTCFG_SSTART(0b10);
+            break;
+        case 2:
+            outputConfiguration = FLEXIO_SHIFTCFG_SSTOP(0b01);
+            break;
+        case 3:
+            outputConfiguration = FLEXIO_SHIFTCFG_SSTOP(0b10);
+            break;
+        case 4:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0001);
+            break;
+        case 5:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0010);
+            break;
+        case 6:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0100);
+            break;
+        case 7:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1000);
+            break;
+        default:
+            return false;
+    }
+    // we only have one supported output configuration
+    p->SHIFTCFG[_state0] = outputConfiguration;
+    p->SHIFTCFG[_state1] = outputConfiguration;
+    p->SHIFTCFG[_state2] = outputConfiguration;
+    p->SHIFTCFG[_state3] = outputConfiguration;
+
     return true;
 }
 bool
