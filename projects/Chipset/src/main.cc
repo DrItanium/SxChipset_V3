@@ -1980,5 +1980,9 @@ configureFlexIO() noexcept {
     // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
     // faster detection than the RP2040 as well. We use FlexIO1 in state
     // machine mode
-    
+    if (inTransactionDetector.begin()) {
+        Serial.println("In Transaction Detector Successfully Started!");
+    } else {
+        Serial.println("In Transaction Detector Failed to start!");
+    }
 }
