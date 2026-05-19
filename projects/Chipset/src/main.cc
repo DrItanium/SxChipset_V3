@@ -1855,8 +1855,17 @@ void
 FlexIOTransactionDetector::end() {
 
 }
-constexpr bool validFlexIOResult(uint8_t input) {
+constexpr bool 
+validFlexIOResult(uint8_t input) {
     return input != 0xff;
+}
+uint32_t 
+computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept {
+    uint32_t result = (static_cast<uint32_t>(outputs) << 24);
+    for (int i = 0; i < 8; ++i) {
+        result |= (fn(0b001 & i, 0b010 & i, 0b100 & i));
+    }
+    return result;
 }
 bool
 FlexIOTransactionDetector::begin() {
@@ -1922,7 +1931,15 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCFG[_state1] = outputConfiguration;
     p->SHIFTCFG[_state2] = outputConfiguration;
     p->SHIFTCFG[_state3] = outputConfiguration;
-
+    // so we need to configure State0 transitions
+    // state0 -> in transaction is high
+    //  0bxx1 -> state0
+    //  0bxx0 -> state1
+    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state0 : _state1; });
+    // state1 -> in transaction is high
+    //  0bxx1 -> state2
+    //  0bxx0 -> state1
+    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state2 : _state1; });
     return true;
 }
 bool
