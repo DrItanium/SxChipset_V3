@@ -1717,7 +1717,6 @@ setup() {
     delay(1000);
     waitForAVRToComeUp();
     putCPUInReset();
-    configureFlexIO();
     inputPin(Pin::DEN);
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
@@ -1742,6 +1741,7 @@ setup() {
     while (!Serial) {
         delay(10);
     }
+    configureFlexIO();
     Entropy.Initialize();
     EEPROM.begin();
     // put your setup code here, to run once:
