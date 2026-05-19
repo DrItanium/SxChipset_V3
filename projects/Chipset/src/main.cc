@@ -1951,6 +1951,19 @@ FlexIOTransactionDetector::begin() {
     //  0bx0x => goto state 3
     //  0bx1x => goto state 0
     p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
+    // example value is 0x0080_0206 
+    // 0x06 => SMOD is in state mode
+    // 0x02 => FXIO_Di (base pin)
+    // 0x80 => Shift on negedge of shift clock
+    // 0x00 => timer 0
+    uint32_t shiftConfiguration = FLEXIO_SHIFTCTL_MODE_STATE |
+        FLEXIO_SHIFTCTL_PINSEL(_adsFlexPin) |
+        FLEXIO_SHIFTCTL_SHIFT_ON_RISING_EDGE |
+        FLEXIO_SHIFTCTL_TIMSEL(_stateMachineTimer);
+    p->SHIFTCTL[_state0] = shiftConfiguration;
+    p->SHIFTCTL[_state1] = shiftConfiguration;
+    p->SHIFTCTL[_state2] = shiftConfiguration;
+    p->SHIFTCTL[_state3] = shiftConfiguration;
     return true;
 }
 bool
