@@ -1885,6 +1885,9 @@ FlexIOTransactionDetector::begin() {
     if (!validFlexIOResult(_transactionFlexPin)) {
         return false;
     }
+    if ((_denFlexPin - _adsFlexPin) != 1) {
+        return false;
+    }
     // not enough sanity checking yet but for testing purposes this is fine
     auto* p = &_ioDevice->port();
     _stateMachineTimer = _ioDevice->requestTimers(1);
@@ -1940,6 +1943,14 @@ FlexIOTransactionDetector::begin() {
     //  0bxx1 -> state2
     //  0bxx0 -> state1
     p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state2 : _state1; });
+    // state2 -> in transaction is high
+    //  0bx1x => goto state 2
+    //  0bx0x => goto state 3
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state2 : _state3; });
+    // state3 -> in transaction is low
+    //  0bx0x => goto state 3
+    //  0bx1x => goto state 0
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
     return true;
 }
 bool
