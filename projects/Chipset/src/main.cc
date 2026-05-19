@@ -73,6 +73,7 @@ Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
 }
+
 inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
     return ((F_CPU_ACTUAL>>16) * nsec) / (1000000000UL>>16);
 }
@@ -1707,6 +1708,7 @@ triggerSystemTimer() noexcept {
 }
 
 void handleAVRSerialConnection() noexcept;
+void configureFlexIO() noexcept;
 void 
 setup() {
     cpuIsRunning = false;
@@ -1715,6 +1717,7 @@ setup() {
     delay(1000);
     waitForAVRToComeUp();
     putCPUInReset();
+    configureFlexIO();
     inputPin(Pin::DEN);
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
@@ -1823,3 +1826,44 @@ loop() {
     tryDoTransaction();
 }
 
+struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
+    public:
+        bool call_back(FlexIOHandler *pflex) override;
+        FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
+        FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
+            : FlexIOTransactionDetector(
+                static_cast<uint8_t>(ads),
+                static_cast<uint8_t>(den),
+                static_cast<uint8_t>(inTransaction)) { }
+        ~FlexIOTransactionDetector() { }
+        bool begin();
+        void end();
+    private:
+        uint8_t _ads, _adsFlexPin = 0;
+        uint8_t _den, _denFlexPin = 0;
+        uint8_t _transactionPin, _transactionFlexPin = 0;
+        FlexIOHandler* _ioDevice = nullptr;
+};
+FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
+void 
+configureFlexIO() noexcept {
+    // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
+    // faster detection than the RP2040 as well. We use FlexIO1 in state
+    // machine mode
+    
+}
+
+void
+FlexIOTransactionDetector::end() {
+
+}
+
+bool
+FlexIOTransactionDetector::begin() {
+    _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
+    if (!_ioDevice) {
+        return false;
+    }
+    _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
+    _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
+}
