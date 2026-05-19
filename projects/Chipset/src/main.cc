@@ -1835,7 +1835,7 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
                 static_cast<uint8_t>(ads),
                 static_cast<uint8_t>(den),
                 static_cast<uint8_t>(inTransaction)) { }
-        ~FlexIOTransactionDetector() { }
+        virtual ~FlexIOTransactionDetector() { }
         bool begin();
         void end();
     private:
@@ -1845,13 +1845,6 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         FlexIOHandler* _ioDevice = nullptr;
 };
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
-void 
-configureFlexIO() noexcept {
-    // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
-    // faster detection than the RP2040 as well. We use FlexIO1 in state
-    // machine mode
-    
-}
 
 void
 FlexIOTransactionDetector::end() {
@@ -1866,4 +1859,17 @@ FlexIOTransactionDetector::begin() {
     }
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
     _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
+    return true;
+}
+bool
+FlexIOTransactionDetector::call_back(FlexIOHandler* pflex) {
+    return false;
+}
+
+void 
+configureFlexIO() noexcept {
+    // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
+    // faster detection than the RP2040 as well. We use FlexIO1 in state
+    // machine mode
+    
 }
