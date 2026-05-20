@@ -1982,10 +1982,10 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
-    _ioDevice->setClock(125'000'000 * 2);
+    _ioDevice->setClock(125'000'000 * 3);
     auto clockSpeed = _ioDevice->computeClockRate();
-    Serial.printf("FlexIO Clock Speed (divided by two): %d\n", clockSpeed / 2);
-    p->TIMCMP[_stateMachineTimer] = 2; // fastest baud rate available
+    Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
+    p->TIMCMP[_stateMachineTimer] = 0; // fastest baud rate available
     p->TIMCFG[_stateMachineTimer] = 0; // always enabled
     // 0x0000'0003
     // 0x0F03'0303
