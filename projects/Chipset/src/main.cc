@@ -1728,6 +1728,9 @@ setup() {
     inputPin(Pin::FULL16_ENABLE);
     inputPin(Pin::WR);
     outputPin(Pin::READY, HIGH);
+    outputPin(Pin::STATE_MACHINE__IN_TRANSACTION_OUT, HIGH);
+    inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
+    inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::READY_LEVEL_IN);
@@ -1863,7 +1866,7 @@ uint32_t
 computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept {
     uint32_t result = (static_cast<uint32_t>(outputs) << 24);
     for (int i = 0; i < 8; ++i) {
-        result |= (fn(0b001 & i, 0b010 & i, 0b100 & i));
+        result |= static_cast<uint32_t>(fn(0b001 & i, 0b010 & i, 0b100 & i)) << (i * 3);
     }
     return result;
 }
@@ -1871,21 +1874,26 @@ bool
 FlexIOTransactionDetector::begin() {
     // all of these should be unique
     if (_ads == _den || _ads == _transactionPin || _den == _transactionPin) {
+        Serial.println("One or more pins are the same input or output!");
         return false;
     }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
     if (!_ioDevice || !validFlexIOResult(_adsFlexPin)) {
+        Serial.println("Could not map the ads pin");
         return false;
     }
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
     if (!validFlexIOResult(_denFlexPin)) {
+        Serial.println("Could not map the den pin");
         return false;
     }
     _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
     if (!validFlexIOResult(_transactionFlexPin)) {
+        Serial.println("Could not map the transaction pin");
         return false;
     }
     if ((_denFlexPin - _adsFlexPin) != 1) {
+        Serial.println("den flex and ads pins are not close enough together");
         return false;
     }
     // not enough sanity checking yet but for testing purposes this is fine
@@ -1900,6 +1908,7 @@ FlexIOTransactionDetector::begin() {
     if (!validFlexIOResult(_state2)) { return false; }
     _state3 = _ioDevice->requestShifter();
     if (!validFlexIOResult(_state3)) { return false; }
+    Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
     uint32_t outputConfiguration;
     switch (_transactionFlexPin) {
         case 0:
@@ -1927,6 +1936,7 @@ FlexIOTransactionDetector::begin() {
             outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1000);
             break;
         default:
+            Serial.printf("Bad Transaction Pin of %d\n", _transactionFlexPin);
             return false;
     }
     // we only have one supported output configuration
@@ -1939,18 +1949,22 @@ FlexIOTransactionDetector::begin() {
     //  0bxx1 -> state0
     //  0bxx0 -> state1
     p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state0 : _state1; });
+    Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
     // state1 -> in transaction is high
     //  0bxx1 -> state2
     //  0bxx0 -> state1
     p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state2 : _state1; });
+    Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
     // state2 -> in transaction is high
     //  0bx1x => goto state 2
     //  0bx0x => goto state 3
     p->SHIFTBUF[_state2] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state2 : _state3; });
+    Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
     // state3 -> in transaction is low
     //  0bx0x => goto state 3
     //  0bx1x => goto state 0
-    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
+    p->SHIFTBUF[_state3] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
+    Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
     // example value is 0x0080_0206 
     // 0x06 => SMOD is in state mode
     // 0x02 => FXIO_Di (base pin)
@@ -1964,10 +1978,22 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
-    p->TIMCMP[_stateMachineTimer] = 0; // fastest baud rate available
+    _ioDevice->setClock(125'000'000 * 2);
+    auto clockSpeed = _ioDevice->computeClockRate() / 2;
+    Serial.printf("FlexIO Clock Speed (divided by two): %d\n", clockSpeed);
+    p->TIMCMP[_stateMachineTimer] = 2; // fastest baud rate available
     p->TIMCFG[_stateMachineTimer] = 0; // always enabled
     p->TIMCTL[_stateMachineTimer] = FLEXIO_TIMCTL_MODE_16BIT;
 
+    p->CTRL = FLEXIO_CTRL_FLEXEN;
+    _ioDevice->setIOPinToFlexMode(_ads);
+    _ioDevice->setIOPinToFlexMode(_den);
+    _ioDevice->setIOPinToFlexMode(_transactionPin);
+    Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
+    *(portControlRegister(_transactionPin)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
+    *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
+    *(portControlRegister(_ads)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
+    //_ioDevice->addIOHandlerCallback(this);
     return true;
 }
 bool
