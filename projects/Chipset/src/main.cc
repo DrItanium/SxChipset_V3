@@ -1948,7 +1948,7 @@ FlexIOTransactionDetector::begin() {
     // state0 -> in transaction is high
     //  0bxx1 -> state0
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state0 : _state1; });
+    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool, bool) -> uint8_t { return ads ? _state0 : _state1; });
     Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
     // state1 -> in transaction is high
     //  0bxx1 -> state2
@@ -1979,16 +1979,27 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
     _ioDevice->setClock(125'000'000 * 2);
-    auto clockSpeed = _ioDevice->computeClockRate() / 2;
-    Serial.printf("FlexIO Clock Speed (divided by two): %d\n", clockSpeed);
+    auto clockSpeed = _ioDevice->computeClockRate();
+    Serial.printf("FlexIO Clock Speed (divided by two): %d\n", clockSpeed / 2);
     p->TIMCMP[_stateMachineTimer] = 2; // fastest baud rate available
     p->TIMCFG[_stateMachineTimer] = 0; // always enabled
+    // 0x0000'0003
+    // 0x0F03'0303
     p->TIMCTL[_stateMachineTimer] = FLEXIO_TIMCTL_MODE_16BIT;
 
-    p->CTRL = FLEXIO_CTRL_FLEXEN;
-    _ioDevice->setIOPinToFlexMode(_ads);
-    _ioDevice->setIOPinToFlexMode(_den);
-    _ioDevice->setIOPinToFlexMode(_transactionPin);
+    p->CTRL = FLEXIO_CTRL_FLEXEN | FLEXIO_CTRL_FASTACC;
+    if (!_ioDevice->setIOPinToFlexMode(_ads)) {
+        Serial.printf("Could not set ADS pin (%d) to flex mode!\n", _ads);
+        return false;
+    }
+    if (!_ioDevice->setIOPinToFlexMode(_den)) {
+        Serial.printf("Could not set DEN pin (%d) to flex mode!\n", _den);
+        return false;
+    }
+    if (!_ioDevice->setIOPinToFlexMode(_transactionPin)) {
+        Serial.printf("Could not set IN TRANSACTION pin (%d) to flex mode!\n", _transactionPin);
+        return false;
+    }
     Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
     *(portControlRegister(_transactionPin)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
     *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
