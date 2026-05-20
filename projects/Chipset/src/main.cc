@@ -1910,35 +1910,38 @@ FlexIOTransactionDetector::begin() {
     if (!validFlexIOResult(_state3)) { return false; }
     Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
     uint32_t outputConfiguration;
+    // when set, the different components disable the corresponding output
+    // drive
     switch (_transactionFlexPin) {
-        case 0:
-            outputConfiguration = FLEXIO_SHIFTCFG_SSTART(0b01);
+        case 0: // pin 0
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b10);
             break;
         case 1:
-            outputConfiguration = FLEXIO_SHIFTCFG_SSTART(0b10);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b01);
             break;
         case 2:
-            outputConfiguration = FLEXIO_SHIFTCFG_SSTOP(0b01);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b10)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         case 3:
-            outputConfiguration = FLEXIO_SHIFTCFG_SSTOP(0b10);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b01)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         case 4:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0001);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1110) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         case 5:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0010);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1101) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         case 6:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0100);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1011) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         case 7:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1000);
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
             break;
         default:
             Serial.printf("Bad Transaction Pin of %d\n", _transactionFlexPin);
             return false;
     }
+    p->SHIFTSTATE = 0;
     // we only have one supported output configuration
     p->SHIFTCFG[_state0] = outputConfiguration;
     p->SHIFTCFG[_state1] = outputConfiguration;
@@ -1973,6 +1976,7 @@ FlexIOTransactionDetector::begin() {
     uint32_t shiftConfiguration = FLEXIO_SHIFTCTL_MODE_STATE |
         FLEXIO_SHIFTCTL_PINSEL(_adsFlexPin) |
         FLEXIO_SHIFTCTL_SHIFT_ON_RISING_EDGE |
+        FLEXIO_SHIFTCTL_PINMODE_OUTPUT |
         FLEXIO_SHIFTCTL_TIMSEL(_stateMachineTimer);
     p->SHIFTCTL[_state0] = shiftConfiguration;
     p->SHIFTCTL[_state1] = shiftConfiguration;
