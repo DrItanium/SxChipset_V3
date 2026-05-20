@@ -61,6 +61,7 @@ constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
 constexpr auto UseRP2040Assistance = true;
+constexpr auto FlexIODebugging = false;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -1908,7 +1909,9 @@ FlexIOTransactionDetector::begin() {
     if (!validFlexIOResult(_state2)) { return false; }
     _state3 = _ioDevice->requestShifter();
     if (!validFlexIOResult(_state3)) { return false; }
-    Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
+    }
     uint32_t outputConfiguration;
     // when set, the different components disable the corresponding output
     // drive
@@ -1952,22 +1955,30 @@ FlexIOTransactionDetector::begin() {
     //  0bxx1 -> state0
     //  0bxx0 -> state1
     p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool, bool) -> uint8_t { return ads ? _state0 : _state1; });
-    Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
+    }
     // state1 -> in transaction is high
     //  0bxx1 -> state2
     //  0bxx0 -> state1
     p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state2 : _state1; });
-    Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
+    }
     // state2 -> in transaction is high
     //  0bx1x => goto state 2
     //  0bx0x => goto state 3
     p->SHIFTBUF[_state2] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state2 : _state3; });
-    Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
+    }
     // state3 -> in transaction is low
     //  0bx0x => goto state 3
     //  0bx1x => goto state 0
     p->SHIFTBUF[_state3] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
-    Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
+    }
     // example value is 0x0080_0206 
     // 0x06 => SMOD is in state mode
     // 0x02 => FXIO_Di (base pin)
@@ -1983,8 +1994,10 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
     _ioDevice->setClock(125'000'000 * 3);
-    auto clockSpeed = _ioDevice->computeClockRate();
-    Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
+    if constexpr (FlexIODebugging) {
+        auto clockSpeed = _ioDevice->computeClockRate();
+        Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
+    }
     p->TIMCMP[_stateMachineTimer] = 0; // fastest baud rate available
     p->TIMCFG[_stateMachineTimer] = 0; // always enabled
     // 0x0000'0003
@@ -2005,10 +2018,10 @@ FlexIOTransactionDetector::begin() {
         return false;
     }
     Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
+    // we just walk through this over and over
     *(portControlRegister(_transactionPin)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
     *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     *(portControlRegister(_ads)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
-    //_ioDevice->addIOHandlerCallback(this);
     return true;
 }
 bool
