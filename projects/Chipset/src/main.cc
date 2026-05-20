@@ -61,7 +61,7 @@ constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
 constexpr auto UseRP2040Assistance = true;
-constexpr auto FlexIODebugging = false;
+constexpr auto FlexIODebugging = true;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -1732,6 +1732,8 @@ setup() {
     outputPin(Pin::STATE_MACHINE__IN_TRANSACTION_OUT, HIGH);
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
+    inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
+    outputPin(Pin::STATE_MACHINE__READY_LEVEL_OUT, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
     inputPin(Pin::READY_LEVEL_IN);
@@ -1829,10 +1831,23 @@ loop() {
     tryDoTransaction();
     tryDoTransaction();
 }
+constexpr bool 
+validFlexIOResult(uint8_t input) {
+    return input != 0xff;
+}
+
+uint32_t 
+computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept {
+    uint32_t result = (static_cast<uint32_t>(outputs) << 24);
+    for (int i = 0; i < 8; ++i) {
+        result |= static_cast<uint32_t>(fn(0b001 & i, 0b010 & i, 0b100 & i)) << (i * 3);
+    }
+    return result;
+}
 
 struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
     public:
-        bool call_back(FlexIOHandler *pflex) override;
+        bool call_back(FlexIOHandler *pflex) override { return false; }
         FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
         FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
             : FlexIOTransactionDetector(
@@ -1841,7 +1856,7 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
                 static_cast<uint8_t>(inTransaction)) { }
         virtual ~FlexIOTransactionDetector() { }
         bool begin();
-        void end();
+        void end() { }
     private:
         uint8_t _ads, _adsFlexPin = 0xff;
         uint8_t _den, _denFlexPin = 0xff;
@@ -1855,22 +1870,6 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
 };
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
 
-void
-FlexIOTransactionDetector::end() {
-
-}
-constexpr bool 
-validFlexIOResult(uint8_t input) {
-    return input != 0xff;
-}
-uint32_t 
-computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept {
-    uint32_t result = (static_cast<uint32_t>(outputs) << 24);
-    for (int i = 0; i < 8; ++i) {
-        result |= static_cast<uint32_t>(fn(0b001 & i, 0b010 & i, 0b100 & i)) << (i * 3);
-    }
-    return result;
-}
 bool
 FlexIOTransactionDetector::begin() {
     // all of these should be unique
@@ -2017,16 +2016,175 @@ FlexIOTransactionDetector::begin() {
         Serial.printf("Could not set IN TRANSACTION pin (%d) to flex mode!\n", _transactionPin);
         return false;
     }
-    Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
+    if constexpr (FlexIODebugging) {
+        Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
+    }
     // we just walk through this over and over
     *(portControlRegister(_transactionPin)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
     *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     *(portControlRegister(_ads)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     return true;
 }
+
+struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
+    public:
+        bool call_back(FlexIOHandler *pflex) override { return false; }
+        FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
+        FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
+        virtual ~FlexIOReadyPulseToLevelConverter() { }
+        bool begin();
+        void end() { }
+    private:
+        uint8_t _in, _inFlexPin= 0xff;
+        uint8_t _out, _outFlexPin= 0xff;
+        FlexIOHandler* _ioDevice = nullptr;
+        uint8_t _stateMachineTimer = 0xff;
+        uint8_t _state0 = 0xff;
+        uint8_t _state1 = 0xff;
+        uint8_t _state2 = 0xff;
+        uint8_t _state3 = 0xff;
+};
+FlexIOReadyPulseToLevelConverter rdyFeedback{Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT};
 bool
-FlexIOTransactionDetector::call_back(FlexIOHandler* pflex) {
-    return false;
+FlexIOReadyPulseToLevelConverter::begin() {
+    // all of these should be unique
+    if (_in == _out) {
+        Serial.println("Input and output pin are the same!");
+        return false;
+    }
+    _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_in, _inFlexPin);
+    if (!_ioDevice || !validFlexIOResult(_inFlexPin)) {
+        Serial.println("Could not map the input pin");
+        return false;
+    }
+    _outFlexPin = _ioDevice->mapIOPinToFlexPin(_out);
+    if (!validFlexIOResult(_outFlexPin)) {
+        Serial.println("Could not map the den pin");
+        return false;
+    }
+    // not enough sanity checking yet but for testing purposes this is fine
+    auto* p = &_ioDevice->port();
+    _stateMachineTimer = _ioDevice->requestTimers(1);
+    if (!validFlexIOResult(_stateMachineTimer)) { return false; }
+    _state0 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state0)) { return false; }
+    _state1 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state1)) { return false; }
+    _state2 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state2)) { return false; }
+    _state3 = _ioDevice->requestShifter();
+    if (!validFlexIOResult(_state3)) { return false; }
+    if constexpr (FlexIODebugging) {
+        Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
+    }
+    uint32_t outputConfiguration;
+    // when set, the different components disable the corresponding output
+    // drive
+    switch (_outFlexPin) {
+        case 0: // pin 0
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b10);
+            break;
+        case 1:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b01);
+            break;
+        case 2:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b10)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        case 3:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b01)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        case 4:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1110) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        case 5:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1101) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        case 6:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1011) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        case 7:
+            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
+            break;
+        default:
+            Serial.printf("Bad index for output pin (%d)\n", _outFlexPin);
+            return false;
+    }
+    p->SHIFTSTATE = 0;
+    // we only have one supported output configuration
+    p->SHIFTCFG[_state0] = outputConfiguration;
+    p->SHIFTCFG[_state1] = outputConfiguration;
+    p->SHIFTCFG[_state2] = outputConfiguration;
+    p->SHIFTCFG[_state3] = outputConfiguration;
+    // so we need to configure State0 transitions
+    // state0 -> ready level is high
+    //  0bxx1 -> state0
+    //  0bxx0 -> state1
+    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state1; });
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
+    }
+    // state1 -> ready level is low
+    //  0bxx1 -> state2
+    //  0bxx0 -> state1
+    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0x00, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state1; });
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
+    }
+    // state2 -> ready level is low
+    //  0bxx1 => goto state 2
+    //  0bxx0 => goto state 3
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state3; });
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
+    }
+    // state3 -> ready level is high
+    //  0bxx0 => goto state 3
+    //  0bxx1 => goto state 0
+    p->SHIFTBUF[_state3] = computeStateMachineBuffer(0xFF, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state3; });
+    if constexpr (FlexIODebugging) {
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
+    }
+    // example value is 0x0080_0206 
+    // 0x06 => SMOD is in state mode
+    // 0x02 => FXIO_Di (base pin)
+    // 0x80 => Shift on negedge of shift clock
+    // 0x00 => timer 0
+    uint32_t shiftConfiguration = FLEXIO_SHIFTCTL_MODE_STATE |
+        FLEXIO_SHIFTCTL_PINSEL(_inFlexPin) |
+        FLEXIO_SHIFTCTL_SHIFT_ON_RISING_EDGE |
+        FLEXIO_SHIFTCTL_PINMODE_OUTPUT |
+        FLEXIO_SHIFTCTL_TIMSEL(_stateMachineTimer);
+    p->SHIFTCTL[_state0] = shiftConfiguration;
+    p->SHIFTCTL[_state1] = shiftConfiguration;
+    p->SHIFTCTL[_state2] = shiftConfiguration;
+    p->SHIFTCTL[_state3] = shiftConfiguration;
+    _ioDevice->setClock(125'000'000 * 3);
+    if constexpr (FlexIODebugging) {
+        auto clockSpeed = _ioDevice->computeClockRate();
+        Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
+    }
+    p->TIMCMP[_stateMachineTimer] = 0; // fastest baud rate available
+    p->TIMCFG[_stateMachineTimer] = 0; // always enabled
+    // 0x0000'0003
+    // 0x0F03'0303
+    p->TIMCTL[_stateMachineTimer] = FLEXIO_TIMCTL_MODE_16BIT;
+
+    p->CTRL = FLEXIO_CTRL_FLEXEN | FLEXIO_CTRL_FASTACC;
+    if (!_ioDevice->setIOPinToFlexMode(_in)) {
+        Serial.printf("Could not set IN pin (%d) to flex mode!\n", _in);
+        return false;
+    }
+    if (!_ioDevice->setIOPinToFlexMode(_out)) {
+        Serial.printf("Could not set OUT pin (%d) to flex mode!\n", _out);
+        return false;
+    }
+    if constexpr (FlexIODebugging) {
+        Serial.printf("Input: %d [Flex: %d], Output: %d [Flex: %d]\n", _in, _inFlexPin, _out, _outFlexPin);
+    }
+    // we just walk through this over and over
+    *(portControlRegister(_out)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
+    *(portControlRegister(_in)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
+    return true;
 }
 
 void 
@@ -2038,5 +2196,10 @@ configureFlexIO() noexcept {
         Serial.println("In Transaction Detector Successfully Started!");
     } else {
         Serial.println("In Transaction Detector Failed to start!");
+    }
+    if (rdyFeedback.begin()) {
+        Serial.println("Ready Pulse -> Level Device Successfully Started!");
+    } else {
+        Serial.println("Ready Pulse -> Level Device Failed to start!");
     }
 }
