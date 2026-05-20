@@ -83,7 +83,7 @@ constexpr auto DEN = PIN_PD7;
 constexpr auto WR = PIN_PE3;
 constexpr auto BE0 = PIN_PE4;
 constexpr auto BE1 = PIN_PE5;
-constexpr auto RP2_UP = PIN_PE6;
+// PIN_PE6
 // PIN_PE7
 
 // PIN_PF0
@@ -145,8 +145,6 @@ configurePins() noexcept {
     pinMode(HOLD960, OUTPUT);
     digitalWrite(HOLD960, LOW);
     pinMode(LOCK960, INPUT);
-    // we now have the design configured
-    pinMode(RP2_UP, INPUT_PULLUP);
 }
 namespace i960 {
 bool isBusHeld() noexcept { return digitalRead(HLDA960) == HIGH; }
@@ -477,10 +475,6 @@ setup() {
     configurePins();
     configureCCLs();
     // just keep looping until we see that the RP2 is up and running
-    while (digitalReadFast(RP2_UP) == HIGH) {
-        delay(10);
-    }
-    
     cpuIsInReset = true;
     chipIsUp = true;
     configureMicroshellInterface();
