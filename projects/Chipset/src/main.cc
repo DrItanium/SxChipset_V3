@@ -2003,7 +2003,7 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
-    _ioDevice->setClock(125'000'000 * 3);
+    _ioDevice->setClock(24'000'000 * 16);
     if constexpr (FlexIODebugging) {
         auto clockSpeed = _ioDevice->computeClockRate();
         Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
@@ -2184,7 +2184,7 @@ FlexIOReadyPulseToLevelConverter::begin() {
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
     p->SHIFTCTL[_state3] = shiftConfiguration;
-    _ioDevice->setClock(125'000'000 * 3);
+    _ioDevice->setClock(24'000'000 * 16);
     if constexpr (FlexIODebugging) {
         auto clockSpeed = _ioDevice->computeClockRate();
         Serial.printf("FlexIO Clock Speed: %d\n", clockSpeed);
