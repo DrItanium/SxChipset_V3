@@ -1837,7 +1837,7 @@ validFlexIOResult(uint8_t input) noexcept {
 }
 constexpr bool 
 uniqueValues(int a, int b, int c) noexcept {
-    return (a != b) && (b != c) && (a != c) 
+    return (a != b) && (b != c) && (a != c) ;
 }
 
 
