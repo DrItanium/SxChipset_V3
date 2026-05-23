@@ -351,26 +351,3 @@ FlexIOReadyPulseToLevelConverter::begin() {
 }
 
 
-bool
-FlexIOAddressAssigner::begin() {
-    _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_addressLines[0], _addressFlexLines[0]);
-    if (!_ioDevice || !validFlexIOResult(_addressFlexLines[0])) {
-        Serial.println("Could not map the first input pin");
-        return false;
-    }
-    OnInvalidFlexIOResultPrint(_addressFlexLines[0], "Could not map a0 pin");
-    for (int i = 1; i < 6; ++i) {
-        _addressFlexLines[i] = _ioDevice->mapIOPinToFlexPin(_addressLines[i]);
-        OnInvalidFlexIOResultPrint(_addressFlexLines[i], "Could not map higher address pin");
-    }
-    _shifter = _ioDevice->requestShifter(0); // Shifters 0 and 4 support 
-    if (!validFlexIOResult(_shifter)) {
-        _shifter = _ioDevice->requestShifter(4); // try shifter 4 since 0 failed
-        OnInvalidFlexIOResultPrint(_shifter, "Could not allocate a parallel width shifter!");
-    }
-    _timer = _ioDevice->requestTimers(1); // Just get a timer
-    OnInvalidFlexIOResultPrint(_timer, "Could not allocate primary timer");
-    _delayTimer = _ioDevice->requestTimers(1); // Just get a timer
-    OnInvalidFlexIOResultPrint(_timer, "Could not allocate secondary timer");
-    return true;
-}
