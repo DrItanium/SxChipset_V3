@@ -22,3 +22,10 @@ new terminal is run
 
 - ManagementEngine: Handles a bunch of the timing related aspects when interfacing with the i960Sx
 - Chipset: Primary transaction handler
+
+# Goal
+
+The goal of this project is to use a Teensy 4.1 and AVR128DB64 (running at 24MHz @ 3.3v) plus some other chips to bring an 80960SB-16/10 (running at 12MHz) to life.
+This is a constantly evolving thing full of research code and advanced uses of the C++ programming language (like concepts in the Chipset project). 
+
+
