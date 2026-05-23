@@ -1832,7 +1832,7 @@ loop() {
     tryDoTransaction();
 }
 constexpr bool 
-validFlexIOResult(uint8_t input) {
+validFlexIOResult(uint8_t input) noexcept {
     return input != 0xff;
 }
 
