@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 #include <functional>
 #include <FlexIO_t4.h>
+#include "Core.h"
+#include "Pinout.h"
 
 /**
  * @brief Set to true to turn on debugging output for the lifetime of the program
