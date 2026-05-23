@@ -1970,7 +1970,7 @@ FlexIOTransactionDetector::begin() {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
     }
     // state2 -> in transaction is low
-    //  0bx0x => goto state 3
+    //  0bx0x => goto state 2
     //  0bx1x => goto state 0
     p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state2; });
     if constexpr (FlexIODebugging) {
