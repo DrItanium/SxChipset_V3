@@ -352,3 +352,34 @@ FlexIOReadyPulseToLevelConverter::begin() {
     *(portControlRegister(_in)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     return true;
 }
+
+
+bool
+FlexIOAddressAssigner::begin() {
+    _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_addressLines[0], _addressFlexLines[0]);
+    if (!_ioDevice || !validFlexIOResult(_addressFlexLines[0])) {
+        Serial.println("Could not map the first input pin");
+        return false;
+    }
+    for (int i = 1; i < 6; ++i) {
+        _addressFlexLines[i] = _ioDevice->mapIOPinToFlexPin(_addressLines[i]);
+        if (!validFlexIOResult(_addressFlexLines[i])) {
+            Serial.println("Could not map the an address pin!");
+            return false;
+        }
+    }
+    _shifter = _ioDevice->requestShifter(0); // Shifters 0 and 4 support 
+    if (!validFlexIOResult(_shifter)) {
+        _shifter = _ioDevice->requestShifter(4); // try shifter 4 since 0 failed
+        if (!validFlexIOResult(_shifter)) {
+            Serial.println("Could not allocate a parallel width shifter!");
+            return false;
+        }
+    }
+    _timer = _ioDevice->requestTimers(1); // Just get a timer
+    if (!validFlexIOResult(_timer)) {
+        Serial.println("Could not allocate a timer!");
+        return false;
+    }
+    return true;
+}
