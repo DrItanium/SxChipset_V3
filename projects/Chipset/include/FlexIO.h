@@ -116,6 +116,7 @@ struct FlexIOAddressAssigner : public FlexIOHandlerCallback {
         FlexIOHandler* _ioDevice = nullptr;
         uint8_t _shifter = 0xff;
         uint8_t _timer = 0xff;
+        uint8_t _delayTimer = 0xff;
 };
 
 #endif // end !defined CHIPSET_FLEXIO_H__

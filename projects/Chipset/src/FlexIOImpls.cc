@@ -35,7 +35,11 @@ computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, boo
     }
     return result;
 }
-
+#define OnInvalidFlexIOResultPrint(fp, msg) \
+    if (!validFlexIOResult(fp)) { \
+        Serial.println(msg); \
+        return false; \
+    }
 
 bool
 FlexIOTransactionDetector::begin() {
@@ -59,20 +63,15 @@ FlexIOTransactionDetector::begin() {
         return false;
     }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
-    if (!_ioDevice || !validFlexIOResult(_adsFlexPin)) {
-        Serial.println("Could not map the ads pin");
+    if (!_ioDevice) {
+        Serial.println("Could not acquire a FlexIO device given the ADS pin!");
         return false;
     }
+    OnInvalidFlexIOResultPrint(_adsFlexPin, "Could not map the ads pin");
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
-    if (!validFlexIOResult(_denFlexPin)) {
-        Serial.println("Could not map the den pin");
-        return false;
-    }
+    OnInvalidFlexIOResultPrint(_denFlexPin, "Could not map the den pin");
     _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
-    if (!validFlexIOResult(_transactionFlexPin)) {
-        Serial.println("Could not map the transaction pin");
-        return false;
-    }
+    OnInvalidFlexIOResultPrint(_transactionFlexPin, "Could not map the transaction pin");
     if ((_denFlexPin - _adsFlexPin) != 1) {
         Serial.println("den flex and ads pins are not close enough together");
         return false;
@@ -80,13 +79,13 @@ FlexIOTransactionDetector::begin() {
     // not enough sanity checking yet but for testing purposes this is fine
     auto* p = &_ioDevice->port();
     _stateMachineTimer = _ioDevice->requestTimers(1);
-    if (!validFlexIOResult(_stateMachineTimer)) { return false; }
+    OnInvalidFlexIOResultPrint(_stateMachineTimer, "Timer request failed");
     _state0 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state0)) { return false; }
+    OnInvalidFlexIOResultPrint(_state0, "Could not allocate shifter for state 0");
     _state1 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state1)) { return false; }
+    OnInvalidFlexIOResultPrint(_state1, "Could not allocate shifter for state 1");
     _state2 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state2)) { return false; }
+    OnInvalidFlexIOResultPrint(_state2, "Could not allocate shifter for state 2");
     if constexpr (FlexIODebugging) {
         Serial.printf("States: [ %d, %d, %d ]\n", _state0, _state1, _state2);
     }
@@ -219,27 +218,25 @@ FlexIOReadyPulseToLevelConverter::begin() {
         return false;
     }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_in, _inFlexPin);
-    if (!_ioDevice || !validFlexIOResult(_inFlexPin)) {
-        Serial.println("Could not map the input pin");
+    if (!_ioDevice) {
+        Serial.println("Could not acquire the FlexIO device!");
         return false;
     }
+    OnInvalidFlexIOResultPrint(_inFlexPin, "Could not map the ready pulse (input) pin");
     _outFlexPin = _ioDevice->mapIOPinToFlexPin(_out);
-    if (!validFlexIOResult(_outFlexPin)) {
-        Serial.println("Could not map the den pin");
-        return false;
-    }
+    OnInvalidFlexIOResultPrint(_outFlexPin, "Could not map the ready level (output) pin");
     // not enough sanity checking yet but for testing purposes this is fine
     auto* p = &_ioDevice->port();
     _stateMachineTimer = _ioDevice->requestTimers(1);
-    if (!validFlexIOResult(_stateMachineTimer)) { return false; }
+    OnInvalidFlexIOResultPrint(_stateMachineTimer, "Timer request failed!");
     _state0 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state0)) { return false; }
+    OnInvalidFlexIOResultPrint(_state0, "Could not allocate shifter for state 0");
     _state1 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state1)) { return false; }
+    OnInvalidFlexIOResultPrint(_state1, "Could not allocate shifter for state 1");
     _state2 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state2)) { return false; }
+    OnInvalidFlexIOResultPrint(_state2, "Could not allocate shifter for state 2");
     _state3 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state3)) { return false; }
+    OnInvalidFlexIOResultPrint(_state3, "Could not allocate shifter for state 3");
     if constexpr (FlexIODebugging) {
         Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
     }
@@ -361,25 +358,19 @@ FlexIOAddressAssigner::begin() {
         Serial.println("Could not map the first input pin");
         return false;
     }
+    OnInvalidFlexIOResultPrint(_addressFlexLines[0], "Could not map a0 pin");
     for (int i = 1; i < 6; ++i) {
         _addressFlexLines[i] = _ioDevice->mapIOPinToFlexPin(_addressLines[i]);
-        if (!validFlexIOResult(_addressFlexLines[i])) {
-            Serial.println("Could not map the an address pin!");
-            return false;
-        }
+        OnInvalidFlexIOResultPrint(_addressFlexLines[i], "Could not map higher address pin");
     }
     _shifter = _ioDevice->requestShifter(0); // Shifters 0 and 4 support 
     if (!validFlexIOResult(_shifter)) {
         _shifter = _ioDevice->requestShifter(4); // try shifter 4 since 0 failed
-        if (!validFlexIOResult(_shifter)) {
-            Serial.println("Could not allocate a parallel width shifter!");
-            return false;
-        }
+        OnInvalidFlexIOResultPrint(_shifter, "Could not allocate a parallel width shifter!");
     }
     _timer = _ioDevice->requestTimers(1); // Just get a timer
-    if (!validFlexIOResult(_timer)) {
-        Serial.println("Could not allocate a timer!");
-        return false;
-    }
+    OnInvalidFlexIOResultPrint(_timer, "Could not allocate primary timer");
+    _delayTimer = _ioDevice->requestTimers(1); // Just get a timer
+    OnInvalidFlexIOResultPrint(_timer, "Could not allocate secondary timer");
     return true;
 }
