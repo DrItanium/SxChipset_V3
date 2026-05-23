@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LittleFS.h>
 #include <Metro.h>
 #include <RTClib.h>
-#include <FlexIO_t4.h>
 #include <IntervalTimer.h>
 #include <USBHost_t36.h>
 // gamepad qt
@@ -54,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ManagementEngineProtocol.h"
 #include "InterfaceEngineCommon.h"
 #include "i960CommonInterface.h"
+#include "FlexIO.h"
 #include <fileuids.h>
 
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
@@ -1837,7 +1837,7 @@ validFlexIOResult(uint8_t input) noexcept {
 }
 constexpr bool 
 uniqueValues(int a, int b, int c) noexcept {
-    return (a != b) && (b != c) && (a != c) 
+    return (a != b) && (b != c) && (a != c) ;
 }
 
 
@@ -2033,24 +2033,6 @@ FlexIOTransactionDetector::begin() {
     return true;
 }
 
-struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
-    public:
-        bool call_back(FlexIOHandler *pflex) override { return false; }
-        FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
-        FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
-        virtual ~FlexIOReadyPulseToLevelConverter() { }
-        bool begin();
-        void end() { }
-    private:
-        uint8_t _in, _inFlexPin= 0xff;
-        uint8_t _out, _outFlexPin= 0xff;
-        FlexIOHandler* _ioDevice = nullptr;
-        uint8_t _stateMachineTimer = 0xff;
-        uint8_t _state0 = 0xff;
-        uint8_t _state1 = 0xff;
-        uint8_t _state2 = 0xff;
-        uint8_t _state3 = 0xff;
-};
 FlexIOReadyPulseToLevelConverter rdyFeedback{Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT};
 
 bool
