@@ -22,6 +22,9 @@ new terminal is run
 
 - ManagementEngine: Handles a bunch of the timing related aspects when interfacing with the i960Sx
 - Chipset: Primary transaction handler
+- research: contains code and sketches for different ideas I've had throughout the lifetime of this project
+  - Fun fact: the code.py was actually used in my design since PIO programs are not affected by circuitpython slowness (I use FlexIO now)
+- PLD: Various PLD programs that I have written over the lifetime of this iteration of the chipset and previous ones. I use a tool called galette to compile them. The chips I use both the 5V (ATF22V10) and 3.3v (ATF22LV10) versions of the GAL22V10 plds. 
 
 # Goal
 
