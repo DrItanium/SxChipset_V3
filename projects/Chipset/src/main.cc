@@ -1866,7 +1866,6 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         uint8_t _state0 = 0xff;
         uint8_t _state1 = 0xff;
         uint8_t _state2 = 0xff;
-        uint8_t _state3 = 0xff;
 };
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
 
@@ -1917,10 +1916,8 @@ FlexIOTransactionDetector::begin() {
     if (!validFlexIOResult(_state1)) { return false; }
     _state2 = _ioDevice->requestShifter();
     if (!validFlexIOResult(_state2)) { return false; }
-    _state3 = _ioDevice->requestShifter();
-    if (!validFlexIOResult(_state3)) { return false; }
     if constexpr (FlexIODebugging) {
-        Serial.printf("States: [ %d, %d, %d, %d ]\n", _state0, _state1, _state2, _state3);
+        Serial.printf("States: [ %d, %d, %d ]\n", _state0, _state1, _state2);
     }
     uint32_t outputConfiguration;
     // when set, the different components disable the corresponding output
@@ -1959,7 +1956,6 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCFG[_state0] = outputConfiguration;
     p->SHIFTCFG[_state1] = outputConfiguration;
     p->SHIFTCFG[_state2] = outputConfiguration;
-    p->SHIFTCFG[_state3] = outputConfiguration;
     // so we need to configure State0 transitions
     // state0 -> in transaction is high
     //  0bxx1 -> state0
@@ -1971,23 +1967,16 @@ FlexIOTransactionDetector::begin() {
     // state1 -> in transaction is high
     //  0bxx1 -> state2
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return ads ? _state2 : _state1; });
+    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return (ads && !den) ? _state2 : _state1; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
     }
-    // state2 -> in transaction is high
-    //  0bx1x => goto state 2
-    //  0bx0x => goto state 3
-    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state2 : _state3; });
-    if constexpr (FlexIODebugging) {
-        Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
-    }
-    // state3 -> in transaction is low
+    // state2 -> in transaction is low
     //  0bx0x => goto state 3
     //  0bx1x => goto state 0
-    p->SHIFTBUF[_state3] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state3; });
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state2; });
     if constexpr (FlexIODebugging) {
-        Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
+        Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
     }
     // example value is 0x0080_0206 
     // 0x06 => SMOD is in state mode
@@ -2002,7 +1991,6 @@ FlexIOTransactionDetector::begin() {
     p->SHIFTCTL[_state0] = shiftConfiguration;
     p->SHIFTCTL[_state1] = shiftConfiguration;
     p->SHIFTCTL[_state2] = shiftConfiguration;
-    p->SHIFTCTL[_state3] = shiftConfiguration;
     _ioDevice->setClock(24'000'000 * 16);
     if constexpr (FlexIODebugging) {
         auto clockSpeed = _ioDevice->computeClockRate();
