@@ -26,7 +26,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Header for providing access to FlexIO components cleanly
 #ifndef CHIPSET_FLEXIO_H__
 #define CHIPSET_FLEXIO_H__
+#include <cstdint>
+#include <functional>
 #include <FlexIO_t4.h>
+
+/**
+ * @brief Set to true to turn on debugging output for the lifetime of the program
+ */
+constexpr auto FlexIODebugging = false;
+
 struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
     public:
         bool call_back(FlexIOHandler *pflex) override { return false; }
@@ -45,4 +53,37 @@ struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
         uint8_t _state2 = 0xff;
         uint8_t _state3 = 0xff;
 };
+
+struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
+    public:
+        bool call_back(FlexIOHandler *pflex) override { return false; }
+        FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
+        FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
+            : FlexIOTransactionDetector(
+                static_cast<uint8_t>(ads),
+                static_cast<uint8_t>(den),
+                static_cast<uint8_t>(inTransaction)) { }
+        virtual ~FlexIOTransactionDetector() { }
+        bool begin();
+        void end() { }
+    private:
+        uint8_t _ads, _adsFlexPin = 0xff;
+        uint8_t _den, _denFlexPin = 0xff;
+        uint8_t _transactionPin, _transactionFlexPin = 0xff;
+        FlexIOHandler* _ioDevice = nullptr;
+        uint8_t _stateMachineTimer = 0xff;
+        uint8_t _state0 = 0xff;
+        uint8_t _state1 = 0xff;
+        uint8_t _state2 = 0xff;
+};
+
+constexpr bool 
+validFlexIOResult(uint8_t input) noexcept {
+    return input != 0xff;
+}
+constexpr bool 
+uniqueValues(int a, int b, int c) noexcept {
+    return (a != b) && (b != c) && (a != c) ;
+}
+uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept;
 #endif // end !defined CHIPSET_FLEXIO_H__

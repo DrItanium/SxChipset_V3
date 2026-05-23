@@ -61,7 +61,6 @@ constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
 constexpr auto UseRP2040Assistance = true;
-constexpr auto FlexIODebugging = false;
 volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
@@ -71,6 +70,10 @@ constexpr bool RealtimeShellActive = false;
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
+// state machines
+FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
+FlexIOReadyPulseToLevelConverter rdyFeedback{Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT};
+
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
 }
@@ -1831,14 +1834,6 @@ loop() {
     tryDoTransaction();
     tryDoTransaction();
 }
-constexpr bool 
-validFlexIOResult(uint8_t input) noexcept {
-    return input != 0xff;
-}
-constexpr bool 
-uniqueValues(int a, int b, int c) noexcept {
-    return (a != b) && (b != c) && (a != c) ;
-}
 
 
 uint32_t 
@@ -1850,29 +1845,6 @@ computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, boo
     return result;
 }
 
-struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
-    public:
-        bool call_back(FlexIOHandler *pflex) override { return false; }
-        FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
-        FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
-            : FlexIOTransactionDetector(
-                static_cast<uint8_t>(ads),
-                static_cast<uint8_t>(den),
-                static_cast<uint8_t>(inTransaction)) { }
-        virtual ~FlexIOTransactionDetector() { }
-        bool begin();
-        void end() { }
-    private:
-        uint8_t _ads, _adsFlexPin = 0xff;
-        uint8_t _den, _denFlexPin = 0xff;
-        uint8_t _transactionPin, _transactionFlexPin = 0xff;
-        FlexIOHandler* _ioDevice = nullptr;
-        uint8_t _stateMachineTimer = 0xff;
-        uint8_t _state0 = 0xff;
-        uint8_t _state1 = 0xff;
-        uint8_t _state2 = 0xff;
-};
-FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
 
 bool
 FlexIOTransactionDetector::begin() {
@@ -2033,7 +2005,6 @@ FlexIOTransactionDetector::begin() {
     return true;
 }
 
-FlexIOReadyPulseToLevelConverter rdyFeedback{Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT};
 
 bool
 FlexIOReadyPulseToLevelConverter::begin() {
