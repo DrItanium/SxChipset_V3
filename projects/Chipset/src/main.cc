@@ -1874,13 +1874,11 @@ FlexIOTransactionDetector::begin() {
     // The algorithm that we use to start processing memory transactions is as
     // follows:
     // 1) Wait for ADS to go low
-    // 2) Wait for ADS to go high
-    // 3) Wait for DEN to go low 
-    // 4) Signal the start of the transaction
-    // 5) Wait for DEN to go high
-    // 6) Goto 1
+    // 2) Wait for ADS to go high and DEN to go low
+    // 3) Wait for DEN to go high
+    // 4) Goto 1
     //
-    // This design requires 4 state machines that are pretty easy to configure.
+    // This design requires 3 state machines that are pretty easy to configure.
     // This state machine is running _constantly_
     // all of these should be unique
     if (_ads == _den || _ads == _transactionPin || _den == _transactionPin) {
