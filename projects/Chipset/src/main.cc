@@ -1801,6 +1801,7 @@ tryDoTransaction() noexcept {
             // If the RP2040 is responsible for transaction state detection
             // then we can just check to see if the "DEN" pin is low.
         }
+        Serial.printf("PIN.PDI: %x\n", inTransactionDetector.input());
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
 #ifdef TrackTransactionLength
