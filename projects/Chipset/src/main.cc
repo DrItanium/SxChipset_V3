@@ -60,7 +60,6 @@ constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
-volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
@@ -1692,10 +1691,6 @@ namespace i960 {
 }
 using i960::putCPUInReset;
 using i960::pullCPUOutOfReset;
-void
-triggerReadySync() noexcept {
-    readyTriggered = true;
-}
 void 
 triggerSystemTimer() noexcept {
     if (systemCounterEnabled) {
