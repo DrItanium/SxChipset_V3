@@ -66,6 +66,7 @@ volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
+constexpr bool AccessFlexIODirectly = true;
 
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
@@ -1103,7 +1104,6 @@ struct i960Interface {
       return output;
   }
 
-  template<bool AccessFlexIODirectly = true>
   static void
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
@@ -1155,7 +1155,6 @@ struct i960Interface {
 private:
   static inline auto _lastReadyState = HIGH;
 public:
-  template<bool AccessFlexIODirectly = true>
   static void
   waitForReadySignal() noexcept {
       if constexpr (UseRP2040Assistance) {
@@ -1783,10 +1782,9 @@ setup() {
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
-constexpr bool readDirectlyFromFlexIO = true;
 inline bool shouldServiceTransaction() noexcept {
     if constexpr (UseRP2040Assistance) {
-        if constexpr (readDirectlyFromFlexIO) {
+        if constexpr (AccessFlexIODirectly) {
             return inTransactionDetector.inTransaction();
         } else {
             return digitalReadFast(Pin::DEN) == LOW;
