@@ -1771,9 +1771,14 @@ setup() {
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
+constexpr bool readDirectlyFromFlexIO = true;
 inline bool shouldServiceTransaction() noexcept {
     if constexpr (UseRP2040Assistance) {
-        return digitalReadFast(Pin::DEN) == LOW;
+        if constexpr (readDirectlyFromFlexIO) {
+            return inTransactionDetector.input() == 0x10;
+        } else {
+            return digitalReadFast(Pin::DEN) == LOW;
+        }
     } else {
         return adsTriggered;
     }
@@ -1801,7 +1806,6 @@ tryDoTransaction() noexcept {
             // If the RP2040 is responsible for transaction state detection
             // then we can just check to see if the "DEN" pin is low.
         }
-        Serial.printf("PIN.PDI: %x\n", inTransactionDetector.input());
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
 #ifdef TrackTransactionLength
