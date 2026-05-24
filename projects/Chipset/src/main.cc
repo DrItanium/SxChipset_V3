@@ -60,8 +60,6 @@ constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto UseDirectPortManipulation = true;
-constexpr auto UseRP2040Assistance = true;
-volatile bool adsTriggered = false;
 volatile bool readyTriggered = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
@@ -1157,24 +1155,12 @@ private:
 public:
   static void
   waitForReadySignal() noexcept {
-      if constexpr (UseRP2040Assistance) {
-          if constexpr (AccessFlexIODirectly) {
-              while (rdyFeedback.getReadyLevel() == _lastReadyState);
-              _lastReadyState = rdyFeedback.getReadyLevel();
-          } else {
-              while (digitalReadFast(Pin::READY_LEVEL_IN) == _lastReadyState);
-              _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
-          }
-      } else {
-          while (!readyTriggered);
-      }
+      while (rdyFeedback.getReadyLevel() == _lastReadyState);
+      _lastReadyState = rdyFeedback.getReadyLevel();
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
-      if constexpr (!UseRP2040Assistance) {
-          readyTriggered = false;
-      }
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
@@ -1707,10 +1693,6 @@ namespace i960 {
 using i960::putCPUInReset;
 using i960::pullCPUOutOfReset;
 void
-triggerADS() noexcept {
-    adsTriggered = true;
-}
-void
 triggerReadySync() noexcept {
     readyTriggered = true;
 }
@@ -1731,7 +1713,6 @@ setup() {
     delay(1000);
     waitForAVRToComeUp();
     putCPUInReset();
-    inputPin(Pin::DEN);
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
@@ -1773,49 +1754,16 @@ setup() {
     setupRandomSeed();
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    if constexpr (!UseRP2040Assistance) {
-        // only attach this interrupt if we are not using the RP2040 as a
-        // secondary coprocessor
-        attachInterrupt(Pin::ADS, triggerADS, FALLING);
-        attachInterrupt(Pin::READY_SYNC, triggerReadySync, FALLING);
-    }
     displayClockSpeedInformation();
     pullCPUOutOfReset();
 }
 inline bool shouldServiceTransaction() noexcept {
-    if constexpr (UseRP2040Assistance) {
-        if constexpr (AccessFlexIODirectly) {
-            return inTransactionDetector.inTransaction();
-        } else {
-            return digitalReadFast(Pin::DEN) == LOW;
-        }
-    } else {
-        return adsTriggered;
-    }
+    return inTransactionDetector.inTransaction();
 }
 //#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
-        if constexpr (!UseRP2040Assistance) {
-            adsTriggered = false;
-            // after introducing a new base board, I have to reintroduce the DEN
-            // pin detection routine. It seems that after providing the first
-            // 32-bytes the i960 CPU triggers ADS but delays on updating the actual
-            // address lines fully. Perhaps it has to do with the pullups in the
-            // CH351 or something similar. But adding this back in seems to solve
-            // the issue. 
-            //
-            // Here is what I was seeing:
-            // Request 0: Give me 0x00-0x0F (and we send that)
-            // Request 1: Give me 0x10-0x1F (and we send that)
-            // Request 2: Give me 0x10-0x1f (and this is wrong)
-            // Request 2 (if we wait): Give me 0x248 (and this is right)
-            while (digitalReadFast(Pin::DEN) != LOW);
-        } else {
-            // If the RP2040 is responsible for transaction state detection
-            // then we can just check to see if the "DEN" pin is low.
-        }
         //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
 #ifdef TrackTransactionLength
