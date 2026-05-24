@@ -1835,8 +1835,6 @@ loop() {
     tryDoTransaction();
 }
 
-
-
 void 
 configureFlexIO() noexcept {
     // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
