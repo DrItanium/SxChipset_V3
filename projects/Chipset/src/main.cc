@@ -1103,11 +1103,16 @@ struct i960Interface {
       return output;
   }
 
+  template<bool AccessFlexIODirectly = true>
   static void
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
-      _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+      if constexpr (AccessFlexIODirectly) {
+        _lastReadyState = rdyFeedback.getReadyLevel();
+      } else {
+        _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+      }
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -1150,11 +1155,17 @@ struct i960Interface {
 private:
   static inline auto _lastReadyState = HIGH;
 public:
+  template<bool AccessFlexIODirectly = true>
   static void
   waitForReadySignal() noexcept {
       if constexpr (UseRP2040Assistance) {
-          while (digitalReadFast(Pin::READY_LEVEL_IN) == _lastReadyState);
-          _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+          if constexpr (AccessFlexIODirectly) {
+              while (rdyFeedback.getReadyLevel() == _lastReadyState);
+              _lastReadyState = rdyFeedback.getReadyLevel();
+          } else {
+              while (digitalReadFast(Pin::READY_LEVEL_IN) == _lastReadyState);
+              _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
+          }
       } else {
           while (!readyTriggered);
       }
@@ -1753,6 +1764,7 @@ setup() {
     configureFlexIO();
     Entropy.Initialize();
     EEPROM.begin();
+
     // put your setup code here, to run once:
     EBIInterface::begin();
     i960Interface::begin();
@@ -1775,7 +1787,7 @@ constexpr bool readDirectlyFromFlexIO = true;
 inline bool shouldServiceTransaction() noexcept {
     if constexpr (UseRP2040Assistance) {
         if constexpr (readDirectlyFromFlexIO) {
-            return inTransactionDetector.input() == 0x10;
+            return inTransactionDetector.inTransaction();
         } else {
             return digitalReadFast(Pin::DEN) == LOW;
         }

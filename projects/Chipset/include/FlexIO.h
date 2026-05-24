@@ -55,6 +55,7 @@ struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
         bool begin();
         void end() { }
         uint32_t input() const noexcept { return _ioDevice->port().PIN; }
+        uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
     private:
         uint8_t _in, _inFlexPin= 0xff;
         uint8_t _out, _outFlexPin= 0xff;
@@ -79,6 +80,7 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         bool begin();
         void end() { }
         uint32_t input() const noexcept { return _ioDevice->port().PIN; }
+        [[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
     private:
         uint8_t _ads, _adsFlexPin = 0xff;
         uint8_t _den, _denFlexPin = 0xff;
