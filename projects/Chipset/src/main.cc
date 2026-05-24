@@ -1153,7 +1153,7 @@ struct i960Interface {
       }
   }
 private:
-  static inline auto _lastReadyState = HIGH;
+  static inline uint32_t _lastReadyState = HIGH;
 public:
   static void
   waitForReadySignal() noexcept {
