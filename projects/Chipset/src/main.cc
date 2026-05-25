@@ -914,18 +914,15 @@ public:
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
-      if (_currentDirection != direction) {
-          // I get a warning from the compiler if I do &= and |= directly
-          // on GPIO6_GDIR. It warning states that doing that with a
-          // volatile variable is deprecated. This form, however, is
-          // supported.
-          auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
-          if constexpr (direction == OUTPUT) {
-              GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
-          } else {
-              GPIO6_GDIR = value;
-          }
-          _currentDirection = direction; 
+      // I get a warning from the compiler if I do &= and |= directly
+      // on GPIO6_GDIR. It warning states that doing that with a
+      // volatile variable is deprecated. This form, however, is
+      // supported.
+      auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+      if constexpr (direction == OUTPUT) {
+          GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
+      } else {
+          GPIO6_GDIR = value;
       }
   }
 
