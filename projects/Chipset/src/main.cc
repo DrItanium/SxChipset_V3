@@ -1211,8 +1211,6 @@ public:
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
 #else
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
-          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           EBIInterface::setDataLines(sp.bytes[0]);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
@@ -1232,6 +1230,8 @@ public:
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
       uint16_t currentWord = target.getWord((offset >> 1));
+      EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       for (uint16_t wordOffset = (offset >> 1); ;) {
           // write the current word
           writeDataLines(currentWord);
@@ -1242,6 +1242,10 @@ public:
           digitalToggleFast(Pin::READY);
           ++wordOffset; // advance wordOffset first
           currentWord = target.getWord(wordOffset); // get the next value
+          // reset the target address to the lower lines before we get the all
+          // clear to continue
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           waitForReadySignal(); // then wait for the ready signal to change
       }
       signalReady();
