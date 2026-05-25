@@ -886,76 +886,47 @@ public:
   }
   static void
   setAddress(uint8_t address) noexcept {
-          // the address table lookup is necessary because the address bits are
-          // backwards compared to the GPIO index
-          // 0: A5
-          // 1: A4
-          // 2: A3
-          // 3: A2
-          // 4: A1
-          // 5: A0
-          //
-          // This layout is taken from the Raspberry pi 0-4's SMI alternate
-          // mode. It allows me to leverage a PCB I made with the two CH351s
-          // meant for a raspberry pi 4.
-          GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
-          GPIO6_DR_SET = EBIAddressTable[address];
+      // the address table lookup is necessary because the address bits are
+      // backwards compared to the GPIO index
+      // 0: A5
+      // 1: A4
+      // 2: A3
+      // 3: A2
+      // 4: A1
+      // 5: A0
+      //
+      // This layout is taken from the Raspberry pi 0-4's SMI alternate
+      // mode. It allows me to leverage a PCB I made with the two CH351s
+      // meant for a raspberry pi 4.
+      GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+      GPIO6_DR_SET = EBIAddressTable[address];
   }
   static uint8_t
   readDataLines() noexcept {
       return static_cast<uint8_t>((GPIO6_PSR) >> 24);
   }
-  template<bool directPortManipulation = UseDirectPortManipulation>
   static void
   setDataLines(uint8_t value) noexcept {
-      // clear then set the corresponding bits
-      if constexpr (directPortManipulation) {
-          GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
-          GPIO6_DR_SET = EBIOutputTransformation[value];
-      } else {
-
-          digitalWriteFast(Pin::EBI_D0, (value & 0b00000001));
-          digitalWriteFast(Pin::EBI_D1, (value & 0b00000010));
-          digitalWriteFast(Pin::EBI_D2, (value & 0b00000100));
-          digitalWriteFast(Pin::EBI_D3, (value & 0b00001000));
-          digitalWriteFast(Pin::EBI_D4, (value & 0b00010000));
-          digitalWriteFast(Pin::EBI_D5, (value & 0b00100000));
-          digitalWriteFast(Pin::EBI_D6, (value & 0b01000000));
-          digitalWriteFast(Pin::EBI_D7, (value & 0b10000000));
-      }
+      GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+      GPIO6_DR_SET = EBIOutputTransformation[value];
   }
 
-  template<PinDirection direction, bool directPortManipulation = UseDirectPortManipulation>
+  template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
       if (_currentDirection != direction) {
-          if constexpr (directPortManipulation) {
-              // I get a warning from the compiler if I do &= and |= directly
-              // on GPIO6_GDIR. It warning states that doing that with a
-              // volatile variable is deprecated. This form, however, is
-              // supported.
-              auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
-              if constexpr (direction == OUTPUT) {
-                  GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
-              } else {
-                  GPIO6_GDIR = value;
-              }
-
+          // I get a warning from the compiler if I do &= and |= directly
+          // on GPIO6_GDIR. It warning states that doing that with a
+          // volatile variable is deprecated. This form, however, is
+          // supported.
+          auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+          if constexpr (direction == OUTPUT) {
+              GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
           } else {
-#define X(p) pinMode(p, direction)
-              X(Pin::EBI_D0);
-              X(Pin::EBI_D1);
-              X(Pin::EBI_D2);
-              X(Pin::EBI_D3);
-              X(Pin::EBI_D4);
-              X(Pin::EBI_D5);
-              X(Pin::EBI_D6);
-              X(Pin::EBI_D7);
-#undef X
+              GPIO6_GDIR = value;
           }
           _currentDirection = direction; 
       }
-
   }
 
 private:
