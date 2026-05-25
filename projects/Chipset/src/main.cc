@@ -911,6 +911,12 @@ public:
       GPIO6_DR_SET = EBIOutputTransformation[value];
   }
 
+  static void
+  setAddressAndDataLines(uint8_t address, uint8_t value) noexcept {
+      GPIO6_DR_CLEAR = EBIOutputTransformation[0xff] | EBIAddressTable[0xff];
+      GPIO6_DR_SET = EBIOutputTransformation[value] | EBIAddressTable[address];
+  }
+
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
@@ -1176,7 +1182,7 @@ public:
   static inline void
   doNothingTransaction() noexcept {
     if constexpr (isReadTransaction) {
-      writeDataLines(0);
+      writeDataLines<true>(0);
     }
     while (true) {
       if (isBurstLast()) {
@@ -1186,10 +1192,9 @@ public:
     }
     signalReady();
   }
-
+  template<bool UpdateBoth = false>
   static void
   writeDataLines(uint16_t value) noexcept {
-      SplitWord16 sp{value};
       // burst writes do work, you just have to be very careful. First you must
       // update the address lines and wait. After the wait period has expired,
       // it is safe to update the data lines. The hold time of 10ns before
@@ -1202,23 +1207,24 @@ public:
       // necessary to preven asserts and such. My hope is that it isn't a
       // problem now since the toggles happen far less frequently.
       digitalToggleFast(Pin::EBI_WR); 
-#if 0
-      for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
-          EBIInterface::setAddress(j);
+      if constexpr (UpdateBoth) {
+          SplitWord16 sp{value};
+          for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
+              EBIInterface::setAddress(j);
+              fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+              EBIInterface::setDataLines(sp.bytes[i]);
+              fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+              fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+          }
+      } else {
+          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-          EBIInterface::setDataLines(sp.bytes[i]);
+          EBIInterface::setDataLines(value >> 8);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
-#else
-          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-                                                                
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
-          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-          EBIInterface::setDataLines(sp.bytes[1]);
-          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-#endif
 
       digitalToggleFast(Pin::EBI_WR);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
