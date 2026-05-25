@@ -1105,11 +1105,7 @@ struct i960Interface {
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
-      if constexpr (AccessFlexIODirectly) {
-        _lastReadyState = rdyFeedback.getReadyLevel();
-      } else {
-        _lastReadyState = digitalReadFast(Pin::READY_LEVEL_IN);
-      }
+      _lastReadyState = rdyFeedback.getReadyLevel();
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -1725,7 +1721,6 @@ setup() {
     outputPin(Pin::STATE_MACHINE__READY_LEVEL_OUT, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    inputPin(Pin::READY_LEVEL_IN);
 
     Serial.begin(115200);
     Serial1.begin(115200); // connection to the AVR
