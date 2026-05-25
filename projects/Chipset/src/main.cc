@@ -1211,8 +1211,6 @@ public:
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
 #else
-          EBIInterface::setDataLines(sp.bytes[0]);
-          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
                                                                 
           EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
@@ -1232,6 +1230,8 @@ public:
       uint16_t currentWord = target.getWord((offset >> 1));
       EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+      EBIInterface::setDataLines(currentWord);
+      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
       for (uint16_t wordOffset = (offset >> 1); ;) {
           // write the current word
           writeDataLines(currentWord);
@@ -1246,6 +1246,8 @@ public:
           // clear to continue
           EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+          EBIInterface::setDataLines(currentWord);
+          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
           waitForReadySignal(); // then wait for the ready signal to change
       }
       signalReady();
