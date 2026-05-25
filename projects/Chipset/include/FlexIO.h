@@ -54,6 +54,7 @@ struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
         virtual ~FlexIOReadyPulseToLevelConverter() { }
         bool begin();
         void end() { }
+        uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
     private:
@@ -79,6 +80,7 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         virtual ~FlexIOTransactionDetector() { }
         bool begin();
         void end() { }
+        uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
     private:
