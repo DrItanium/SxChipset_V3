@@ -79,9 +79,8 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         virtual ~FlexIOTransactionDetector() { }
         bool begin();
         void end() { }
-        uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         uint32_t input() const noexcept { return _ioDevice->port().PIN; }
-        [[nodiscard]] bool inTransaction() const noexcept { return stateIndex() == _state2; }
+        [[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
     private:
         uint8_t _ads, _adsFlexPin = 0xff;
         uint8_t _den, _denFlexPin = 0xff;
