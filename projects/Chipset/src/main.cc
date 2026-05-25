@@ -927,6 +927,7 @@ public:
   }
 
 private:
+  // leaving this here increases i960 coremarks...
   static inline PinDirection _currentDirection = OUTPUT;
 };
 using EBIInterface = EBIWrapperInterface;
