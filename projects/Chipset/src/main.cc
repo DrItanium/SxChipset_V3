@@ -884,10 +884,8 @@ public:
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
   }
-  template<bool directPortManipulation = UseDirectPortManipulation>
   static void
   setAddress(uint8_t address) noexcept {
-      if constexpr (directPortManipulation) {
           // the address table lookup is necessary because the address bits are
           // backwards compared to the GPIO index
           // 0: A5
@@ -902,37 +900,10 @@ public:
           // meant for a raspberry pi 4.
           GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
           GPIO6_DR_SET = EBIAddressTable[address];
-      } else {
-          digitalWriteFast(Pin::EBI_A0, address & 0b000001);
-          digitalWriteFast(Pin::EBI_A1, address & 0b000010);
-          digitalWriteFast(Pin::EBI_A2, address & 0b000100);
-          digitalWriteFast(Pin::EBI_A3, address & 0b001000);
-          digitalWriteFast(Pin::EBI_A4, address & 0b010000);
-          digitalWriteFast(Pin::EBI_A5, address & 0b100000);
-      }
   }
-  template<bool checkD0 = true, bool useDirectPortRead = UseDirectPortManipulation>
   static uint8_t
   readDataLines() noexcept {
-      if constexpr (useDirectPortRead) {
-          return static_cast<uint8_t>((GPIO6_PSR) >> 24);
-      } else {
-          uint8_t value = 0;
-#define X(p, t) if ((digitalReadFast(p) != LOW)) value |= t
-          //@todo accelerate using direct GPIO port reads
-          if constexpr (checkD0) {
-              X(Pin::EBI_D0, 0b00000001);
-          }
-          X(Pin::EBI_D1, 0b00000010);
-          X(Pin::EBI_D2, 0b00000100);
-          X(Pin::EBI_D3, 0b00001000);
-          X(Pin::EBI_D4, 0b00010000);
-          X(Pin::EBI_D5, 0b00100000);
-          X(Pin::EBI_D6, 0b01000000);
-          X(Pin::EBI_D7, 0b10000000);
-#undef X
-          return value;
-      }
+      return static_cast<uint8_t>((GPIO6_PSR) >> 24);
   }
   template<bool directPortManipulation = UseDirectPortManipulation>
   static void
