@@ -1202,6 +1202,7 @@ public:
       // necessary to preven asserts and such. My hope is that it isn't a
       // problem now since the toggles happen far less frequently.
       digitalToggleFast(Pin::EBI_WR); 
+#if 0
       for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
           EBIInterface::setAddress(j);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
@@ -1209,6 +1210,20 @@ public:
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
+#else
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+          EBIInterface::setDataLines(sp.bytes[0]);
+          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+                                                                
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
+          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+          EBIInterface::setDataLines(sp.bytes[1]);
+          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+#endif
+
       digitalToggleFast(Pin::EBI_WR);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
@@ -1216,7 +1231,8 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       // pull the value ahead of time to start this process off
-      for (uint16_t wordOffset = (offset >> 1), currentWord = target.getWord((offset >> 1)); ;) {
+      uint16_t currentWord = target.getWord((offset >> 1));
+      for (uint16_t wordOffset = (offset >> 1); ;) {
           // write the current word
           writeDataLines(currentWord);
           if (isBurstLast()) {
