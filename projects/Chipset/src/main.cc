@@ -822,7 +822,7 @@ public:
            Pin::EBI_D7,
          }) {
       pinMode(a, OUTPUT);
-      digitalWrite(a, LOW);
+      digitalWriteFast(a, LOW);
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
     setAddress(0);
@@ -857,12 +857,6 @@ public:
       GPIO6_DR_SET = EBIOutputTransformation[value];
   }
 
-  static void
-  setAddressAndDataLines(uint8_t address, uint8_t value) noexcept {
-      GPIO6_DR_CLEAR = EBIOutputTransformation[0xff] | EBIAddressTable[0xff];
-      GPIO6_DR_SET = EBIOutputTransformation[value] | EBIAddressTable[address];
-  }
-
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
@@ -877,6 +871,7 @@ public:
           GPIO6_GDIR = value;
       }
   }
+
 };
 using EBIInterface = EBIWrapperInterface;
 // i960 common interface begin
