@@ -777,17 +777,6 @@ constexpr uint32_t makeAddress(uint8_t value) noexcept {
 static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
 static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
 
-constexpr uint32_t EBIAddressTable[256] {
-#define X(value) makeAddress(value), 
-#include "Entry255.def"
-#undef X
-};
-
-constexpr uint32_t EBIOutputTransformation[256] {
-#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
-#include "Entry255.def"
-#undef X
-};
 constexpr auto AddressLineAddress = 0b1000;
 constexpr auto DataLinesAddress = 0;
 constexpr CH351 addressLines{ AddressLineAddress }, 
@@ -801,6 +790,17 @@ public:
   EBIWrapperInterface(EBIWrapperInterface&&) = delete;
   EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
   EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
+  static constexpr uint32_t EBIAddressTable[256] {
+#define X(value) makeAddress(value), 
+#include "Entry255.def"
+#undef X
+  };
+
+  static constexpr uint32_t EBIOutputTransformation[256] {
+#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
+#include "Entry255.def"
+#undef X
+  };
   static void
   begin() noexcept {
     for (auto a : {
