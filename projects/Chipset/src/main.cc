@@ -260,86 +260,56 @@ private:
     static constexpr uint32_t _eepromCapacity = 4096;
 };
 struct RandomSourceRelatedThings {
-    void clear() noexcept { }
+    void clear() noexcept {
+        _backingStorage.clear();
+    }
     void update() noexcept {
-        _currentRandomValue = random();
+        _backingStorage.setWord32(0, random());
     }
 
     uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset) {
-            case 0: // arduino random
-                return static_cast<uint16_t>(_currentRandomValue);
-            case 1: // arduino random upper
-                return static_cast<uint16_t>(_currentRandomValue >> 16);
-            case 2: // system counter enable 
-                return systemCounterEnabled ? 0xFFFF : 0x0000;
-            default:
-                return 0;
-        }
+        return _backingStorage.getWord(offset);
     }
     void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
-        switch (offset) {
-            case 2: // system counter enable
-                systemCounterEnabled = (value != 0);
-                break;
-            default:
-                break;
-        }
+        _backingStorage.setWord(offset, value, enableLo, enableHi);
     }
-    void onFinish() noexcept { }
+    void onFinish() noexcept {
+        systemCounterEnabled = _backingStorage.getWord(2) != 0;
+    }
 private:
-    uint32_t _currentRandomValue = 0;
+    MemoryCellBlock _backingStorage;
 };
 struct RTCMemoryBlock {
     public:
-        void clear() noexcept { }
-        void update() noexcept {
-            _now = rtc.now();
-            _inputTemperature = rtc.getTemperature();
-            _32kOutEn = rtc.isEnabled32K(); 
+        void clear() noexcept { 
+            _backingStorage.clear();
         }
-        void onFinish() noexcept { }
+        void update() noexcept {
+            auto now = rtc.now();
+            _backingStorage.setWord32(0, now.unixtime());
+            _backingStorage.setWord32(1, now.secondstime());
+            union {
+                float in;
+                uint32_t out;
+            } q;
+            q.in = rtc.getTemperature();
+            _backingStorage.setWord32(2, q.out);
+        }
         uint16_t getWord(uint8_t offset) const noexcept {
-            switch (offset) {
-                case 0: // unixtime lower
-                    return static_cast<uint16_t>(_now.unixtime());
-                case 1: // unixtime upper
-                    return static_cast<uint16_t>(_now.unixtime() >> 16);
-                case 2: // secondstime lower
-                    return static_cast<uint16_t>(_now.secondstime());
-                case 3: // secondstime upper
-                    return static_cast<uint16_t>(_now.secondstime() >> 16);
-                case 4: // temperature
-                    return static_cast<uint16_t>(_outputTemperature);
-                case 5: // temperature upper
-                    return static_cast<uint16_t>(_outputTemperature >> 16);
-                case 6: 
-                case 7:
-                    return _32kOutEn ? 0xFFFF : 0x0000;
-                default:
-                    return 0;
-            }
+            return _backingStorage.getWord(offset);
         }
         void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
-            switch (offset) {
-                case 6:
-                    if (value != 0) {
-                        rtc.enable32K();
-                    } else {
-                        rtc.disable32K();
-                    }
-                    break;
-                default:
-                    break;
+            _backingStorage.setWord(offset, value, enableLo, enableHi);
+        }
+        void onFinish() noexcept { 
+            if (_backingStorage.getWord(6) != 0) {
+                rtc.enable32K();
+            } else {
+                rtc.disable32K();
             }
         }
     private:
-        DateTime _now;
-        union {
-            float _inputTemperature;
-            uint32_t _outputTemperature;
-        };
-        bool _32kOutEn = false;
+        MemoryCellBlock _backingStorage;
 };
 // ----- hard memory space definitions begin
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
