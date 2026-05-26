@@ -758,11 +758,7 @@ struct CH351 final {
     return _dataPortBaseAddress;
   }
   [[nodiscard]] constexpr auto getDataPortReadAddressBase() const noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
           return _dataPortBaseAddress + 2;
-      } else {
-          return _dataPortBaseAddress;
-      }
   }
   [[nodiscard]] constexpr auto getDataPortWriteAddressBase() const noexcept {
       return _dataPortBaseAddress;
@@ -1007,21 +1003,16 @@ struct i960Interface {
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
       write8(addressLines.getConfigPortBaseAddress() + 3, 0);
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Dual16) {
-          // lower 16-bits are for the i960 read port
-          write8(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
-          write8(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
-          write8(dataLines.getDataPortBaseAddress() + 0, 0);
-          write8(dataLines.getDataPortBaseAddress() + 1, 0);
-          // upper 16-bits are for the i960 write port
-          write8(dataLines.getConfigPortBaseAddress() + 2, 0);
-          write8(dataLines.getConfigPortBaseAddress() + 3, 0);
-          // after this point, the code will no longer change directions since
-          // it is unnecessary
-      } else if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          // configure the data bus for a read operation (which is output to the i960)
-        configureDataLinesForRead();
-      }
+      // lower 16-bits are for the i960 read port
+      write8(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
+      write8(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
+      write8(dataLines.getDataPortBaseAddress() + 0, 0);
+      write8(dataLines.getDataPortBaseAddress() + 1, 0);
+      // upper 16-bits are for the i960 write port
+      write8(dataLines.getConfigPortBaseAddress() + 2, 0);
+      write8(dataLines.getConfigPortBaseAddress() + 3, 0);
+      // after this point, the code will no longer change directions since
+      // it is unnecessary
       EBIInterface::setDataLines(0);
   }
   template<uint16_t value>
@@ -1032,15 +1023,9 @@ struct i960Interface {
   }
   static inline void
   configureDataLinesForRead() noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0xFFFF>();
-      }
   }
   static inline void
   configureDataLinesForWrite() noexcept {
-      if constexpr (BusConfiguration == CPUDataBusConfiguration::Bidirectional16) {
-          configureDataLinesDirection<0>();
-      }
   }
 private:
   static inline uint32_t _lastReadyState = HIGH;
