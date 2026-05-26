@@ -323,12 +323,10 @@ struct RTCMemoryBlock {
         void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
             switch (offset) {
                 case 6:
-                    if (enableLo || enableHi) {
-                        if (value != 0) {
-                            rtc.enable32K();
-                        } else {
-                            rtc.disable32K();
-                        }
+                    if (value != 0) {
+                        rtc.enable32K();
+                    } else {
+                        rtc.disable32K();
                     }
                     break;
                 default:
