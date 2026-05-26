@@ -788,11 +788,6 @@ constexpr uint32_t EBIOutputTransformation[256] {
 #include "Entry255.def"
 #undef X
 };
-constexpr uint32_t EBIOutputTransformation_Mask[256] {
-#define X(value) (~((static_cast<uint32_t>(value) << 24) & 0xFF00'0000)),
-#include "Entry255.def"
-#undef X
-};
 constexpr auto AddressLineAddress = 0b1000;
 constexpr auto DataLinesAddress = 0;
 constexpr CH351 addressLines{ AddressLineAddress }, 
@@ -875,11 +870,11 @@ public:
       // on GPIO6_GDIR. It warning states that doing that with a
       // volatile variable is deprecated. This form, however, is
       // supported.
-      //auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+      auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
       if constexpr (direction == OUTPUT) {
-          GPIO6_GDIR = GPIO6_GDIR | EBIOutputTransformation[0xff];
+          GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
       } else {
-          GPIO6_GDIR = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+          GPIO6_GDIR = value;
       }
   }
 };
