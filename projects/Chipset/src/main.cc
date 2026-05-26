@@ -98,6 +98,7 @@ struct TimeTracker {
     const char* _prefix;
     uint32_t _startTime;
 };
+
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
  * Teensy has no way of knowing this configuration so it is a compile time
@@ -191,9 +192,7 @@ struct USBSerialBlock {
         switch (offset) {
             case 0:
             case 4:
-                if (lo) {
-                    Serial.write(static_cast<uint8_t>(value));
-                }
+                Serial.write(static_cast<uint8_t>(value));
                 break;
             case 2:
             case 6:
@@ -1117,7 +1116,7 @@ public:
     return digitalReadFast(Pin::WR) == HIGH;
   }
   static SplitWord32
-  getAddress24() noexcept {
+  getAddress() noexcept {
       // this takes around 400 ARM cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
@@ -1250,7 +1249,7 @@ public:
           currentWord = target.getWord(wordOffset); // get the next value
           // reset the target address to the lower lines before we get the all
           // clear to continue
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           EBIInterface::setDataLines(currentWord);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
@@ -1447,18 +1446,10 @@ public:
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction() noexcept {
-      auto address = getAddress24();
-      if constexpr (BusConfiguration != CPUDataBusConfiguration::Dual16) {
-          if constexpr (isReadTransaction) { 
-              i960Interface::configureDataLinesForRead();
-          } else {
-              i960Interface::configureDataLinesForWrite();
-          }
-      } else {
-          if constexpr (isReadTransaction) {
-              // this will stay this way for the rest of the transaction
-              EBIInterface::setDataLinesDirection<OUTPUT>();
-          }
+      auto address = getAddress();
+      if constexpr (isReadTransaction) {
+          // this will stay this way for the rest of the transaction
+          EBIInterface::setDataLinesDirection<OUTPUT>();
       }
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
@@ -1780,3 +1771,4 @@ configureFlexIO() noexcept {
         Serial.println("Ready Pulse -> Level Device Failed to start!");
     }
 }
+
