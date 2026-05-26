@@ -803,7 +803,6 @@ public:
   EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
   static void
   begin() noexcept {
-    _currentDirection = OUTPUT;
     for (auto a : {
            Pin::EBI_A5,
            Pin::EBI_A4,
@@ -878,10 +877,6 @@ public:
           GPIO6_GDIR = value;
       }
   }
-
-private:
-  // leaving this here increases i960 coremarks...
-  static inline PinDirection _currentDirection = OUTPUT;
 };
 using EBIInterface = EBIWrapperInterface;
 // i960 common interface begin
