@@ -204,39 +204,23 @@ struct USBSerialBlock {
     }
 };
 struct TimingRelatedThings {
-    void clear() noexcept { }
+    void clear() noexcept { 
+        _backingStorage.clear();
+    }
     void update() noexcept {
-        _currentMillis = millis();
-        _currentMicros = micros();
-        _currentCycle = getCurrentCycleCount();
+        _backingStorage.setWord32(0, millis());
+        _backingStorage.setWord32(1, micros());
+        _backingStorage.setWord32(2, getCurrentCycleCount());
     }
     uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset) {
-            case 0: // millis
-                return static_cast<uint16_t>(_currentMillis);
-            case 1: // millis upper
-                return static_cast<uint16_t>(_currentMillis >> 16);
-            case 2: // micros
-                return static_cast<uint16_t>(_currentMicros);
-            case 3:
-                return static_cast<uint16_t>(_currentMicros >> 16);
-            case 4: // cycle count
-                return static_cast<uint16_t>(_currentCycle);
-            case 5: 
-                return static_cast<uint16_t>(_currentCycle >> 16);
-            default:
-                return 0;
-        }
+        return _backingStorage.getWord(offset);
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
     void onFinish() noexcept { }
 
 private:
-    // for temporary snapshot purposes
-    uint32_t _currentMicros = 0;
-    uint32_t _currentMillis = 0;
-    uint32_t _currentCycle = 0;
+    MemoryCellBlock _backingStorage;
 };
 struct CapacityInformation {
     void clear() noexcept { }
