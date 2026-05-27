@@ -1600,7 +1600,6 @@ setup() {
     inputPin(Pin::FULL16_ENABLE);
     inputPin(Pin::WR);
     outputPin(Pin::READY, HIGH);
-    outputPin(Pin::STATE_MACHINE__IN_TRANSACTION_OUT, HIGH);
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
     inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);

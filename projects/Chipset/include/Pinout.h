@@ -98,9 +98,9 @@ enum class Pin {
     STATE_MACHINE__IN_TRANSACTION_ADS = INDIRECT_D23,
     STATE_MACHINE__IN_TRANSACTION_DEN = INDIRECT_D24,
     // INDIRECT_D25
-    STATE_MACHINE__IN_TRANSACTION_OUT = INDIRECT_D26,
-    // INDIRECT_D27,
-    // INDIRECT_D28,
+    // INDIRECT_D26
+    // INDIRECT_D27
+    // INDIRECT_D28
     FULL16_ENABLE = INDIRECT_D29,
     READY = INDIRECT_D30,
     READY_SYNC = INDIRECT_D31,
@@ -108,12 +108,17 @@ enum class Pin {
     INT960_3 = INDIRECT_D33,
     STATE_MACHINE__READY_LEVEL_OUT = INDIRECT_D34, // FlexIO2.0
     // INDIRECT_D35 (MOSI)
-    STATE_MACHINE__READY_LEVEL_PULSE = INDIRECT_D36, // formerly (MISO) and FlexIO2.1
+    // INDIRECT_D36 (MISO)
     // INDIRECT_D37 (SCK)
     TEENSY_AVR_RX = INDIRECT_D38,
     TEENSY_AVR_TX = INDIRECT_D39,
     TEENSY_AVR_SCL = INDIRECT_D40,
     TEENSY_AVR_SDA = INDIRECT_D41,
+    // these pins are theoretical and only here to allow the FlexIO internal
+    // state to map to the appropriate location. I will want to update the
+    // pin state to have more expressive setups
+    STATE_MACHINE__IN_TRANSACTION_OUT = INDIRECT_D26, 
+    STATE_MACHINE__READY_LEVEL_PULSE = INDIRECT_D36, 
 
 };
 

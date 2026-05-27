@@ -181,14 +181,9 @@ FlexIOTransactionDetector::begin() {
         Serial.printf("Could not set DEN pin (%d) to flex mode!\n", _den);
         return false;
     }
-    if (!_ioDevice->setIOPinToFlexMode(_transactionPin)) {
-        Serial.printf("Could not set IN TRANSACTION pin (%d) to flex mode!\n", _transactionPin);
-        return false;
-    }
     if constexpr (FlexIODebugging) {
         Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
     }
-    *(portControlRegister(_transactionPin)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
     *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     *(portControlRegister(_ads)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     return true;
@@ -336,15 +331,16 @@ FlexIOReadyPulseToLevelConverter::begin() {
         Serial.printf("Could not set IN pin (%d) to flex mode!\n", _in);
         return false;
     }
+#if 0
     if (!_ioDevice->setIOPinToFlexMode(_out)) {
         Serial.printf("Could not set OUT pin (%d) to flex mode!\n", _out);
         return false;
     }
+#endif
     if constexpr (FlexIODebugging) {
         Serial.printf("Input: %d [Flex: %d], Output: %d [Flex: %d]\n", _in, _inFlexPin, _out, _outFlexPin);
     }
     // we just walk through this over and over
-    *(portControlRegister(_out)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2);
     *(portControlRegister(_in)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     return true;
 }
