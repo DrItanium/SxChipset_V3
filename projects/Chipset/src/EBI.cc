@@ -95,6 +95,12 @@ EBIWrapperInterface::configureFlexIO() noexcept {
     // now grab a timer
     _addressTimer = _ioDevice->requestTimers(); 
     OnInvalidFlexIOResultPrint(_addressTimer, "Could not allocate a timer for the address lines!");
-
+    auto* p = &_ioDevice->port();
+    p->SHIFTCFG[_addressShifter] = FLEXIO_SHIFTCFG_PWIDTH(6) | FLEXIO_SHIFTCFG_SSTOP(0) | FLEXIO_SHIFTCFG_SSTART(0);
+    p->SHIFTCTL[_addressShifter] = FLEXIO_SHIFTCTL_TIMSEL(_addressTimer) | 
+        FLEXIO_SHIFTCTL_SHIFT_ON_FALLING_EDGE |
+        FLEXIO_SHIFTCTL_PINMODE_OUTPUT |
+        FLEXIO_SHIFTCTL_PINSEL(AddressLinesFlexIOPins[0]) | 
+        FLEXIO_SHIFTCTL_MODE_TRANSMIT;
     return true;
 }
