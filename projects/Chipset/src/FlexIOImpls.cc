@@ -345,4 +345,3 @@ FlexIOReadyPulseToLevelConverter::begin() {
     return true;
 }
 
-

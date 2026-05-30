@@ -49,14 +49,14 @@ uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, 
 struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
     public:
         bool call_back(FlexIOHandler *pflex) override { return false; }
-        FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
-        FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
+        constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
+        constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
         virtual ~FlexIOReadyPulseToLevelConverter() { }
-        bool begin();
-        void end() { }
-        uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
-        uint32_t input() const noexcept { return _ioDevice->port().PIN; }
-        uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
+        [[nodiscard]] bool begin() noexcept;
+        void end() noexcept { }
+        [[nodiscard]] uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
+        [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
+        [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
     private:
         uint8_t _in, _inFlexPin= 0xff;
         uint8_t _out, _outFlexPin= 0xff;
@@ -71,17 +71,17 @@ struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
 struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
     public:
         bool call_back(FlexIOHandler *pflex) override { return false; }
-        FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
-        FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
+        constexpr FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
+        constexpr FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
             : FlexIOTransactionDetector(
                 static_cast<uint8_t>(ads),
                 static_cast<uint8_t>(den),
                 static_cast<uint8_t>(inTransaction)) { }
         virtual ~FlexIOTransactionDetector() { }
-        bool begin();
-        void end() { }
-        uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
-        uint32_t input() const noexcept { return _ioDevice->port().PIN; }
+        [[nodiscard]] bool begin() noexcept;
+        void end() noexcept { }
+        [[nodiscard]] uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
+        [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
     private:
         uint8_t _ads, _adsFlexPin = 0xff;
@@ -93,6 +93,5 @@ struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
         uint8_t _state1 = 0xff;
         uint8_t _state2 = 0xff;
 };
-
 
 #endif // end !defined CHIPSET_FLEXIO_H__
