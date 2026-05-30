@@ -1523,7 +1523,14 @@ setup() {
     EEPROM.begin();
 
     // put your setup code here, to run once:
-    EBIInterface::begin();
+    if (EBIInterface::begin()) {
+        Serial.println("EBI Interface Up!");
+    } else {
+        Serial.println("EBI Interface Could Not Be Started!");
+        while (true) {
+            delay(1000);
+        }
+    }
     i960Interface::begin();
     setupMemory();
     setupRTC();
