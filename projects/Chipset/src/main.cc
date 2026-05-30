@@ -52,6 +52,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ManagementEngineProtocol.h"
 #include "FlexIO.h"
 #include <fileuids.h>
+#include "EBI.h"
 
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
@@ -768,16 +769,12 @@ private:
   uint8_t _dataPortBaseAddress;
   uint8_t _cfgPortBaseAddress;
 };
-constexpr uint32_t makeAddress(uint8_t value) noexcept {
-    return static_cast<uint32_t>(value & 0b111111) << 16;
-}
-static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
-static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
-
 constexpr auto AddressLineAddress = 0b1000;
 constexpr auto DataLinesAddress = 0;
 constexpr CH351 addressLines{ AddressLineAddress }, 
                 dataLines{ DataLinesAddress };
+
+
 
 struct EBIWrapperInterface {
 public:
@@ -1113,6 +1110,7 @@ public:
       }
       signalReady();
     }
+    // we can actually setup for the next cycle because it will show up!
     signalReady();
   }
   template<bool UpdateBoth = false>
