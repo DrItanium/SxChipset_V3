@@ -27,11 +27,54 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CHIPSET_EBI_H__
 #define CHIPSET_EBI_H__
 #include <cstdint>
+#include <Arduino.h>
+#include "Pinout.h"
 
 constexpr uint32_t makeAddress(uint8_t value) noexcept {
     return static_cast<uint32_t>(value & 0b111111) << 16;
 }
 static_assert(makeAddress(0b00'01'00'11) == 0b00'01'00'11'0000'0000'0000'0000);
 static_assert(makeAddress(0b00'00'00'01) == 0b00'00'00'01'0000'0000'0000'0000);
+
+struct EBIWrapperInterface {
+public:
+  EBIWrapperInterface() = delete;
+  ~EBIWrapperInterface() = delete;
+  EBIWrapperInterface(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface(EBIWrapperInterface&&) = delete;
+  EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
+  EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
+  static constexpr uint32_t EBIAddressTable[256] {
+#define X(value) makeAddress(value), 
+#include "Entry255.def"
+#undef X
+  };
+
+  static constexpr uint32_t EBIOutputTransformation[256] {
+#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
+#include "Entry255.def"
+#undef X
+  };
+  static void begin() noexcept;
+  static void setAddress(uint8_t address) noexcept;
+  static uint8_t readDataLines() noexcept;
+  static void setDataLines(uint8_t value) noexcept;
+  template<PinDirection direction>
+  static void
+  setDataLinesDirection() noexcept {
+      // I get a warning from the compiler if I do &= and |= directly
+      // on GPIO6_GDIR. It warning states that doing that with a
+      // volatile variable is deprecated. This form, however, is
+      // supported.
+      auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
+      if constexpr (direction == OUTPUT) {
+          GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
+      } else {
+          GPIO6_GDIR = value;
+      }
+  }
+
+};
+using EBIInterface = EBIWrapperInterface;
 
 #endif // end !defined(CHIPSET_EBI_H__)

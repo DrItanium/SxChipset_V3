@@ -24,3 +24,61 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "EBI.h"
+#include "Pinout.h"
+
+
+void
+EBIWrapperInterface::begin() noexcept {
+    for (auto a : {
+            Pin::EBI_A5,
+            Pin::EBI_A4,
+            Pin::EBI_A3,
+            Pin::EBI_A2,
+            Pin::EBI_A1,
+            Pin::EBI_A0,
+            Pin::EBI_RD,
+            Pin::EBI_WR,
+            Pin::EBI_D0,
+            Pin::EBI_D1,
+            Pin::EBI_D2,
+            Pin::EBI_D3,
+            Pin::EBI_D4,
+            Pin::EBI_D5,
+            Pin::EBI_D6,
+            Pin::EBI_D7,
+            }) {
+        pinMode(a, OUTPUT);
+        digitalWriteFast(a, LOW);
+    }
+    // force EBI_A4 and A5 to low  since we will never be accessing that
+    setAddress(0);
+    digitalWriteFast(Pin::EBI_RD, HIGH);
+    digitalWriteFast(Pin::EBI_WR, HIGH);
+    setDataLines(0);
+}
+void
+EBIWrapperInterface::setAddress(uint8_t address) noexcept {
+    // the address table lookup is necessary because the address bits are
+    // backwards compared to the GPIO index
+    // 0: A5
+    // 1: A4
+    // 2: A3
+    // 3: A2
+    // 4: A1
+    // 5: A0
+    //
+    // This layout is taken from the Raspberry pi 0-4's SMI alternate
+    // mode. It allows me to leverage a PCB I made with the two CH351s
+    // meant for a raspberry pi 4.
+    GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+    GPIO6_DR_SET = EBIAddressTable[address];
+}
+uint8_t
+EBIWrapperInterface::readDataLines() noexcept {
+    return static_cast<uint8_t>((GPIO6_PSR) >> 24);
+}
+void
+EBIWrapperInterface::setDataLines(uint8_t value) noexcept {
+    GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
+    GPIO6_DR_SET = EBIOutputTransformation[value];
+}
