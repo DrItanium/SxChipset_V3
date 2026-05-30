@@ -1577,7 +1577,6 @@ triggerSystemTimer() noexcept {
     }
 }
 
-void handleAVRSerialConnection() noexcept;
 void configureFlexIO() noexcept;
 void 
 setup() {
@@ -1650,22 +1649,10 @@ tryDoTransaction() noexcept {
         }
     } 
 }
-void
-handleAVRSerialConnection() noexcept {
-#ifdef USB_TRIPLE_SERIAL
-    if (Serial1.available()) {
-        SerialUSB2.write(Serial1.read());
-    }
-    if (SerialUSB2.available()) {
-        Serial1.write(SerialUSB2.read());
-    }
-#endif
-}
 void 
 loop() {
     tryDoTransaction();
     tryDoTransaction();
-    handleAVRSerialConnection();
     tryDoTransaction();
     tryDoTransaction();
 }
