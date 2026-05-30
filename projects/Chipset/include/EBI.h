@@ -57,7 +57,7 @@ public:
 #include "Entry255.def"
 #undef X
   };
-  static void begin() noexcept;
+  static bool begin() noexcept;
   static void 
   setAddress(uint8_t address) noexcept {
       // the address table lookup is necessary because the address bits are
@@ -98,6 +98,8 @@ public:
           GPIO6_GDIR = value;
       }
   }
+  private:
+    static bool configureFlexIO() noexcept;
   private:
     static inline FlexIOHandler* _ioDevice = nullptr;
     static constexpr std::array<Pin, 6> AddressLines {

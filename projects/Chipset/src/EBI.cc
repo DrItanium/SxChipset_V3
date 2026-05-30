@@ -26,16 +26,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "EBI.h"
 #include "Pinout.h"
 
+#define OnInvalidFlexIOResultPrint(fp, msg) \
+    if (!validFlexIOResult(fp)) { \
+        Serial.println(msg); \
+        return false; \
+    }
 
-void
+bool
 EBIWrapperInterface::begin() noexcept {
+    
     for (auto a : {
-            Pin::EBI_A5,
-            Pin::EBI_A4,
-            Pin::EBI_A3,
-            Pin::EBI_A2,
-            Pin::EBI_A1,
-            Pin::EBI_A0,
+            //Pin::EBI_A5,
+            //Pin::EBI_A4,
+            //Pin::EBI_A3,
+            //Pin::EBI_A2,
+            //Pin::EBI_A1,
+            //Pin::EBI_A0,
             Pin::EBI_RD,
             Pin::EBI_WR,
             Pin::EBI_D0,
@@ -50,9 +56,18 @@ EBIWrapperInterface::begin() noexcept {
         pinMode(a, OUTPUT);
         digitalWriteFast(a, LOW);
     }
+    if (!configureFlexIO()) {
+        return false;
+    }
     // force EBI_A4 and A5 to low  since we will never be accessing that
     setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
     digitalWriteFast(Pin::EBI_WR, HIGH);
     setDataLines(0);
+    return true;
+}
+
+bool
+EBIWrapperInterface::configureFlexIO() noexcept {
+    return true;
 }
