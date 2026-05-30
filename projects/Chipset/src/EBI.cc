@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "EBI.h"
 #include "Pinout.h"
+#include "FlexIO.h"
 
 #define OnInvalidFlexIOResultPrint(fp, msg) \
     if (!validFlexIOResult(fp)) { \
@@ -36,12 +37,12 @@ bool
 EBIWrapperInterface::begin() noexcept {
     
     for (auto a : {
-            //Pin::EBI_A5,
-            //Pin::EBI_A4,
-            //Pin::EBI_A3,
-            //Pin::EBI_A2,
-            //Pin::EBI_A1,
-            //Pin::EBI_A0,
+            Pin::EBI_A5,
+            Pin::EBI_A4,
+            Pin::EBI_A3,
+            Pin::EBI_A2,
+            Pin::EBI_A1,
+            Pin::EBI_A0,
             Pin::EBI_RD,
             Pin::EBI_WR,
             Pin::EBI_D0,
@@ -69,5 +70,31 @@ EBIWrapperInterface::begin() noexcept {
 
 bool
 EBIWrapperInterface::configureFlexIO() noexcept {
+    for (int i = 0; i < 6; ++i) {
+        if (auto pin = static_cast<uint8_t>(AddressLines[i]); !_ioDevice) {
+            _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(pin, AddressLinesFlexIOPins[i]); 
+            if (!_ioDevice) {
+                Serial.printf("Could not acquire a FlexIO device given the A[%d] pin!", i);
+                return false;
+            }
+        } else {
+            AddressLinesFlexIOPins[i] = _ioDevice->mapIOPinToFlexPin(pin);
+            OnInvalidFlexIOResultPrint(AddressLinesFlexIOPins[i], "Could not allocate flexio pin for address line!");
+        }
+    }
+    // okay, at this point we have mapped everything io pin wise
+    // Now, it is important to reserve the correct shifter that supports
+    // parallel transmit. We can choose either 0 or 4. My target will be
+    // shifter 0 for now since I can easily rearrange it as needed
+    _addressShifter = _ioDevice->requestShifter(0); // this will be fine for now
+    if (!validFlexIOResult(_addressShifter)) {
+        // okay so try and grab shifter 4
+        _addressShifter = _ioDevice->requestShifter(4);
+        OnInvalidFlexIOResultPrint(_addressShifter, "Could not grab shifter 0 or 4 for parallel transmit!");
+    }
+    // now grab a timer
+    _addressTimer = _ioDevice->requestTimers(); 
+    OnInvalidFlexIOResultPrint(_addressTimer, "Could not allocate a timer for the address lines!");
+
     return true;
 }

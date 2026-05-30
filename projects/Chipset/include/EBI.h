@@ -114,7 +114,7 @@ public:
         0xff, 0xff, 0xff,
         0xff, 0xff, 0xff,
     };
-    static inline uint8_t _reservedTimer = 0xff;
+    static inline uint8_t _addressTimer = 0xff;
     static inline uint8_t _addressShifter = 0xff;
 };
 using EBIInterface = EBIWrapperInterface;
