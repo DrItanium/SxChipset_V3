@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 #include <Arduino.h>
 #include "Pinout.h"
+#include <FlexIO_t4.h>
+#include <array>
 
 constexpr uint32_t makeAddress(uint8_t value) noexcept {
     return static_cast<uint32_t>(value & 0b111111) << 16;
@@ -96,7 +98,22 @@ public:
           GPIO6_GDIR = value;
       }
   }
-
+  private:
+    static inline FlexIOHandler* _ioDevice = nullptr;
+    static constexpr std::array<Pin, 6> AddressLines {
+        Pin::EBI_A0,
+        Pin::EBI_A1,
+        Pin::EBI_A2,
+        Pin::EBI_A3,
+        Pin::EBI_A4,
+        Pin::EBI_A5,
+    };
+    static inline std::array<uint8_t, 6> AddressLinesFlexIOPins {
+        0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff,
+    };
+    static inline uint8_t _reservedTimer = 0xff;
+    static inline uint8_t _addressShifter = 0xff;
 };
 using EBIInterface = EBIWrapperInterface;
 
