@@ -45,14 +45,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
 
-#include <microshell.h>
 
 #include "Pinout.h"
 #include "MemoryCell.h"
 #include "Core.h"
 #include "ManagementEngineProtocol.h"
-#include "InterfaceEngineCommon.h"
-#include "i960CommonInterface.h"
 #include "FlexIO.h"
 #include <fileuids.h>
 
