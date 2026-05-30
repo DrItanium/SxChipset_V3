@@ -5,9 +5,6 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include "ManagementEngineProtocol.h"
-#include <microshell.h>
-#include "InterfaceEngineCommon.h"
-#include "i960CommonInterface.h"
 
 // TODO: 
 // - Use PER_CLK/2 for the interrupt generators instead of TCA0 when it makes sense
@@ -32,7 +29,7 @@
 // TWI0: Teensy Communication Channel
 // TWI1: 
 // USART0:
-// USART1: Teensy Communication Channel
+// USART1:
 // USART2:
 // USART3:
 // USART4:
@@ -59,8 +56,8 @@ constexpr auto INT2_OUT = PIN_PB5;
 // PIN_PB6
 // PIN_PB7
 
-constexpr auto TEENSY_SER_TX = PIN_PC0;
-constexpr auto TEENSY_SER_RX = PIN_PC1;
+// PIN_PC0
+// PIN_PC1
 constexpr auto WIRE_SDA = PIN_PC2;
 constexpr auto WIRE_SCL = PIN_PC3;
 // PIN_PC4
@@ -439,9 +436,6 @@ void
 setup() {
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
     Wire.begin(0x08);
-    SPI.swap(SPI0_SWAP1); 
-    SPI.begin();
-    Serial1.begin(115200);
     Wire.onReceive(onReceiveHandler);
     Wire.onRequest(onRequestHandler);
 #define X(index) serialNumberCache[ index ] = SIGROW.SERNUM ## index 
@@ -477,11 +471,12 @@ setup() {
     // just keep looping until we see that the RP2 is up and running
     cpuIsInReset = true;
     chipIsUp = true;
-    configureMicroshellInterface();
 }
 void
 loop() {
+#if 0
     serviceShell();
+#endif
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
@@ -557,97 +552,3 @@ onRequestHandler() {
 
     }
 }
-
-
-int ushRead(struct ush_object* self, char* ch) {
-    if (Serial1.available()) {
-        *ch = Serial1.read();
-        return 1;
-    }
-    return 0;
-}
-
-int ushWrite(struct ush_object* self, char ch) {
-    return (Serial1.write(ch) == 1);
-}
-
-const ush_io_interface ioInterface = { .read = ushRead, .write = ushWrite };
-
-char ushInputBuffer[256];
-char ushOutputBuffer[256];
-
-constexpr auto PATH_MAX_SIZE = 256;
-
-struct ush_object ush;
-
-const ush_descriptor PROGMEM_MAPPED descriptor = {
-    .io = &ioInterface,
-    .input_buffer = ushInputBuffer,
-    .input_buffer_size = sizeof(ushInputBuffer),
-    .output_buffer = ushOutputBuffer,
-    .output_buffer_size = sizeof(ushOutputBuffer),
-    .path_max_length = PATH_MAX_SIZE,
-    .hostname = "management_engine",
-};
-
-size_t infoGetDataCallback(ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-    static const char* message = "AVR Console\r\n";
-    *data = (uint8_t*)message;
-    return strlen(message);
-}
-const ush_file_descriptor PROGMEM_MAPPED rootFiles[] {
-    {
-        .name = "info.txt",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = infoGetDataCallback,
-    }
-};
-
-const ush_file_descriptor devFiles[] {
-    INTERFACE_ENGINE_COMMON_DEVICES,
-    {
-        .name = "rseed",
-        .description = nullptr,
-        .help = nullptr,
-        .exec = nullptr,
-        .get_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t** data) {
-            static char buffer[16];
-            snprintf(buffer, sizeof(buffer), "%ld\r\n", rSeed);
-            buffer[sizeof(buffer) - 1] = 0;
-            *data = (uint8_t*)buffer;
-            return strlen((char*)(*data));
-        },
-        .set_data = [](ush_object* self, ush_file_descriptor const* file, uint8_t* data, size_t size) {
-            long value = 0;
-            if (sscanf((const char*)data, "%lu", &value) == EOF) {
-                ush_print_status(self, USH_STATUS_ERROR_COMMAND_SYNTAX_ERROR);
-                return;
-            }
-            rSeed = value;
-            randomSeed(rSeed);
-        },
-    },
-};
-
-ush_node_object root;
-ush_node_object dev;
-
-void
-configureMicroshellInterface() noexcept {
-    ush_init(&ush, &descriptor);
-
-    InterfaceEngine::installCommonCommands(&ush);
-    InterfaceEngine::installI960Commands(&ush);
-    ush_node_mount(&ush, "/", &root, rootFiles, ComputeFileSize(rootFiles));
-    ush_node_mount(&ush, "/dev", &dev, devFiles, ComputeFileSize(devFiles));
-    InterfaceEngine::installEepromDeviceDirectory(&ush);
-    InterfaceEngine::installI960Devices(&ush);
-}
-
-void
-serviceShell() noexcept {
-    ush_service(&ush);
-}
-
