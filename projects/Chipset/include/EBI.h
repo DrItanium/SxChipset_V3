@@ -92,21 +92,11 @@ public:
       // on GPIO6_GDIR. It warning states that doing that with a
       // volatile variable is deprecated. This form, however, is
       // supported.
-#if 0
-      auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
-      if constexpr (direction == OUTPUT) {
-          GPIO6_GDIR = (value | EBIOutputTransformation[0xff]);
-      } else {
-          GPIO6_GDIR = value;
-      }
-#else
       auto value = GPIO6_GDIR & ~EBIOutputTransformation[0xff];
       if constexpr (direction == OUTPUT) {
           value |= EBIOutputTransformation[0xff];
       } 
       GPIO6_GDIR = value;
-#endif
-
   }
   private:
     static bool configureFlexIO() noexcept;
