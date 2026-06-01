@@ -68,7 +68,10 @@ IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 // state machines
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
-//FlexIOReadyPulseToLevelConverter rdyFeedback{Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT};
+FlexIOReadyPulseToLevelConverter rdyFeedback{
+    Pin::STATE_MACHINE__READY_LEVEL_PULSE, 
+    Pin::STATE_MACHINE__READY_LEVEL_OUT
+};
 
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
@@ -890,7 +893,7 @@ struct i960Interface {
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
-      _lastReadyState = ReadyFeedback::getReadyLevel();
+      _lastReadyState = rdyFeedback.getReadyLevel();
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -924,8 +927,8 @@ private:
 public:
   static void
   waitForReadySignal() noexcept {
-      while (ReadyFeedback::getReadyLevel() == _lastReadyState);
-      _lastReadyState = ReadyFeedback::getReadyLevel();
+      while (rdyFeedback.getReadyLevel() == _lastReadyState);
+      _lastReadyState = rdyFeedback.getReadyLevel();
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
@@ -1588,7 +1591,7 @@ configureFlexIO() noexcept {
     // the second FlexIO device is used to convert the ready signal pulse into
     // a level. It runs at 480MHz like the other state machine does. The layout
     // is actually the same as well.
-    if (ReadyFeedback::begin()) {
+    if (rdyFeedback.begin()) {
         Serial.println("Ready Pulse -> Level Device Successfully Started!");
     } else {
         Serial.println("Ready Pulse -> Level Device Failed to start!");
