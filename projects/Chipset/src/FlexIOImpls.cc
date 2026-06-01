@@ -302,12 +302,6 @@ FlexIOReadyPulseToLevelConverter::begin() {
         Serial.printf("Could not set IN pin (%d) to flex mode!\n", _in);
         return false;
     }
-#if 0
-    if (!_ioDevice->setIOPinToFlexMode(_out)) {
-        Serial.printf("Could not set OUT pin (%d) to flex mode!\n", _out);
-        return false;
-    }
-#endif
     if constexpr (FlexIODebugging) {
         Serial.printf("Input: %d [Flex: %d], Output: %d [Flex: %d]\n", _in, _inFlexPin, _out, _outFlexPin);
     }
