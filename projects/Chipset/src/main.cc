@@ -1510,6 +1510,7 @@ setup() {
     inputPin(Pin::READY_SYNC);
 
     Serial.begin(115200);
+    Serial1.begin(115200);
 #ifdef USB_TRIPLE_SERIAL
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
