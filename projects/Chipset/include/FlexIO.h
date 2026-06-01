@@ -48,21 +48,30 @@ uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, 
 
 struct FlexIOReadyPulseToLevelConverter final {
     public:
-        constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
-        constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
-        [[nodiscard]] bool begin() noexcept;
-        [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
-        [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
+        FlexIOReadyPulseToLevelConverter() = delete;
+        ~FlexIOReadyPulseToLevelConverter() = delete;
+        FlexIOReadyPulseToLevelConverter(const FlexIOReadyPulseToLevelConverter&) = delete;
+        FlexIOReadyPulseToLevelConverter(FlexIOReadyPulseToLevelConverter&&) = delete;
+        FlexIOReadyPulseToLevelConverter& operator=(const FlexIOReadyPulseToLevelConverter&) = delete;
+        FlexIOReadyPulseToLevelConverter& operator=(FlexIOReadyPulseToLevelConverter&&) = delete;
+        //constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
+        //constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
+        [[nodiscard]] static bool begin() noexcept;
+        [[nodiscard]] static uint32_t input() noexcept { return _ioDevice->port().PIN; }
+        [[nodiscard]] static uint32_t getReadyLevel() noexcept { return input() & (1 << _outFlexPin); }
     private:
-        uint8_t _in, _inFlexPin= 0xff;
-        uint8_t _out, _outFlexPin= 0xff;
-        FlexIOHandler* _ioDevice = nullptr;
-        uint8_t _stateMachineTimer = 0xff;
-        uint8_t _state0 = 0xff;
-        uint8_t _state1 = 0xff;
-        uint8_t _state2 = 0xff;
-        uint8_t _state3 = 0xff;
+        static constexpr auto _in = static_cast<uint8_t>(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
+        static inline uint8_t _inFlexPin= 0xff;
+        static constexpr auto _out = static_cast<uint8_t>(Pin::STATE_MACHINE__READY_LEVEL_OUT);
+        static inline uint8_t _outFlexPin= 0xff;
+        static inline FlexIOHandler* _ioDevice = nullptr;
+        static inline uint8_t _stateMachineTimer = 0xff;
+        static inline uint8_t _state0 = 0xff;
+        static inline uint8_t _state1 = 0xff;
+        static inline uint8_t _state2 = 0xff;
+        static inline uint8_t _state3 = 0xff;
 };
+using ReadyFeedback = FlexIOReadyPulseToLevelConverter;
 
 struct FlexIOTransactionDetector final {
     public:

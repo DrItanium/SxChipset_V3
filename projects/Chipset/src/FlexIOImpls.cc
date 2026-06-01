@@ -277,28 +277,28 @@ FlexIOReadyPulseToLevelConverter::begin() {
     // state0 -> ready level is high
     //  0bxx1 -> state0
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state1; });
+    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state1; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
     }
     // state1 -> ready level is low
     //  0bxx1 -> state2
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0x00, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state1; });
+    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0x00, [](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state1; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
     }
     // state2 -> ready level is low
     //  0bxx1 => goto state 2
     //  0bxx0 => goto state 3
-    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state3; });
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [](bool ready, bool, bool) -> uint8_t { return ready ? _state2 : _state3; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
     }
     // state3 -> ready level is high
     //  0bxx0 => goto state 3
     //  0bxx1 => goto state 0
-    p->SHIFTBUF[_state3] = computeStateMachineBuffer(0xFF, [this](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state3; });
+    p->SHIFTBUF[_state3] = computeStateMachineBuffer(0xFF, [](bool ready, bool, bool) -> uint8_t { return ready ? _state0 : _state3; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state3, p->SHIFTBUF[_state3]);
     }
