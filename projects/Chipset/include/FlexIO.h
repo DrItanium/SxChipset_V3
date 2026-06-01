@@ -46,15 +46,11 @@ uniqueValues(int a, int b, int c) noexcept {
 }
 uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept;
 
-struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
+struct FlexIOReadyPulseToLevelConverter final {
     public:
-        bool call_back(FlexIOHandler *pflex) override { return false; }
         constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
         constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
-        virtual ~FlexIOReadyPulseToLevelConverter() { }
         [[nodiscard]] bool begin() noexcept;
-        void end() noexcept { }
-        [[nodiscard]] uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
     private:
@@ -68,19 +64,15 @@ struct FlexIOReadyPulseToLevelConverter: public FlexIOHandlerCallback {
         uint8_t _state3 = 0xff;
 };
 
-struct FlexIOTransactionDetector : public FlexIOHandlerCallback {
+struct FlexIOTransactionDetector final {
     public:
-        bool call_back(FlexIOHandler *pflex) override { return false; }
         constexpr FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
         constexpr FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
             : FlexIOTransactionDetector(
                 static_cast<uint8_t>(ads),
                 static_cast<uint8_t>(den),
                 static_cast<uint8_t>(inTransaction)) { }
-        virtual ~FlexIOTransactionDetector() { }
         [[nodiscard]] bool begin() noexcept;
-        void end() noexcept { }
-        [[nodiscard]] uint32_t stateIndex() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
     private:

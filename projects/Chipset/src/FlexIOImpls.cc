@@ -220,6 +220,7 @@ FlexIOReadyPulseToLevelConverter::begin() {
     _outFlexPin = _ioDevice->mapIOPinToFlexPin(_out);
     OnInvalidFlexIOResultPrint(_outFlexPin, "Could not map the ready level (output) pin");
     // not enough sanity checking yet but for testing purposes this is fine
+
     auto* p = &_ioDevice->port();
     _stateMachineTimer = _ioDevice->requestTimers(1);
     OnInvalidFlexIOResultPrint(_stateMachineTimer, "Timer request failed!");
