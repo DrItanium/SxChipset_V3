@@ -46,22 +46,32 @@ uniqueValues(int a, int b, int c) noexcept {
 }
 uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept;
 
+template<typename T>
+concept FlexIODevice = requires(T a) {
+    { a.begin() } -> std::same_as<bool>;
+};
+// The ready pulse handler engine is important for the purposes of execution
+// but also makes sure that 
+template<typename T>
+concept ReadyPulseHandlerEngine = requires (T a) {
+    { a.begin() } -> std::same_as<bool>;
+    { a.reset() };
+    { a.wait() };
+} && FlexIODevice<T>;
+
 struct FlexIOReadyPulseToLevelConverter final {
     public:
         using TriggerOperation = void(*)(void);
         constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
         constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
         [[nodiscard]] bool begin() noexcept;
+        [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
         void reset() noexcept { }
         void wait() noexcept {
             while (getReadyLevel() == _lastReadyState);
             _lastReadyState = getReadyLevel();
-        }
-        void signalReadyAndWait(TriggerOperation op) {
-            op();
-            wait();
         }
     private:
         uint8_t _in, _inFlexPin= 0xff;
@@ -85,16 +95,8 @@ struct FlexIOReadyPulseDetector final {
         constexpr FlexIOReadyPulseDetector(Pin input) : FlexIOReadyPulseDetector(static_cast<uint8_t>(input)) { }
         [[nodiscard]] bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
-        void reset() noexcept {
-            _ioDevice->port().SHIFTSTATE = _state0; 
-        }
+        void reset() noexcept { _ioDevice->port().SHIFTSTATE = _state0; }
         void wait() const noexcept { while (currentState() == _state0); }
-        void 
-        signalReadyAndWait(TriggerOperation op) {
-            reset();
-            op();
-            wait();
-        }
     private:
         uint8_t _in, _inFlexPin= 0xff;
         FlexIOHandler* _ioDevice = nullptr;

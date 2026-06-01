@@ -1482,7 +1482,8 @@ triggerSystemTimer() noexcept {
     }
 }
 
-void configureFlexIO() noexcept;
+template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
+bool configureFlexIO(TD&, RD&) noexcept;
 void 
 setup() {
     cpuIsRunning = false;
@@ -1516,7 +1517,12 @@ setup() {
     while (!Serial) {
         delay(10);
     }
-    configureFlexIO();
+    if (!configureFlexIO(inTransactionDetector, rdyFeedback)) {
+        Serial.println("Halting...");
+        while (true) {
+            delay(10);
+        }
+    }
     Entropy.Initialize();
     EEPROM.begin();
 
@@ -1568,8 +1574,9 @@ loop() {
     tryDoTransaction();
 }
 
-void 
-configureFlexIO() noexcept {
+template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
+bool
+configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     // we want to use FlexIO1 to migrate off of the RP2040 and also allow for
     // faster detection than the RP2040 as well. We use FlexIO1 in state
     // machine mode
@@ -1582,6 +1589,7 @@ configureFlexIO() noexcept {
         Serial.println("In Transaction Detector Successfully Started!");
     } else {
         Serial.println("In Transaction Detector Failed to start!");
+        return false;
     }
     // the second FlexIO device is used to convert the ready signal pulse into
     // a level. It runs at 480MHz like the other state machine does. The layout
@@ -1590,6 +1598,8 @@ configureFlexIO() noexcept {
         Serial.println("Ready Pulse -> Level Device Successfully Started!");
     } else {
         Serial.println("Ready Pulse -> Level Device Failed to start!");
+        return false;
     }
+    return true;
 }
 
