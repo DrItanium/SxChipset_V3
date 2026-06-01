@@ -26,7 +26,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 #include <functional>
 #include "FlexIO.h"
+constexpr uint32_t computeStateMachineOutputConfigurationEntry(uint8_t enabledConfiguration) noexcept {
+    // turn the bits provided into the aspects necessary, but invert it first
+    uint8_t inv = ~enabledConfiguration;
+    return FLEXIO_SHIFTCFG_PWIDTH(((inv >> 4) & 0b1111)) | FLEXIO_SHIFTCFG_SSTOP(((inv >> 2) & 0b11)) | FLEXIO_SHIFTCFG_SSTART((inv & 0b11));
+}
+constexpr uint32_t StateMachineOutputConfiguration[256] {
+#define X(value) computeStateMachineOutputConfigurationEntry(value), 
+#include "Entry255.def"
+#undef X
+};
 
+static_assert(StateMachineOutputConfiguration[1] == (FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11) | FLEXIO_SHIFTCFG_SSTART(0b10)));
+static_assert(StateMachineOutputConfiguration[0] == (FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11) | FLEXIO_SHIFTCFG_SSTART(0b11)));
 uint32_t 
 computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, bool, bool)> fn) noexcept {
     uint32_t result = (static_cast<uint32_t>(outputs) << 24);
@@ -88,7 +100,7 @@ FlexIOTransactionDetector::begin() {
         Serial.printf("States: [ %d, %d, %d ]\n", _state0, _state1, _state2);
     }
     // disable all outputs as we only care about the state
-    uint32_t outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11) | FLEXIO_SHIFTCFG_SSTART(0b11);
+    uint32_t outputConfiguration = StateMachineOutputConfiguration[0];
     p->SHIFTSTATE = 0;
     // we only have one supported output configuration
     p->SHIFTCFG[_state0] = outputConfiguration;
@@ -208,34 +220,11 @@ FlexIOReadyPulseToLevelConverter::begin() {
     uint32_t outputConfiguration;
     // when set, the different components disable the corresponding output
     // drive
-    switch (_outFlexPin) {
-        case 0: // pin 0
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b10);
-            break;
-        case 1:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b01);
-            break;
-        case 2:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b10)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 3:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b01)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 4:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1110) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 5:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1101) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 6:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1011) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 7:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        default:
-            Serial.printf("Bad index for output pin (%d)\n", _outFlexPin);
-            return false;
+    if (_outFlexPin > 7) {
+        Serial.printf("Bad index for output pin (%d)\n", _outFlexPin);
+        return false;
+    } else {
+        outputConfiguration = StateMachineOutputConfiguration[1 << _outFlexPin];
     }
     p->SHIFTSTATE = 0;
     // we only have one supported output configuration
