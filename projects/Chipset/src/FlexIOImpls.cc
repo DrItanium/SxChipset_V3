@@ -297,6 +297,7 @@ FlexIOReadyPulseToLevelConverter::begin() {
     }
     // we just walk through this over and over
     *(portControlRegister(_in)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
+    _lastReadyState = getReadyLevel();
     return true;
 }
 

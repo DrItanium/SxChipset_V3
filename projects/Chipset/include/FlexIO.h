@@ -48,11 +48,21 @@ uint32_t computeStateMachineBuffer(uint8_t outputs, std::function<uint8_t(bool, 
 
 struct FlexIOReadyPulseToLevelConverter final {
     public:
+        using TriggerOperation = void(*)(void);
         constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
         constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
         [[nodiscard]] bool begin() noexcept;
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
+        void reset() noexcept { }
+        void wait() noexcept {
+            while (getReadyLevel() == _lastReadyState);
+            _lastReadyState = getReadyLevel();
+        }
+        void signalReadyAndWait(TriggerOperation op) {
+            op();
+            wait();
+        }
     private:
         uint8_t _in, _inFlexPin= 0xff;
         uint8_t _out, _outFlexPin= 0xff;
@@ -62,6 +72,7 @@ struct FlexIOReadyPulseToLevelConverter final {
         uint8_t _state1 = 0xff;
         uint8_t _state2 = 0xff;
         uint8_t _state3 = 0xff;
+        uint32_t _lastReadyState = 0;
 };
 
 /**
@@ -69,17 +80,21 @@ struct FlexIOReadyPulseToLevelConverter final {
  */
 struct FlexIOReadyPulseDetector final {
     public:
+        using TriggerOperation = void(*)(void);
         constexpr FlexIOReadyPulseDetector(uint8_t input) : _in(input) { }
         constexpr FlexIOReadyPulseDetector(Pin input) : FlexIOReadyPulseDetector(static_cast<uint8_t>(input)) { }
         [[nodiscard]] bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         void reset() noexcept {
             _ioDevice->port().SHIFTSTATE = _state0; 
-            // apparently we can get nonsense so we should actually wait until
-            // currentState has updated to be state0 
-            while (currentState() != _state0); 
         }
         void wait() const noexcept { while (currentState() == _state0); }
+        void 
+        signalReadyAndWait(TriggerOperation op) {
+            reset();
+            op();
+            wait();
+        }
     private:
         uint8_t _in, _inFlexPin= 0xff;
         FlexIOHandler* _ioDevice = nullptr;

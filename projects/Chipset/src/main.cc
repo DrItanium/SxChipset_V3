@@ -890,7 +890,6 @@ struct i960Interface {
   begin() noexcept {
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
-      _lastReadyState = rdyFeedback.getReadyLevel();
       write8(addressLines.getConfigPortBaseAddress(), 0);
       write8(addressLines.getConfigPortBaseAddress() + 1, 0);
       write8(addressLines.getConfigPortBaseAddress() + 2, 0);
@@ -919,17 +918,15 @@ struct i960Interface {
   static inline void
   configureDataLinesForWrite() noexcept {
   }
-private:
-  static inline uint32_t _lastReadyState = HIGH;
 public:
   static void
   waitForReadySignal() noexcept {
-      while (rdyFeedback.getReadyLevel() == _lastReadyState);
-      _lastReadyState = rdyFeedback.getReadyLevel();
+      rdyFeedback.wait();
   }
   template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
+      rdyFeedback.reset();
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
@@ -1073,6 +1070,7 @@ public:
           if (isBurstLast()) {
               break;
           } 
+          rdyFeedback.reset();
           // overlay operations
           digitalToggleFast(Pin::READY);
           ++wordOffset; // advance wordOffset first
@@ -1157,6 +1155,7 @@ public:
   template<MemoryCell MC>
   static inline void
   writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
+      rdyFeedback.reset();
       digitalToggleFast(Pin::READY);
       // perform the write operation itself after we got the data off the bus
       // and told the i960 that we want the next block of data. This design
