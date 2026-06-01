@@ -58,8 +58,8 @@ FlexIOTransactionDetector::begin() {
     // manipulate the DEN pin outside a transaction... very obnoxious...
     //
     // 
-    if (!uniqueValues(_ads, _den, _transactionPin)) {
-        Serial.println("One or more pins are the same input or output!");
+    if (_ads == _den) {
+        Serial.println("ADS and DEN are the same pin index!");
         return false;
     }
     _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(_ads, _adsFlexPin);
@@ -70,8 +70,6 @@ FlexIOTransactionDetector::begin() {
     OnInvalidFlexIOResultPrint(_adsFlexPin, "Could not map the ads pin");
     _denFlexPin = _ioDevice->mapIOPinToFlexPin(_den);
     OnInvalidFlexIOResultPrint(_denFlexPin, "Could not map the den pin");
-    _transactionFlexPin = _ioDevice->mapIOPinToFlexPin(_transactionPin);
-    OnInvalidFlexIOResultPrint(_transactionFlexPin, "Could not map the transaction pin");
     if ((_denFlexPin - _adsFlexPin) != 1) {
         Serial.println("den flex and ads pins are not close enough together");
         return false;
@@ -89,62 +87,34 @@ FlexIOTransactionDetector::begin() {
     if constexpr (FlexIODebugging) {
         Serial.printf("States: [ %d, %d, %d ]\n", _state0, _state1, _state2);
     }
-    uint32_t outputConfiguration;
-    // when set, the different components disable the corresponding output
-    // drive
-    switch (_transactionFlexPin) {
-        case 0: // pin 0
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b10);
-            break;
-        case 1:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b01);
-            break;
-        case 2:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b10)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 3:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b01)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 4:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1110) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 5:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1101) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 6:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1011) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        case 7:
-            outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b0111) | FLEXIO_SHIFTCFG_SSTOP(0b11)  | FLEXIO_SHIFTCFG_SSTART(0b11);
-            break;
-        default:
-            Serial.printf("Bad Transaction Pin of %d\n", _transactionFlexPin);
-            return false;
-    }
+    // disable all outputs as we only care about the state
+    uint32_t outputConfiguration = FLEXIO_SHIFTCFG_PWIDTH(0b1111) | FLEXIO_SHIFTCFG_SSTOP(0b11) | FLEXIO_SHIFTCFG_SSTART(0b11);
     p->SHIFTSTATE = 0;
     // we only have one supported output configuration
     p->SHIFTCFG[_state0] = outputConfiguration;
     p->SHIFTCFG[_state1] = outputConfiguration;
     p->SHIFTCFG[_state2] = outputConfiguration;
+    // at this point we are just checking to see the state index instead of
+    // anything else!
     // so we need to configure State0 transitions
     // state0 -> in transaction is high
     //  0bxx1 -> state0
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0xFF, [this](bool ads, bool, bool) -> uint8_t { return ads ? _state0 : _state1; });
+    p->SHIFTBUF[_state0] = computeStateMachineBuffer(0, [this](bool ads, bool, bool) -> uint8_t { return ads ? _state0 : _state1; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state0, p->SHIFTBUF[_state0]);
     }
     // state1 -> in transaction is high
     //  0bxx1 -> state2
     //  0bxx0 -> state1
-    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0xFF, [this](bool ads, bool den, bool) -> uint8_t { return (ads && !den) ? _state2 : _state1; });
+    p->SHIFTBUF[_state1] = computeStateMachineBuffer(0, [this](bool ads, bool den, bool) -> uint8_t { return (ads && !den) ? _state2 : _state1; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state1, p->SHIFTBUF[_state1]);
     }
     // state2 -> in transaction is low
     //  0bx0x => goto state 2
     //  0bx1x => goto state 0
-    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0x00, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state2; });
+    p->SHIFTBUF[_state2] = computeStateMachineBuffer(0, [this](bool ads, bool den, bool) -> uint8_t { return den ? _state0 : _state2; });
     if constexpr (FlexIODebugging) {
         Serial.printf("SHIFTBUF[%d] = %x\n", _state2, p->SHIFTBUF[_state2]);
     }
@@ -182,7 +152,7 @@ FlexIOTransactionDetector::begin() {
         return false;
     }
     if constexpr (FlexIODebugging) {
-        Serial.printf("ADS: %d, DEN: %d, TRANSACTION: %d\n", _ads, _den, _transactionPin);
+        Serial.printf("ADS: %d, DEN: %d\n", _ads, _den);
     }
     *(portControlRegister(_den)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
     *(portControlRegister(_ads)) = IOMUXC_PAD_DSE(7) | IOMUXC_PAD_SPEED(2) | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);

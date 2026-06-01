@@ -67,11 +67,8 @@ RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 // state machines
-FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN, Pin::STATE_MACHINE__IN_TRANSACTION_OUT};
-FlexIOReadyPulseToLevelConverter rdyFeedback{
-    Pin::STATE_MACHINE__READY_LEVEL_PULSE, 
-    Pin::STATE_MACHINE__READY_LEVEL_OUT
-};
+FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN };
+FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT };
 
 inline uint32_t getCurrentCycleCount() noexcept {
     return ARM_DWT_CYCCNT;
@@ -1508,7 +1505,6 @@ setup() {
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
     inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
     inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
-    outputPin(Pin::STATE_MACHINE__READY_LEVEL_OUT, HIGH);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
 

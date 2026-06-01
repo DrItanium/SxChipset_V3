@@ -117,7 +117,6 @@ enum class Pin {
     // these pins are theoretical and only here to allow the FlexIO internal
     // state to map to the appropriate location. I will want to update the
     // pin state to have more expressive setups
-    STATE_MACHINE__IN_TRANSACTION_OUT = INDIRECT_D26, 
     STATE_MACHINE__READY_LEVEL_OUT = INDIRECT_D34, // FlexIO2.0
 
 };

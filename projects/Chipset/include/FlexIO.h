@@ -66,16 +66,13 @@ struct FlexIOReadyPulseToLevelConverter final {
 
 struct FlexIOTransactionDetector final {
     public:
-        constexpr FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin, uint8_t inTransactionPin) : _ads(adsPin), _den(denPin), _transactionPin(inTransactionPin) { }
-        constexpr FlexIOTransactionDetector(Pin ads, Pin den, Pin inTransaction) 
+        constexpr FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin) : _ads(adsPin), _den(denPin) { }
+        constexpr FlexIOTransactionDetector(Pin ads, Pin den) 
             : FlexIOTransactionDetector(
                 static_cast<uint8_t>(ads),
-                static_cast<uint8_t>(den),
-                static_cast<uint8_t>(inTransaction)) { }
+                static_cast<uint8_t>(den)) { }
         [[nodiscard]] bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
-        [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
-        //[[nodiscard]] bool inTransaction() const noexcept { return input() == 0x10; }
         [[nodiscard]] bool inTransaction() const noexcept { 
             // we know that if the current state is actually state2 then we are in the proper transaction state
             return currentState() == _state2; 
@@ -83,7 +80,6 @@ struct FlexIOTransactionDetector final {
     private:
         uint8_t _ads, _adsFlexPin = 0xff;
         uint8_t _den, _denFlexPin = 0xff;
-        uint8_t _transactionPin, _transactionFlexPin = 0xff;
         FlexIOHandler* _ioDevice = nullptr;
         uint8_t _stateMachineTimer = 0xff;
         uint8_t _state0 = 0xff;
