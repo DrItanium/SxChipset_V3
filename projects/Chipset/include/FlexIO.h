@@ -64,6 +64,26 @@ struct FlexIOReadyPulseToLevelConverter final {
         uint8_t _state3 = 0xff;
 };
 
+/**
+ * @brief A state machine that detects a ready pulse and denotes that it has happened until it is reset manually
+ */
+struct FlexIOReadyPulseDetector final {
+    public:
+        constexpr FlexIOReadyPulseDetector(uint8_t input) : _in(input) { }
+        constexpr FlexIOReadyPulseDetector(Pin input) : FlexIOReadyPulseDetector(static_cast<uint8_t>(input)) { }
+        [[nodiscard]] bool begin() noexcept;
+        [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
+        [[nodiscard]] void reset() noexcept { _ioDevice->port().SHIFTSTATE = _state0; }
+        [[nodiscard]] bool triggered() const noexcept { return (currentState() != _state0); }
+    private:
+        uint8_t _in, _inFlexPin= 0xff;
+        FlexIOHandler* _ioDevice = nullptr;
+        uint8_t _stateMachineTimer = 0xff;
+        uint8_t _state0 = 0xff;
+        uint8_t _state1 = 0xff;
+        uint8_t _state2 = 0xff;
+};
+
 struct FlexIOTransactionDetector final {
     public:
         constexpr FlexIOTransactionDetector(uint8_t adsPin, uint8_t denPin) : _ads(adsPin), _den(denPin) { }
