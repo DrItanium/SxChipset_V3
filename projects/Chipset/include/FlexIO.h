@@ -73,7 +73,12 @@ struct FlexIOReadyPulseDetector final {
         constexpr FlexIOReadyPulseDetector(Pin input) : FlexIOReadyPulseDetector(static_cast<uint8_t>(input)) { }
         [[nodiscard]] bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
-        void reset() noexcept { _ioDevice->port().SHIFTSTATE = _state0; }
+        void reset() noexcept {
+            _ioDevice->port().SHIFTSTATE = _state0; 
+            // apparently we can get nonsense so we should actually wait until
+            // currentState has updated to be state0 
+            while (currentState() != _state0); 
+        }
         void wait() const noexcept { while (currentState() == _state0); }
     private:
         uint8_t _in, _inFlexPin= 0xff;
