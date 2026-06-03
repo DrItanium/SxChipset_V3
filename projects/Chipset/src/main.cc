@@ -1569,9 +1569,6 @@ void
 loop() {
     do {
         tryDoTransaction();
-        tryDoTransaction();
-        tryDoTransaction();
-        tryDoTransaction();
     } while (true);
 }
 
