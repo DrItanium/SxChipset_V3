@@ -1543,6 +1543,7 @@ setup() {
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
     displayClockSpeedInformation();
+    Serial.println("-------");
     pullCPUOutOfReset();
 }
 inline bool shouldServiceTransaction() noexcept {
