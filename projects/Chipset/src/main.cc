@@ -1481,7 +1481,6 @@ triggerSystemTimer() noexcept {
         digitalToggleFast(Pin::INT960_0); 
     }
 }
-
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
 bool configureFlexIO(TD&, RD&) noexcept;
 void 
@@ -1509,7 +1508,6 @@ setup() {
     inputPin(Pin::READY_SYNC);
 
     Serial.begin(115200);
-    //Serial1.begin(115200);
 #ifdef USB_TRIPLE_SERIAL
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
@@ -1569,10 +1567,12 @@ tryDoTransaction() noexcept {
 }
 void 
 loop() {
-    tryDoTransaction();
-    tryDoTransaction();
-    tryDoTransaction();
-    tryDoTransaction();
+    do {
+        tryDoTransaction();
+        tryDoTransaction();
+        tryDoTransaction();
+        tryDoTransaction();
+    } while (true);
 }
 
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
