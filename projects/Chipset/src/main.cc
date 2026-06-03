@@ -992,7 +992,7 @@ public:
       SplitWord16 value;
       for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
           EBIInterface::setAddress(k);
-          fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+          //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
           fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
           value.bytes[i] = EBIInterface::readDataLines();
           fixedDelayNanoseconds<ReadConfiguration.holdTime>();
@@ -1003,7 +1003,7 @@ public:
       TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
       EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       value = EBIInterface::readDataLines();
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
@@ -1013,7 +1013,7 @@ public:
       TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
       EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
