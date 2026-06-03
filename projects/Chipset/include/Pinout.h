@@ -110,8 +110,8 @@ enum class Pin {
     // INDIRECT_D35 (MOSI)
     STATE_MACHINE__READY_LEVEL_PULSE = INDIRECT_D36,  // MISO / FlexIO2.1
     // INDIRECT_D37 (SCK)
-    TEENSY_AVR_RX = INDIRECT_D38,
-    TEENSY_AVR_TX = INDIRECT_D39,
+    // INDIRECT_D38 (RX)
+    // INDIRECT_D39 (TX)
     TEENSY_AVR_SCL = INDIRECT_D40,
     TEENSY_AVR_SDA = INDIRECT_D41,
     // these pins are theoretical and only here to allow the FlexIO internal
