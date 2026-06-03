@@ -958,10 +958,10 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
+      digitalToggleFast(Pin::EBI_RD);
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
-      digitalToggleFast(Pin::EBI_RD);
       for (uint32_t i = 0, k = addressLines.getBaseAddress(); i < sizeof(uint32_t); ++i, ++k) {
           // just set the address and wait
           EBIInterface::setAddress(k);
