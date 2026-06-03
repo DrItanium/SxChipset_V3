@@ -917,7 +917,8 @@ public:
   }
   static SplitWord32
   getAddress() noexcept {
-      // this takes around 400 ARM cycles to complete
+      //TimeTracker addressGulpingDuration("Address Capture Duration");
+      // this takes around 219-228 cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this

@@ -70,6 +70,7 @@ struct FlexIOReadyPulseToLevelConverter final {
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
         void reset() noexcept { }
         void wait() noexcept {
+            //TimeTracker waitDuration("Ready Signal Wait Duration");
             while (getReadyLevel() == _lastReadyState);
             _lastReadyState = getReadyLevel();
         }
