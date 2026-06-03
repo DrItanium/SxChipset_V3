@@ -167,17 +167,24 @@ inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
 /**
  * @brief Track how many cycles elapsed for the given scope
  */
+template<bool E>
 struct TimeTracker final {
+    TimeTracker(const char*) { }
+    ~TimeTracker() { }
+};
+
+#ifdef USB_TRIPLE_SERIAL
+template<>
+struct TimeTracker<true> final {
     TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
     ~TimeTracker() {
-#ifdef USB_TRIPLE_SERIAL
         auto endTime = getCurrentCycleCount();
         SerialUSB1.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
-#endif
     }
     private:
         const char* _prefix;
         uint32_t _startTime;
 };
+#endif
 
 #endif // end !defined CHIPSET_CORE_H__

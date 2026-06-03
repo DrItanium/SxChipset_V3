@@ -62,7 +62,45 @@ volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 constexpr bool RealtimeShellActive = false;
 constexpr bool AccessFlexIODirectly = true;
-
+enum class TimerTrackingTargets {
+    None,
+    GetAddress,
+    DoNothingTransaction,
+    ReadLo8,
+    ReadHi8,
+    WriteDataLines,
+    DetermineActionKind,
+    DoWriteAction,
+    WriteActionCycle,
+    DoMemoryCellReadTransaction,
+    DoMemoryCellWriteTransaction,
+    DoMemoryCellTransaction,
+    DoMemoryTransaction,
+    TransmitConstantMemoryCell,
+    ReadDataLines,
+};
+constexpr TimerTrackingTargets FunctionToTrackTimeOn = TimerTrackingTargets::None;
+constexpr bool shouldEnableTimeTracking(TimerTrackingTargets target) noexcept {
+    return FunctionToTrackTimeOn == target;
+}
+// tracking targets
+#define X(func) \
+    constexpr auto Track ## func = shouldEnableTimeTracking(TimerTrackingTargets:: func ) 
+X(GetAddress);
+X(ReadLo8);
+X(ReadHi8);
+X(ReadDataLines);
+X(DoNothingTransaction);
+X(WriteDataLines);
+X(DoMemoryCellReadTransaction);
+X(DetermineActionKind);
+X(DoWriteAction);
+X(WriteActionCycle);
+X(DoMemoryCellWriteTransaction);
+X(DoMemoryCellTransaction);
+X(TransmitConstantMemoryCell);
+X(DoMemoryTransaction);
+#undef X
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
@@ -917,7 +955,7 @@ public:
   }
   static SplitWord32
   getAddress() noexcept {
-      //TimeTracker addressGulpingDuration("Address Capture Duration");
+      TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
       EBIInterface::setDataLinesDirection<INPUT>();
@@ -950,6 +988,7 @@ public:
   }
   static uint16_t
   readDataLines() noexcept {
+      TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
       SplitWord16 value;
       for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
           EBIInterface::setAddress(k);
@@ -961,6 +1000,7 @@ public:
       return value.value;
   }
   static uint16_t readLo8() noexcept {
+      TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
       EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
@@ -970,6 +1010,7 @@ public:
       return value;
   }
   static uint16_t readHi8() noexcept {
+      TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
       EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
@@ -981,21 +1022,23 @@ public:
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
-    if constexpr (isReadTransaction) {
-      writeDataLines<true>(0);
-    }
-    while (true) {
-      if (isBurstLast()) {
-        break;
+      TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
+      if constexpr (isReadTransaction) {
+          writeDataLines<true>(0);
       }
+      while (true) {
+          if (isBurstLast()) {
+              break;
+          }
+          signalReady();
+      }
+      // we can actually setup for the next cycle because it will show up!
       signalReady();
-    }
-    // we can actually setup for the next cycle because it will show up!
-    signalReady();
   }
   template<bool UpdateBoth = false>
   static void
   writeDataLines(uint16_t value) noexcept {
+      TimeTracker<TrackWriteDataLines> tracker(__PRETTY_FUNCTION__);
       // burst writes do work, you just have to be very careful. First you must
       // update the address lines and wait. After the wait period has expired,
       // it is safe to update the data lines. The hold time of 10ns before
@@ -1033,6 +1076,7 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
+      TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
       // pull the value ahead of time to start this process off
       uint16_t currentWord = target.getWord((offset >> 1));
       EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
@@ -1067,6 +1111,7 @@ public:
   };
   using WriteActionKind = ActionKind;
   static inline ActionKind determineActionKind() noexcept {
+      TimeTracker<TrackDetermineActionKind> tracker(__PRETTY_FUNCTION__);
       // the i960Sx exposes two byte enable signals, BE0 and BE1
       // Each signal denotes if we should write that byte value. 
       //
@@ -1113,6 +1158,7 @@ public:
   template<MemoryCell MC>
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
+      TimeTracker<TrackDoWriteAction> tracker(__PRETTY_FUNCTION__);
       switch (kind) {
           case ActionKind::Full16:
               target.setWord(offset, dataLines);
@@ -1130,6 +1176,7 @@ public:
   template<MemoryCell MC>
   static inline void
   writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
+      TimeTracker<TrackWriteActionCycle> tracker(__PRETTY_FUNCTION__);
       rdyFeedback.reset();
       digitalToggleFast(Pin::READY);
       // perform the write operation itself after we got the data off the bus
@@ -1143,6 +1190,7 @@ public:
   template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
+      TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       digitalToggleFast(Pin::EBI_RD);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
@@ -1167,6 +1215,7 @@ public:
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
   doMemoryCellTransaction(MC& target, uint8_t offset) noexcept {
+      TimeTracker<TrackDoMemoryCellTransaction> tracker(__PRETTY_FUNCTION__);
       target.update();
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(target, offset);
@@ -1178,6 +1227,7 @@ public:
   template<bool isReadTransaction, MemoryCell MC>
   static inline void 
   transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
+      TimeTracker<TrackTransmitConstantMemoryCell> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(cell, offset);
       } else {
@@ -1246,10 +1296,10 @@ public:
               break;
       }
   }
-
   template<bool isReadTransaction>
   static inline void
   doMemoryTransaction() noexcept {
+      TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
       auto address = getAddress();
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
@@ -1522,20 +1572,12 @@ setup() {
 inline bool shouldServiceTransaction() noexcept {
     return inTransactionDetector.inTransaction();
 }
-//#define TrackTransactionLength
 void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
-        //Serial.printf("Target Address: 0x%x\n", targetAddress);
         if (i960Interface::isReadOperation()) {
-#ifdef TrackTransactionLength
-            TimeTracker q("Read Transaction Length");
-#endif
             i960Interface::doMemoryTransaction<true>();
         } else {
-#ifdef TrackTransactionLength
-            TimeTracker q("Write Transaction Length");
-#endif
             i960Interface::doMemoryTransaction<false>();
         }
     } 
