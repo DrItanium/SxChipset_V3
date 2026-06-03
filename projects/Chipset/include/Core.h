@@ -156,5 +156,28 @@ union SplitWord64 {
     [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b11]; }
 };
 
+inline uint32_t getCurrentCycleCount() noexcept {
+    return ARM_DWT_CYCCNT;
+}
+
+inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
+    return ((F_CPU_ACTUAL>>16) * nsec) / (1000000000UL>>16);
+}
+
+/**
+ * @brief Track how many cycles elapsed for the given scope
+ */
+struct TimeTracker final {
+    TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
+    ~TimeTracker() {
+#ifdef USB_TRIPLE_SERIAL
+        auto endTime = getCurrentCycleCount();
+        SerialUSB1.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
+#endif
+    }
+    private:
+        const char* _prefix;
+        uint32_t _startTime;
+};
 
 #endif // end !defined CHIPSET_CORE_H__

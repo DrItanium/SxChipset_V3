@@ -70,32 +70,6 @@ Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN };
 FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT };
 
-inline uint32_t getCurrentCycleCount() noexcept {
-    return ARM_DWT_CYCCNT;
-}
-
-inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
-    return ((F_CPU_ACTUAL>>16) * nsec) / (1000000000UL>>16);
-}
-
-struct TimeTracker {
-    TimeTracker(const char* prefix) : _prefix(prefix), _startTime(getCurrentCycleCount()) { }
-    ~TimeTracker() {
-        auto endTime = getCurrentCycleCount();
-#ifdef USB_TRIPLE_SERIAL
-        if constexpr (RealtimeShellActive) {
-#endif
-            Serial.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
-#ifdef USB_TRIPLE_SERIAL
-        } else {
-            SerialUSB1.printf("%s, cycleCount: %d cycles\n", _prefix, endTime - _startTime);
-        }
-#endif
-    }
-    private:
-    const char* _prefix;
-    uint32_t _startTime;
-};
 
 /**
  * @brief How the data bus lines are configured as seen on the CPU card. The
