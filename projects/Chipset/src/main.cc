@@ -808,6 +808,9 @@ inline void fixedDelayNanoseconds() noexcept {
 static constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
+static constexpr InterfaceTimingDescription defaultRead8 {
+    100, 80, 20, 50
+}; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
     0,  // setup time
@@ -817,9 +820,6 @@ static constexpr InterfaceTimingDescription customWrite8 {
    // is)
    
 
-static constexpr InterfaceTimingDescription defaultRead8 {
-    100, 80, 20, 50
-}; // 250ns worth of delay
 static constexpr InterfaceTimingDescription customRead8 {
     10, 20, 0, 0 
 }; // 30ns worth of delay (pulling hold time down any further prevents booting)
