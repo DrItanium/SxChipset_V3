@@ -1093,12 +1093,12 @@ public:
           } else {
               // overlay operations
               digitalToggleFast(Pin::READY);
+              EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
               ++wordOffset; // advance wordOffset first
               currentWord = target.getWord(wordOffset); // get the next value
                                                         // reset the target address to the lower lines before we get the all
                                                         // clear to continue
-              EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
-              fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+              //fixedDelayNanoseconds<WriteConfiguration.addressWait>();
               EBIInterface::setDataLines(currentWord);
               fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
               waitForReadySignal(); // then wait for the ready signal to change
