@@ -1082,23 +1082,24 @@ public:
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       EBIInterface::setDataLines(currentWord);
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      for (uint16_t wordOffset = (offset >> 1); ;) {
+      for (auto wordOffset = (offset >> 1); ;) {
           // write the current word
           writeDataLines(currentWord);
           if (isBurstLast()) {
               break;
-          } 
-          // overlay operations
-          digitalToggleFast(Pin::READY);
-          ++wordOffset; // advance wordOffset first
-          currentWord = target.getWord(wordOffset); // get the next value
-          // reset the target address to the lower lines before we get the all
-          // clear to continue
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
-          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-          EBIInterface::setDataLines(currentWord);
-          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          waitForReadySignal(); // then wait for the ready signal to change
+          } else {
+              // overlay operations
+              digitalToggleFast(Pin::READY);
+              ++wordOffset; // advance wordOffset first
+              currentWord = target.getWord(wordOffset); // get the next value
+                                                        // reset the target address to the lower lines before we get the all
+                                                        // clear to continue
+              EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
+              fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+              EBIInterface::setDataLines(currentWord);
+              fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+              waitForReadySignal(); // then wait for the ready signal to change
+          }
       }
       signalReady();
   }
