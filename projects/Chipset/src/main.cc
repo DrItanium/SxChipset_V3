@@ -938,7 +938,6 @@ public:
   template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
-      rdyFeedback.reset();
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
@@ -1089,7 +1088,6 @@ public:
           if (isBurstLast()) {
               break;
           } 
-          rdyFeedback.reset();
           // overlay operations
           digitalToggleFast(Pin::READY);
           ++wordOffset; // advance wordOffset first
@@ -1177,7 +1175,6 @@ public:
   static inline void
   writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
       TimeTracker<TrackWriteActionCycle> tracker(__PRETTY_FUNCTION__);
-      rdyFeedback.reset();
       digitalToggleFast(Pin::READY);
       // perform the write operation itself after we got the data off the bus
       // and told the i960 that we want the next block of data. This design

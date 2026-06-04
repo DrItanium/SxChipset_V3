@@ -55,7 +55,6 @@ concept FlexIODevice = requires(T a) {
 template<typename T>
 concept ReadyPulseHandlerEngine = requires (T a) {
     { a.begin() } -> std::same_as<bool>;
-    { a.reset() };
     { a.wait() };
 } && FlexIODevice<T>;
 
@@ -68,9 +67,7 @@ struct FlexIOReadyPulseToLevelConverter final {
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
-        void reset() noexcept { }
         void wait() noexcept {
-            //TimeTracker waitDuration("Ready Signal Wait Duration");
             while (getReadyLevel() == _lastReadyState);
             _lastReadyState = getReadyLevel();
         }
