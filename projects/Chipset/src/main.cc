@@ -1029,6 +1029,11 @@ public:
       } else {
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
 
+          // this address assignment and wait is necessary to make sure that
+          // the new data to be set doesn't overwrite the previous address cell
+          //
+          // Remember that we are technically playing fast and loose with the
+          // timings here so these delays are very important!
           EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           EBIInterface::setDataLines(value >> 8);
