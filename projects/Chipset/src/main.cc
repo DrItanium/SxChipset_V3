@@ -975,6 +975,13 @@ public:
       return value;
   }
 #else
+  static inline uint8_t fastRead8() noexcept {
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      auto value = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
+  }
   static SplitWord32
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
@@ -985,28 +992,16 @@ public:
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
       EBIInterface::setAddress<addressLines.getBaseAddress()>();
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value.bytes[0] = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      value.bytes[0] = fastRead8();
 
       EBIInterface::setAddress<addressLines.getBaseAddress()+1>();
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value.bytes[1] = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      value.bytes[1] = fastRead8();
 
       EBIInterface::setAddress<addressLines.getBaseAddress()+2>();
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value.bytes[2] = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      value.bytes[2] = fastRead8();
 
       EBIInterface::setAddress<addressLines.getBaseAddress()+3>();
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value.bytes[3] = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      value.bytes[3] = fastRead8();
 
       digitalToggleFast(Pin::EBI_RD);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
