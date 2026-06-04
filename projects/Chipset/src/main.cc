@@ -1045,6 +1045,7 @@ public:
       digitalToggleFast(Pin::EBI_WR);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
+
   template<MemoryCell MC>
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
