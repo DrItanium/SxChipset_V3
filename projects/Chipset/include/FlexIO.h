@@ -54,7 +54,6 @@ concept FlexIODevice = requires(T a) {
 // but also makes sure that 
 template<typename T>
 concept ReadyPulseHandlerEngine = requires (T a) {
-    { a.begin() } -> std::same_as<bool>;
     { a.wait() };
 } && FlexIODevice<T>;
 
