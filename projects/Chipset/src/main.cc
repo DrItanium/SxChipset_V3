@@ -952,6 +952,7 @@ public:
   isWriteOperation() noexcept {
     return digitalReadFast(Pin::WR) == HIGH;
   }
+#if 0
   static SplitWord32
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
@@ -973,6 +974,45 @@ public:
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return value;
   }
+#else
+  static SplitWord32
+  getAddress() noexcept {
+      TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
+      // this takes around 219-228 cycles to complete
+      SplitWord32 value;
+      digitalToggleFast(Pin::EBI_RD);
+      EBIInterface::setDataLinesDirection<INPUT>();
+      // apparently, you can burst read from the CH351! I have confirmed this
+      // through testing
+      EBIInterface::setAddress<addressLines.getBaseAddress()>();
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value.bytes[0] = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+
+      EBIInterface::setAddress<addressLines.getBaseAddress()+1>();
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value.bytes[1] = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+
+      EBIInterface::setAddress<addressLines.getBaseAddress()+2>();
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value.bytes[2] = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+
+      EBIInterface::setAddress<addressLines.getBaseAddress()+3>();
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value.bytes[3] = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+
+      digitalToggleFast(Pin::EBI_RD);
+      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
+      return value;
+  }
+#endif
   static inline bool
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
