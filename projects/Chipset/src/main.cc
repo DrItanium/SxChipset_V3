@@ -934,10 +934,6 @@ public:
   isReadOperation() noexcept {
     return digitalReadFast(Pin::WR) == LOW;
   }
-  static inline bool
-  isWriteOperation() noexcept {
-    return digitalReadFast(Pin::WR) == HIGH;
-  }
   static inline uint8_t fastRead8() noexcept {
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
