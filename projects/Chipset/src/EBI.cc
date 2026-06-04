@@ -57,9 +57,6 @@ EBIWrapperInterface::begin() noexcept {
         pinMode(a, OUTPUT);
         digitalWriteFast(a, LOW);
     }
-    if (!configureFlexIO()) {
-        return false;
-    }
     // force EBI_A4 and A5 to low  since we will never be accessing that
     setAddress(0);
     digitalWriteFast(Pin::EBI_RD, HIGH);
@@ -68,39 +65,3 @@ EBIWrapperInterface::begin() noexcept {
     return true;
 }
 
-bool
-EBIWrapperInterface::configureFlexIO() noexcept {
-    for (int i = 0; i < 6; ++i) {
-        if (auto pin = static_cast<uint8_t>(AddressLines[i]); !_ioDevice) {
-            _ioDevice = FlexIOHandler::mapIOPinToFlexIOHandler(pin, AddressLinesFlexIOPins[i]); 
-            if (!_ioDevice) {
-                Serial.printf("Could not acquire a FlexIO device given the A[%d] pin!", i);
-                return false;
-            }
-        } else {
-            AddressLinesFlexIOPins[i] = _ioDevice->mapIOPinToFlexPin(pin);
-            OnInvalidFlexIOResultPrint(AddressLinesFlexIOPins[i], "Could not allocate flexio pin for address line!");
-        }
-    }
-    // okay, at this point we have mapped everything io pin wise
-    // Now, it is important to reserve the correct shifter that supports
-    // parallel transmit. We can choose either 0 or 4. My target will be
-    // shifter 0 for now since I can easily rearrange it as needed
-    _addressShifter = _ioDevice->requestShifter(0); // this will be fine for now
-    if (!validFlexIOResult(_addressShifter)) {
-        // okay so try and grab shifter 4
-        _addressShifter = _ioDevice->requestShifter(4);
-        OnInvalidFlexIOResultPrint(_addressShifter, "Could not grab shifter 0 or 4 for parallel transmit!");
-    }
-    // now grab a timer
-    _addressTimer = _ioDevice->requestTimers(); 
-    OnInvalidFlexIOResultPrint(_addressTimer, "Could not allocate a timer for the address lines!");
-    auto* p = &_ioDevice->port();
-    p->SHIFTCFG[_addressShifter] = FLEXIO_SHIFTCFG_PWIDTH(6) | FLEXIO_SHIFTCFG_SSTOP(0) | FLEXIO_SHIFTCFG_SSTART(0);
-    p->SHIFTCTL[_addressShifter] = FLEXIO_SHIFTCTL_TIMSEL(_addressTimer) | 
-        FLEXIO_SHIFTCTL_SHIFT_ON_FALLING_EDGE |
-        FLEXIO_SHIFTCTL_PINMODE_OUTPUT |
-        FLEXIO_SHIFTCTL_PINSEL(AddressLinesFlexIOPins[0]) | 
-        FLEXIO_SHIFTCTL_MODE_TRANSMIT;
-    return true;
-}
