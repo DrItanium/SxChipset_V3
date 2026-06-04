@@ -781,10 +781,8 @@ private:
   uint8_t _dataPortBaseAddress;
   uint8_t _cfgPortBaseAddress;
 };
-constexpr auto AddressLineAddress = 0b1000;
-constexpr auto DataLinesAddress = 0;
-constexpr CH351 addressLines{ AddressLineAddress }, 
-                dataLines{ DataLinesAddress };
+constexpr CH351 addressLines{ 0b1000 }, 
+                dataLines{ 0 };
 
 
 
