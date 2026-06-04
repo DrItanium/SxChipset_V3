@@ -985,39 +985,6 @@ public:
   byteEnableHigh() noexcept {
     return digitalReadFast(Pin::BE1) == LOW;
   }
-  static uint16_t
-  readDataLines() noexcept {
-      TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
-      SplitWord16 value;
-      for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
-          EBIInterface::setAddress(k);
-          //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-          value.bytes[i] = EBIInterface::readDataLines();
-          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      }
-      return value.value;
-  }
-  static uint16_t readLo8() noexcept {
-      TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
-      uint16_t value;
-      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
-      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      return value;
-  }
-  static uint16_t readHi8() noexcept {
-      TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
-      uint16_t value;
-      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
-      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      return value;
-  }
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1108,6 +1075,39 @@ public:
           }
       }
       signalReady();
+  }
+  static uint16_t
+  readDataLines() noexcept {
+      TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
+      SplitWord16 value;
+      for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
+          EBIInterface::setAddress(k);
+          //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+          value.bytes[i] = EBIInterface::readDataLines();
+          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      }
+      return value.value;
+  }
+  static uint16_t readLo8() noexcept {
+      TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
+      uint16_t value;
+      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
+      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
+  }
+  static uint16_t readHi8() noexcept {
+      TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
+      uint16_t value;
+      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
+      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
   }
   enum class ActionKind : uint8_t {
       Full16,
