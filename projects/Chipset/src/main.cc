@@ -1034,7 +1034,8 @@ public:
           //
           // Remember that we are technically playing fast and loose with the
           // timings here so these delays are very important!
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 1);
+
+          EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase() + 1>();
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
           EBIInterface::setDataLines(value >> 8);
           fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
@@ -1064,7 +1065,7 @@ public:
           } else {
               // overlay operations
               digitalToggleFast(Pin::READY);
-              EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
+              EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
               // "delay" with work by setting the address first and then use
               // the accessing of the target word and other logic acting as the
               // delay as well
@@ -1096,7 +1097,7 @@ public:
   static uint16_t readLo8() noexcept {
       TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
-      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase());
+      EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
       //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       value = EBIInterface::readDataLines();
@@ -1106,7 +1107,7 @@ public:
   static uint16_t readHi8() noexcept {
       TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
       uint16_t value;
-      EBIInterface::setAddress(dataLines.getDataPortReadAddressBase()+1);
+      EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()+1>();
       //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
@@ -1312,7 +1313,7 @@ public:
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
-          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+          EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase() + 0>();
       }
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM

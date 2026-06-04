@@ -75,6 +75,11 @@ public:
       GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
       GPIO6_DR_SET = EBIAddressTable[address];
   }
+  template<uint8_t address>
+  static void setAddress() noexcept {
+      GPIO6_DR_CLEAR = EBIAddressTable[0xFF];
+      GPIO6_DR_SET = EBIAddressTable[address];
+  }
   static void 
   setDataLines(uint8_t value) noexcept {
       GPIO6_DR_CLEAR = EBIOutputTransformation[0xFF];
