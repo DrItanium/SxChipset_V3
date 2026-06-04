@@ -1076,8 +1076,12 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
-      // pull the value ahead of time to start this process off
       EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
+      // pull the value ahead of time to start this process off but place it
+      // after the address assignment to use this as a "delay with work"
+      //
+      // Also, at this point, the WR pin is not pulled low so it won't cause
+      // problems with accidental writes anyway!
       uint16_t currentWord = target.getWord((offset >> 1));
       EBIInterface::setDataLines(currentWord);
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
