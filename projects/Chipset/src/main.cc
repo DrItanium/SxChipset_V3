@@ -1094,6 +1094,9 @@ public:
               // overlay operations
               digitalToggleFast(Pin::READY);
               EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase());
+              // "delay" with work by setting the address first and then use
+              // the accessing of the target word and other logic acting as the
+              // delay as well
               ++wordOffset; // advance wordOffset first
               currentWord = target.getWord(wordOffset); // get the next value
                                                         // reset the target address to the lower lines before we get the all
