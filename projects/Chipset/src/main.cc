@@ -1043,7 +1043,6 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
-      EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
       // pull the value ahead of time to start this process off but place it
       // after the address assignment to use this as a "delay with work"
       //
@@ -1308,6 +1307,7 @@ public:
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
+          EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
       }
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
