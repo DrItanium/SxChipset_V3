@@ -916,18 +916,6 @@ struct i960Interface final {
       // it is unnecessary
       EBIInterface::setDataLines(0);
   }
-  template<uint16_t value>
-  static inline void
-  configureDataLinesDirection() noexcept {
-      write8(dataLines.getConfigPortBaseAddress(), static_cast<uint8_t>(value)); // 235ns delay
-      write8(dataLines.getConfigPortBaseAddress()+1, static_cast<uint8_t>(value >> 8)); // 235ns delay
-  }
-  static inline void
-  configureDataLinesForRead() noexcept {
-  }
-  static inline void
-  configureDataLinesForWrite() noexcept {
-  }
 public:
   static void
   waitForReadySignal() noexcept {
