@@ -985,10 +985,7 @@ public:
       if constexpr (isReadTransaction) {
           writeDataLines<true>(0);
       }
-      while (true) {
-          if (isBurstLast()) {
-              break;
-          }
+      while (!isBurstLast()) {
           signalReady();
       }
       // we can actually setup for the next cycle because it will show up!
