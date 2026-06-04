@@ -1077,9 +1077,8 @@ public:
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
       // pull the value ahead of time to start this process off
-      uint16_t currentWord = target.getWord((offset >> 1));
       EBIInterface::setAddress(dataLines.getDataPortWriteAddressBase() + 0);
-      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+      uint16_t currentWord = target.getWord((offset >> 1));
       EBIInterface::setDataLines(currentWord);
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
       for (auto wordOffset = (offset >> 1); ;) {
