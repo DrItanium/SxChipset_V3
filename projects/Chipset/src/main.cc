@@ -1336,13 +1336,11 @@ namespace {
     template<ManagementEngineReceiveOpcode code>
     constexpr uint8_t GenericSingleByteSequence[] { static_cast<uint8_t>(code) };
     template<ManagementEngineReceiveOpcode code>
-    void
-    doFixedWriteOperation() noexcept {
+    void doFixedWriteOperation() noexcept {
         managementEngine.write(GenericSingleByteSequence<code>, sizeof (GenericSingleByteSequence<code>));
     }
     template<ManagementEngineRequestOpcode code>
-    int
-    requestByte() noexcept {
+    int requestByte() noexcept {
         static constexpr uint8_t InstructionSequence[] {
             static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
             static_cast<uint8_t>(code),
