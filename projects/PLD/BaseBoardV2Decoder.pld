@@ -1,0 +1,15 @@
+GAL22V10
+BaseBoardV2Logic
+
+V0 V1 V2 V3 WR    D7   D8 D37 D36 BE1 BE0 GND
+V4 V5 V6 V7 Write Read CS A2  A1  A0  D5  VCC
+
+/D5 = /BE0 * /BE1
+A0 = D36
+A1 = D37
+A2 = D8
+/Write = A2 * /D7 + /A2 * /A1 * A0 * /D7
+/Read = /A2 * /A1 * /A0 * /D7 + /A2 * A1 * /D7
+CS = GND
+
+DESCRIPTION

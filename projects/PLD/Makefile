@@ -16,8 +16,11 @@ all: NewCPUCardDecoder.jed \
 	AddressAndDataLineDecoder.jed \
 	AddressAndDataLineDecoder_PortMode.jed \
 	AddressAndDataLineDecoder_Mixed.jed \
-	NewCPUCardDecoder_v3.jed
+	NewCPUCardDecoder_v3.jed \
+	BaseBoardV2Decoder.jed
 
+install_BaseBoardV2Decoder: BaseBoardV2Decoder.jed
+	minipro -p 'ATF22V10CQZ(UES)' --write $<
 install_RPiCH351Interface: RPiCH351Interface.jed
 	minipro -p "ATF22V10CQZ(UES)" --write $<
 install_RPiCH351Interface_deactivated: RPiCH351Interface_deactivated.jed
