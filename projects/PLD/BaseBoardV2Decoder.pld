@@ -1,15 +1,15 @@
 GAL22V10
 BaseBoardV2Logic
 
-V0 V1 V2 V3 WR    D7   D8 D37 D36 BE1 BE0 GND
-V4 V5 V6 V7 Write Read CS A2  A1  A0  D5  VCC
+Z0 Z1 Z2 Z3 WR    A1   A0 EN   A2  BE1 BE0 GND
+Z4 Z5 Z6 Z7 Write Read CS EA2  EA1 EA0 F16  VCC
 
-/D5 = /BE0 * /BE1
-A0 = D36
-A1 = D37
-A2 = D8
-/Write = A2 * /D7 + /A2 * /A1 * A0 * /D7
-/Read = /A2 * /A1 * /A0 * /D7 + /A2 * A1 * /D7
+/F16 = /BE0 * /BE1
+EA0 = A0
+EA1 = A1
+EA2 = A2
+/Write = A2 * /EN + /A2 * /A1 * A0 * /EN
+/Read = /A2 * /A1 * /A0 * /EN + /A2 * A1 * /EN
 CS = GND
 
 DESCRIPTION

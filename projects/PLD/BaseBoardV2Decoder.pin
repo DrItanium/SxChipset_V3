@@ -2,28 +2,28 @@
 
  Pin # | Name     | Pin Type
 -----------------------------
-   1   | V0       | Clock/Input
-   2   | V1       | Input
-   3   | V2       | Input
-   4   | V3       | Input
+   1   | Z0       | Clock/Input
+   2   | Z1       | Input
+   3   | Z2       | Input
+   4   | Z3       | Input
    5   | WR       | Input
-   6   | D7       | Input
-   7   | D8       | Input
-   8   | D37      | Input
-   9   | D36      | Input
+   6   | A1       | Input
+   7   | A0       | Input
+   8   | EN       | Input
+   9   | A2       | Input
   10   | BE1      | Input
   11   | BE0      | Input
   12   | GND      | GND
-  13   | V4       | Input
-  14   | V5       | NC
-  15   | V6       | NC
-  16   | V7       | NC
+  13   | Z4       | Input
+  14   | Z5       | NC
+  15   | Z6       | NC
+  16   | Z7       | NC
   17   | Write    | Output
   18   | Read     | Output
   19   | CS       | Output
-  20   | A2       | Output
-  21   | A1       | Output
-  22   | A0       | Output
-  23   | D5       | Output
+  20   | EA2      | Output
+  21   | EA1      | Output
+  22   | EA0      | Output
+  23   | F16      | Output
   24   | VCC      | VCC
 
