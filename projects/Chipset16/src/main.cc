@@ -1030,6 +1030,7 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
+#if 0
       digitalToggleFast(Pin::EBI_EN);
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this
@@ -1042,6 +1043,10 @@ public:
 
       digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
+#else
+      value.shorts[0] = read16(addressLines.getBaseAddress());
+      value.shorts[1] = read16(addressLines.getBaseAddress()+1);
+#endif
       return value;
   }
   static inline bool
@@ -1312,12 +1317,15 @@ public:
       TimeTracker<TrackDoWriteAction> tracker(__PRETTY_FUNCTION__);
       switch (kind) {
           case ActionKind::Full16:
+              SerialUSB1.printf("\t0x%x: 0x%x (f)\n", offset, dataLines);
               target.setWord(offset, dataLines);
               break;
           case ActionKind::Low8:
+              SerialUSB1.printf("\t0x%x: 0x%x (l)\n", offset, dataLines);
               target.setWord(offset, dataLines, true, false);
               break;
           case ActionKind::Hi8:
+              SerialUSB1.printf("\t0x%x: 0x%x (h)\n", offset, dataLines);
               target.setWord(offset, dataLines, false, true);
               break;
           default:
