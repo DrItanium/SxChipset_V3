@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Set to true to turn on debugging output for the lifetime of the program
  */
-constexpr auto FlexIODebugging = false;
+constexpr auto FlexIODebugging = true;
 constexpr bool 
 validFlexIOResult(uint8_t input) noexcept {
     return input != 0xff;
