@@ -118,10 +118,11 @@ public:
   static void
   setDataLinesDirection() noexcept {
       auto value = GPIO6_GDIR & 0x0000'FFFF;
-      if constexpr (direction == OUTPUT) {
-          value |= 0xFFFF'0000;
+      if constexpr (auto value = GPIO6_GDIR & 0x0000'FFFF; direction == OUTPUT) {
+          GPIO6_GDIR = (value | 0xFFFF'0000);
+      } else {
+          GPIO6_GDIR = value;
       }
-      GPIO6_GDIR = value;
   }
 };
 using EBIInterface = EBIWrapperInterface;
