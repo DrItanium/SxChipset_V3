@@ -72,6 +72,7 @@ enum class Pin {
     X(40, 24),
     X(41, 25),
 #undef X
+#ifndef NewBusLayout
     EBI_A0 = INDIRECT_D0,
     EBI_A1 = INDIRECT_D1,
     EBI_A2 = INDIRECT_D2,
@@ -118,7 +119,56 @@ enum class Pin {
     // state to map to the appropriate location. I will want to update the
     // pin state to have more expressive setups
     STATE_MACHINE__READY_LEVEL_OUT = INDIRECT_D34, // FlexIO2.0
+#else
+    // the new bus design uses a 16-bit data bus with a very simple 3 bit
+    // address bus with an enable. The Read and Write signals are computed by
+    // an external PLD.
+#define DefDataBusPin(idx) EBI_D ## idx = INDIRECT_D ## idx
+    DefDataBusPin(0),
+    DefDataBusPin(1),
+    DefDataBusPin(2),
+    DefDataBusPin(3),
+    DefDataBusPin(4),
+    DefDataBusPin(5),
+    DefDataBusPin(6),
+    DefDataBusPin(7),
+    DefDataBusPin(8),
+    DefDataBusPin(9),
+    DefDataBusPin(10),
+    DefDataBusPin(11),
+    DefDataBusPin(12),
+    DefDataBusPin(13),
+    DefDataBusPin(14),
+    DefDataBusPin(15),
+#undef DefDataBusPin
+    EBI_A0 = INDIRECT_D16,
+    EBI_A1 = INDIRECT_D17,
+    EBI_A2 = INDIRECT_D18,
+    EBI_EN = INDIRECT_D19,
+    READY = INDIRECT_D20,
+    BLAST = INDIRECT_D21,
+    READY_SYNC = INDIRECT_D22,
+    ADS = INDIRECT_D23,
+    DEN = INDIRECT_D24,
+    WR = INDIRECT_D25,
+    BE0 = INDIRECT_D26,
+    FULL16_ENABLE = INDIRECT_D27,
+    INT960_0 = INDIRECT_D28,
+    INT960_1 = INDIRECT_D29,
+    INT960_2 = INDIRECT_D30,
+    INT960_3 = INDIRECT_D31,
+    // INDIRECT D32
+    // INDIRECT D33
+    // INDIRECT D34 (CS)
+    // INDIRECT D35 (MOSI)
+    // INDIRECT D36 (MISO)
+    // INDIRECT D37 (SCK)
+    // INDIRECT D38 (RX0)
+    // INDIRECT D39 (TX0)
+    TEENSY_AVR_SCL = INDIRECT_D40,
+    TEENSY_AVR_SDA = INDIRECT_D41,
 
+#endif
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
