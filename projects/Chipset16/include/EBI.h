@@ -58,6 +58,7 @@ public:
 #undef X
   };
   static bool begin() noexcept;
+#if 0
   static void 
   setAddress(uint8_t address) noexcept {
       // the address table lookup is necessary because the address bits are
@@ -89,6 +90,29 @@ public:
   readDataLines() noexcept {
         return static_cast<uint8_t>((GPIO6_PSR) >> 24);
   }
+#else
+  // in the 16-bit bus design, we can easily just assign data without needing
+  // to have a strange lookup table for all of this
+  static void
+  setDataLines(uint16_t value) noexcept {
+      GPIO6_DR_CLEAR = 0xFFFF'0000;
+      GPIO6_DR_SET = (static_cast<uint32_t>(value) << 16);
+  }
+  static uint16_t
+  readDataLines() noexcept {
+      return static_cast<uint16_t>((GPIO6_PSR) >> 16);
+  }
+  static void setAddress(uint8_t address) noexcept {
+      // unlike the 8-bit bus, the address lines are stashed in the GPIO7 in
+      // the upper half of the bus
+      GPIO7_DR_CLEAR = 0x0007'0000;
+      GPIO7_DR_SET = (static_cast<uint32_t>(address & 0b111) << 16);
+  }
+  template<uint8_t address>
+  static inline void setAddress() noexcept {
+      setAddress(address);
+  }
+#endif
 
   template<PinDirection direction>
   static void
