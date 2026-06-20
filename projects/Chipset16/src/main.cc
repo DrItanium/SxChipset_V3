@@ -1181,6 +1181,7 @@ public:
 #endif
       signalReady();
   }
+#if 0
   static uint16_t
   readDataLines() noexcept {
       TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
@@ -1214,6 +1215,26 @@ public:
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       return value;
   }
+#else
+    template<bool SetAddress = true>
+    static uint16_t
+    readDataLines() noexcept {
+        // unlike the 8-bit bus layout, it is fine to just read in the full
+        // 16-bits once and have the teensy just mask the bits out later
+        //
+        // This is the initial implementation and should be as simple as
+        // possible
+        TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
+        if constexpr (SetAddress) {
+            EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
+        }
+        fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+        fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+        uint16_t value = EBIInterface::readDataLines();
+        fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+        return value;
+    }
+#endif
   enum class ActionKind : uint8_t {
       Full16,
       Low8,
@@ -1253,6 +1274,7 @@ public:
           return ActionKind::Hi8;
       }
   }
+#if 0
   static uint16_t readDataLines(ActionKind kind) noexcept {
       switch (kind) {
           case ActionKind::Full16:
@@ -1265,6 +1287,20 @@ public:
               return 0;
       }
   }
+#else
+  static uint16_t readDataLines(ActionKind kind) noexcept {
+      // we just read in the full 16-bits and then mask out the upper or lower
+      // parts as needed
+      switch (kind) {
+          case ActionKind::Low8:
+              return readDataLines() & 0x00FF;
+          case ActionKind::Hi8:
+              return readDataLines() & 0xFF00;
+          default:
+              return readDataLines();
+      }
+  }
+#endif
   template<MemoryCell MC>
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
