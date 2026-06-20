@@ -1064,6 +1064,7 @@ public:
       // we can actually setup for the next cycle because it will show up!
       signalReady();
   }
+#if 0
   template<bool UpdateBoth = false>
   static void
   writeDataLines(uint16_t value) noexcept {
@@ -1108,6 +1109,7 @@ public:
       digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
+#endif
   template<bool SetAddress = true>
   static void 
   commitOutputDataLines(uint16_t value) noexcept {
