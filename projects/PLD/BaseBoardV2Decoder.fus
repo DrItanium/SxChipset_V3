@@ -80,7 +80,7 @@ Pin 19 = CS           S0 = 1   S1 = 1
 
 Pin 18 = Read         S0 = 0   S1 = 1
  66  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 67  ---- ---- ---- ---- ---- -x-- -x-- -x-- -x-- ---- ----
+ 67  ---- ---- ---- ---- ---- -x-- x--- -x-- -x-- ---- ----
  68  ---- ---- ---- ---- ---- x--- ---- -x-- -x-- ---- ----
  69  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  70  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
@@ -99,8 +99,8 @@ Pin 18 = Read         S0 = 0   S1 = 1
 
 Pin 17 = Write        S0 = 0   S1 = 1
  83  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
- 84  ---- ---- ---- ---- ---- ---- ---- -x-- x--- ---- ----
- 85  ---- ---- ---- ---- ---- -x-- x--- -x-- -x-- ---- ----
+ 84  ---- ---- ---- ---- ---- -x-- -x-- -x-- -x-- ---- ----
+ 85  ---- ---- ---- ---- ---- ---- ---- -x-- x--- ---- ----
  86  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  87  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
  88  xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
