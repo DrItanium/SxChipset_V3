@@ -1005,12 +1005,22 @@ public:
   isReadOperation() noexcept {
     return digitalReadFast(Pin::WR) == LOW;
   }
+  /*
   static inline uint8_t fastRead8() noexcept {
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       auto value = EBIInterface::readDataLines();
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       return value;
+  }
+  */
+  static inline uint16_t fastRead() noexcept {
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      uint16_t value = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      return value;
+
   }
   static SplitWord32
   getAddress() noexcept {
@@ -1022,16 +1032,10 @@ public:
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
       EBIInterface::setAddress<addressLines.getBaseAddress()>();
-      value.bytes[0] = fastRead8();
+      value.shorts[0] = fastRead();
 
       EBIInterface::setAddress<addressLines.getBaseAddress()+1>();
-      value.bytes[1] = fastRead8();
-
-      EBIInterface::setAddress<addressLines.getBaseAddress()+2>();
-      value.bytes[2] = fastRead8();
-
-      EBIInterface::setAddress<addressLines.getBaseAddress()+3>();
-      value.bytes[3] = fastRead8();
+      value.shorts[1] = fastRead();
 
       digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
@@ -1051,7 +1055,8 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          writeDataLines<true>(0);
+          commitOutputDataLines(0);
+          //writeDataLines<true>(0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -1103,11 +1108,30 @@ public:
       digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
+  template<bool SetAddress = true>
+  static void 
+  commitOutputDataLines(uint16_t value) noexcept {
+      // unlike the 8-bit design, this 16-bit design is far cleaner and easier
+      // to work with. We do not need to constantly set the address but for
+      // simplicity of implementation lets start with it that way
+      TimeTracker<TrackWriteDataLines> tracker(__PRETTY_FUNCTION__);
+      digitalToggleFast(Pin::EBI_EN);
+      if constexpr (SetAddress) {
+          EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
+      }
+      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+      EBIInterface::setDataLines(value);
+      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+      fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+      digitalToggleFast(Pin::EBI_EN);
+      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
+  }
 
   template<MemoryCell MC>
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
+#if 0
       // pull the value ahead of time to start this process off but place it
       // after the address assignment to use this as a "delay with work"
       //
@@ -1138,6 +1162,21 @@ public:
               waitForReadySignal(); // then wait for the ready signal to change
           }
       }
+#else
+      // this 16-bit impl will be the straightforward implementation since
+      // there is no need to overlay operations while testing things out
+      for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
+          commitOutputDataLines(target.getWord(wordOffset));
+          if (isBurstLast()) {
+              break;
+          } else {
+              digitalToggleFast(Pin::READY);
+              // overlay operations go here but for now, make it as simple as
+              // possible
+              waitForReadySignal();
+          }
+      }
+#endif
       signalReady();
   }
   static uint16_t
