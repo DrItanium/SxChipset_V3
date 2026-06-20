@@ -871,9 +871,9 @@ struct i960Interface final {
 
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      digitalWriteFast(Pin::EBI_WR, LOW);
+      digitalWriteFast(Pin::EBI_EN, LOW);
       fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_WR, HIGH);
+      digitalWriteFast(Pin::EBI_EN, HIGH);
       // update the address
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
@@ -887,11 +887,11 @@ struct i960Interface final {
       }
       EBIInterface::setAddress(address);
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      digitalWriteFast(Pin::EBI_RD, LOW);
+      digitalWriteFast(Pin::EBI_EN, LOW);
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       uint8_t output = EBIInterface::readDataLines();
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      digitalWriteFast(Pin::EBI_RD, HIGH);
+      digitalWriteFast(Pin::EBI_EN, HIGH);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
@@ -946,7 +946,7 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
-      digitalToggleFast(Pin::EBI_RD);
+      digitalToggleFast(Pin::EBI_EN);
       EBIInterface::setDataLinesDirection<INPUT>();
       // apparently, you can burst read from the CH351! I have confirmed this
       // through testing
@@ -962,7 +962,7 @@ public:
       EBIInterface::setAddress<addressLines.getBaseAddress()+3>();
       value.bytes[3] = fastRead8();
 
-      digitalToggleFast(Pin::EBI_RD);
+      digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return value;
   }
@@ -974,10 +974,7 @@ public:
   byteEnableLow() noexcept {
     return digitalReadFast(Pin::BE0) == LOW;
   }
-  static inline bool
-  byteEnableHigh() noexcept {
-    return digitalReadFast(Pin::BE1) == LOW;
-  }
+
   template<bool isReadTransaction>
   static inline void
   doNothingTransaction() noexcept {
@@ -1006,7 +1003,7 @@ public:
       // toggling the write pin. What needs to be checked is if more delays are
       // necessary to preven asserts and such. My hope is that it isn't a
       // problem now since the toggles happen far less frequently.
-      digitalToggleFast(Pin::EBI_WR); 
+      digitalToggleFast(Pin::EBI_EN); 
       if constexpr (UpdateBoth) {
           SplitWord16 sp{value};
           for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
@@ -1032,7 +1029,7 @@ public:
           fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       }
 
-      digitalToggleFast(Pin::EBI_WR);
+      digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
@@ -1191,7 +1188,7 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      digitalToggleFast(Pin::EBI_RD);
+      digitalToggleFast(Pin::EBI_EN);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
           auto dataLines = readDataLines(kind);
@@ -1209,7 +1206,7 @@ public:
               writeActionCycle(target, wordOffset, dataLines, kind);
           }
       }
-      digitalToggleFast(Pin::EBI_RD);
+      digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
   }
   template<bool isReadTransaction, MemoryCell MC>
@@ -1521,13 +1518,13 @@ setup() {
     outputPin(Pin::INT960_2, LOW);
     outputPin(Pin::INT960_3, HIGH);
     inputPin(Pin::BE0);
-    inputPin(Pin::BE1);
+    //inputPin(Pin::BE1);
     inputPin(Pin::FULL16_ENABLE);
     inputPin(Pin::WR);
     outputPin(Pin::READY, HIGH);
-    inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
-    inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
-    inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
+    //inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_ADS);
+    //inputPin(Pin::STATE_MACHINE__IN_TRANSACTION_DEN);
+    //inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
 

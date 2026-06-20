@@ -72,54 +72,6 @@ enum class Pin {
     X(40, 24),
     X(41, 25),
 #undef X
-#ifndef NewBusLayout
-    EBI_A0 = INDIRECT_D0,
-    EBI_A1 = INDIRECT_D1,
-    EBI_A2 = INDIRECT_D2,
-    EBI_A3 = INDIRECT_D3,
-    EBI_A4 = INDIRECT_D4,
-    EBI_A5 = INDIRECT_D5,
-    EBI_RD = INDIRECT_D6,
-    EBI_WR = INDIRECT_D7,
-    EBI_D0 = INDIRECT_D8,
-    EBI_D1 = INDIRECT_D9,
-    EBI_D2 = INDIRECT_D10,
-    EBI_D3 = INDIRECT_D11,
-    EBI_D4 = INDIRECT_D12,
-    EBI_D5 = INDIRECT_D13,
-    EBI_D6 = INDIRECT_D14,
-    EBI_D7 = INDIRECT_D15,
-    ADS = INDIRECT_D16,
-    BLAST = INDIRECT_D17,
-    WR = INDIRECT_D18,
-    BE0 = INDIRECT_D19,
-    BE1 = INDIRECT_D20,
-    INT960_0 = INDIRECT_D21,  
-    INT960_1 = INDIRECT_D22,  
-    STATE_MACHINE__IN_TRANSACTION_ADS = INDIRECT_D23,
-    STATE_MACHINE__IN_TRANSACTION_DEN = INDIRECT_D24,
-    // INDIRECT_D25
-    // INDIRECT_D26
-    // INDIRECT_D27
-    // INDIRECT_D28
-    FULL16_ENABLE = INDIRECT_D29,
-    READY = INDIRECT_D30,
-    READY_SYNC = INDIRECT_D31,
-    INT960_2 = INDIRECT_D32,
-    INT960_3 = INDIRECT_D33,
-    // INDIRECT_D34 (CS)
-    // INDIRECT_D35 (MOSI)
-    STATE_MACHINE__READY_LEVEL_PULSE = INDIRECT_D36,  // MISO / FlexIO2.1
-    // INDIRECT_D37 (SCK)
-    // INDIRECT_D38 (RX)
-    // INDIRECT_D39 (TX)
-    TEENSY_AVR_SCL = INDIRECT_D40,
-    TEENSY_AVR_SDA = INDIRECT_D41,
-    // these pins are theoretical and only here to allow the FlexIO internal
-    // state to map to the appropriate location. I will want to update the
-    // pin state to have more expressive setups
-    STATE_MACHINE__READY_LEVEL_OUT = INDIRECT_D34, // FlexIO2.0
-#else
     // the new bus design uses a 16-bit data bus with a very simple 3 bit
     // address bus with an enable. The Read and Write signals are computed by
     // an external PLD.
@@ -167,8 +119,11 @@ enum class Pin {
     // INDIRECT_D39 (TX0)
     TEENSY_AVR_SCL = INDIRECT_D40,
     TEENSY_AVR_SDA = INDIRECT_D41,
-
-#endif
+    STATE_MACHINE__READY_LEVEL_PULSE = READY_SYNC,
+    // this is only mapped to the internal FlexIO "pins"
+    STATE_MACHINE__READY_LEVEL_OUT = INDIRECT_D34, // FlexIO2.0 
+    STATE_MACHINE__IN_TRANSACTION_ADS = ADS,
+    STATE_MACHINE__IN_TRANSACTION_DEN = DEN,
 };
 
 constexpr std::underlying_type_t<Pin> pinIndexConvert(Pin value) noexcept {
