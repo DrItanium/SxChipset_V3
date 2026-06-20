@@ -1020,6 +1020,7 @@ public:
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
       uint16_t value = EBIInterface::readDataLines();
+      //SerialUSB1.printf("fastRead(): got 0x%x\n", value);
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
       return value;
 
@@ -1171,9 +1172,9 @@ public:
       // there is no need to overlay operations while testing things out
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
-          SerialUSB1.printf("%x: %x\n", wordOffset, value);
+          //SerialUSB1.printf("%x: %x\n", wordOffset, value);
           commitOutputDataLines(value);
-          SerialUSB1.println("\tCommited value!");
+          //SerialUSB1.println("\tCommited value!");
           if (isBurstLast()) {
               break;
           } else {
