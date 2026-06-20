@@ -431,7 +431,6 @@ setupRandomSeed() noexcept {
     rSeed += SIGROW.TEMPSENSE1;
 }
 void configureMicroshellInterface();
-void serviceShell();
 void
 setup() {
     Wire.swap(2); // it is supposed to be PC2/PC3 TWI ms
@@ -474,9 +473,6 @@ setup() {
 }
 void
 loop() {
-#if 0
-    serviceShell();
-#endif
 }
 
 volatile ManagementEngineRequestOpcode currentMode = ManagementEngineRequestOpcode::CPUClockConfiguration;
