@@ -37,14 +37,10 @@ bool
 EBIWrapperInterface::begin() noexcept {
     
     for (auto a : {
-            Pin::EBI_A5,
-            Pin::EBI_A4,
-            Pin::EBI_A3,
-            Pin::EBI_A2,
-            Pin::EBI_A1,
             Pin::EBI_A0,
-            Pin::EBI_RD,
-            Pin::EBI_WR,
+            Pin::EBI_A1,
+            Pin::EBI_A2,
+            Pin::EBI_EN,
             Pin::EBI_D0,
             Pin::EBI_D1,
             Pin::EBI_D2,
@@ -53,14 +49,21 @@ EBIWrapperInterface::begin() noexcept {
             Pin::EBI_D5,
             Pin::EBI_D6,
             Pin::EBI_D7,
+            Pin::EBI_D8,
+            Pin::EBI_D9,
+            Pin::EBI_D10,
+            Pin::EBI_D11,
+            Pin::EBI_D12,
+            Pin::EBI_D13,
+            Pin::EBI_D14,
+            Pin::EBI_D15,
             }) {
         pinMode(a, OUTPUT);
         digitalWriteFast(a, LOW);
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
     setAddress(0);
-    digitalWriteFast(Pin::EBI_RD, HIGH);
-    digitalWriteFast(Pin::EBI_WR, HIGH);
+    digitalWriteFast(Pin::EBI_EN, HIGH);
     setDataLines(0);
     return true;
 }
