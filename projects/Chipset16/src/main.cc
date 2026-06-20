@@ -875,6 +875,7 @@ struct i960Interface final {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
+#if 0
   template<bool configureDataLineDirection = true>
   static inline void write8(uint8_t address, uint8_t value) noexcept {
       /// @todo once new board comes in we can implement the fixed direction
@@ -911,9 +912,49 @@ struct i960Interface final {
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
+#else
+  template<bool configureDataLineDirection = true>
+  static inline void write16(uint8_t address, uint16_t value) noexcept {
+      /// @todo once new board comes in we can implement the fixed direction
+      /// design
+      if constexpr (configureDataLineDirection) {
+        EBIInterface::setDataLinesDirection<OUTPUT>();
+      }
+      EBIInterface::setAddress(address);
+      EBIInterface::setDataLines(value);
+
+      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
+      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+      digitalWriteFast(Pin::EBI_EN, LOW);
+      fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
+      digitalWriteFast(Pin::EBI_EN, HIGH);
+      // update the address
+      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
+  }
+  template<bool configureDataLineDirection = true>
+  static inline uint16_t
+  read16(uint8_t address) noexcept {
+      // the CH351 has some very strict requirements
+      // This function will take at least 230 ns to complete
+      if constexpr (configureDataLineDirection) {
+        EBIInterface::setDataLinesDirection<INPUT>();
+      }
+      EBIInterface::setAddress(address);
+      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
+      digitalWriteFast(Pin::EBI_EN, LOW);
+      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
+      uint16_t output = EBIInterface::readDataLines();
+      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
+      digitalWriteFast(Pin::EBI_EN, HIGH);
+      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
+      return output;
+  }
+#endif
+
 
   static void
   begin() noexcept {
+#if 0
       // okay, we need to synchronize the initial ready out state since it
       // could be different comparatively than expected.
       write8(addressLines.getConfigPortBaseAddress(), 0);
@@ -931,6 +972,20 @@ struct i960Interface final {
       // after this point, the code will no longer change directions since
       // it is unnecessary
       EBIInterface::setDataLines(0);
+#else
+      // configure the address lower lines for input
+      write16(addressLines.getConfigPortBaseAddress(), 0);
+      // configure the address upper lines for input 
+      write16(addressLines.getConfigPortBaseAddress()+1, 0);
+      // configure data transmit port for output
+      write16(dataLines.getConfigPortBaseAddress(), 0xFFFF);
+      // then output 0 on the data lines
+      write16(dataLines.getDataPortWriteAddressBase(), 0);
+      // configure the receieve port for inpu
+      write16(dataLines.getConfigPortBaseAddress()+1, 0);
+      // Make sure that the data lines are set to zero
+      EBIInterface::setDataLines(0);
+#endif
   }
 public:
   static void
