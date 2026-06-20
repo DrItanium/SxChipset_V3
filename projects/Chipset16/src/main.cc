@@ -105,7 +105,9 @@ RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 // state machines
+// right now, transaction detection is working right! Woo!
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN };
+// ready pulse to level converter needs to be fixed up
 FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT };
 
 
@@ -1168,14 +1170,16 @@ public:
       // this 16-bit impl will be the straightforward implementation since
       // there is no need to overlay operations while testing things out
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
-          commitOutputDataLines(target.getWord(wordOffset));
+          auto value = target.getWord(wordOffset);
+          SerialUSB1.printf("%x: %x\n", wordOffset, value);
+          commitOutputDataLines(value);
+          SerialUSB1.println("\tCommited value!");
           if (isBurstLast()) {
               break;
           } else {
-              digitalToggleFast(Pin::READY);
-              // overlay operations go here but for now, make it as simple as
-              // possible
-              waitForReadySignal();
+              // okay so we are currently hanging inside of signal ready which
+              // is not surprising!
+              signalReady();
           }
       }
 #endif
@@ -1446,6 +1450,7 @@ public:
   doMemoryTransaction() noexcept {
       TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
       auto address = getAddress();
+      SerialUSB1.printf("Address: 0x%x\n", address.value);
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
