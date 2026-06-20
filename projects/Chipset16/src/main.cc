@@ -757,10 +757,27 @@ RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
 RawFilesystemInterface sdcardInterface;
+// with the 16-bit data bus connection, things have changed somewhat
+// 0b000 -> Data Lines Transmit Port (implicit write)
+// 0b001 -> Data Lines Receive Port (implicit read)
+// 0b010 -> Address Lines Lower Half (implicit read)
+// 0b011 -> Address Lines Upper Half (implicit read)
+// 0b100 -> Data Lines Transmit Port CFG (implicit write)
+// 0b101 -> Data Lines Receive Port CFG (implicit write)
+// 0b110 -> Address Lines Lower Port CFG (implicit write)
+// 0b111 -> Address Lines Upper Port CFG (implicit write)
+//
+// This is a major change from the previous 8-bit data port design. Two CH351s
+// are still used but both are active at the same time whenever you select an
+// address. This change greatly simplifies the design and should produce
+// increased overall throughput. However, this class has to change as we are
+// describing concepts instead of interfacing with a single CH351. 
+//
+// So the data lines have the base offset of 0b000
+// The address lines have the base offset of 0b010
+
 struct CH351 final {
-  constexpr explicit CH351(uint8_t baseAddress) noexcept
-    : _baseAddress(baseAddress & 0b1111'1000), _dataPortBaseAddress(baseAddress & 0b1111'1000), _cfgPortBaseAddress((baseAddress & 0b1111'1000) | 0b0000'0100) {
-  }
+  constexpr explicit CH351(uint8_t baseAddress) noexcept : _baseAddress(baseAddress & 0b010), _dataPortBaseAddress(baseAddress & 0b010), _cfgPortBaseAddress((baseAddress & 0b010) | 0b100) { }
   [[nodiscard]] constexpr auto getBaseAddress() const noexcept {
     return _baseAddress;
   }
@@ -781,9 +798,8 @@ private:
   uint8_t _dataPortBaseAddress;
   uint8_t _cfgPortBaseAddress;
 };
-constexpr CH351 addressLines{ 0b1000 }, 
-                dataLines{ 0 };
-
+constexpr CH351 addressLines{ 0b010 }, dataLines{ 0b000 };
+static_assert(addressLines.getConfigPortBaseAddress() == 0b110, "Address Lines configuration directory is wrong!");
 
 
 // i960 common interface begin
