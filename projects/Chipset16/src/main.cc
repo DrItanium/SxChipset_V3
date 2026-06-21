@@ -828,7 +828,7 @@ constexpr InterfaceTimingDescription customWrite16 { 25, 0, 50, 75 };
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
-constexpr InterfaceTimingDescription customRead16 { 50, 20, 10, 25 };
+constexpr InterfaceTimingDescription customRead16 { 50, 20, 10, 0 };
 #if 0
 constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
