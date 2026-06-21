@@ -824,11 +824,11 @@ inline void fixedDelayNanoseconds() noexcept {
 constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
-constexpr InterfaceTimingDescription customWrite16 { 25, 0, 40, 0 };
+constexpr InterfaceTimingDescription customWrite16 { 20, 0, 20, 0 };
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
-constexpr InterfaceTimingDescription customRead16 { 50, 20, 10, 0 };
+constexpr InterfaceTimingDescription customRead16 { 25, 20, 10, 0 };
 #if 0
 constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
