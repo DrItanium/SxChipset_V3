@@ -824,25 +824,11 @@ inline void fixedDelayNanoseconds() noexcept {
 constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
-constexpr InterfaceTimingDescription customWrite16 { 10, 0, 20, 0 };
+constexpr InterfaceTimingDescription customWrite16 { 10, 0, 20, 0 }; // 30ns total
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
-constexpr InterfaceTimingDescription customRead16 { 10, 20, 10, 0 };
-#if 0
-constexpr InterfaceTimingDescription customWrite8 {
-    10, // address wait
-    0,  // setup time
-    10, // hold time
-    0   // after time / resting time
-}; // 20ns worth of delay (can go lower safely but I'm not sure how reliable it
-   // is)
-   
-
-constexpr InterfaceTimingDescription customRead8 {
-    10, 20, 0, 0 
-}; // 30ns worth of delay (pulling hold time down any further prevents booting)
-#endif
+constexpr InterfaceTimingDescription customRead16 { 10, 20, 10, 0 }; // 40ns total
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
 struct EBIOperationDescription final {
