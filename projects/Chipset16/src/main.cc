@@ -991,7 +991,7 @@ public:
       // there is no need to overlay operations while testing things out
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
-          SerialUSB1.printf("0x%04x, ", value);
+          //SerialUSB1.printf("0x%04x, ", value);
           write16(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
@@ -1050,7 +1050,7 @@ public:
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
       TimeTracker<TrackDoWriteAction> tracker(__PRETTY_FUNCTION__);
-      SerialUSB1.printf("0x%04x, ", dataLines);
+      //SerialUSB1.printf("0x%04x, ", dataLines);
       switch (kind) {
           case ActionKind::Full16:
               target.setWord(offset, dataLines);
@@ -1168,7 +1168,7 @@ public:
   doMemoryTransaction() noexcept {
       TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
       auto address = getAddress();
-      SerialUSB1.printf("Address: 0x%08x(%c) -> ", address.value, isReadTransaction ? 'R' : 'W');
+      //SerialUSB1.printf("Address: 0x%08x(%c) -> ", address.value, isReadTransaction ? 'R' : 'W');
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
@@ -1185,7 +1185,7 @@ public:
               doNothingTransaction<isReadTransaction>();
               break;
       }
-      SerialUSB1.println();
+      //SerialUSB1.println();
   }
   static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
