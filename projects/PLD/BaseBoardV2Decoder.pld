@@ -8,9 +8,9 @@ Z4 Z5 Z6 Z7 Write Read CS EA2  EA1 EA0 F16  VCC
 EA0 = A0
 EA1 = A1
 EA2 = A2
-/Write = /A2 * /A1 * /A0 +  A2
-/Read =  /A2 * /A1 *  A0 + /A2 * A1
-/CS = /EN
+/Write = /A2 * /A1 * /A0 * /EN +  A2      * /EN
+/Read =  /A2 * /A1 *  A0 * /EN + /A2 * A1 * /EN
+/CS = VCC
 
 DESCRIPTION
 

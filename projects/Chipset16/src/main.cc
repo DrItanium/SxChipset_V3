@@ -824,11 +824,11 @@ inline void fixedDelayNanoseconds() noexcept {
 constexpr InterfaceTimingDescription defaultWrite8{
     50, 30, 100, 150
 }; // 330ns worth of delay
+constexpr InterfaceTimingDescription customWrite16 { 25, 15, 50, 75 };
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
 constexpr InterfaceTimingDescription customRead16 { 50, 40, 10, 25 };
-constexpr InterfaceTimingDescription customWrite16 { 25, 15, 50, 75 };
 #if 0
 constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
@@ -845,6 +845,14 @@ constexpr InterfaceTimingDescription customRead8 {
 #endif
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
+struct EBIOperationDescription final {
+    constexpr EBIOperationDescription(bool configureDataLinesDirection, bool triggerEnable) : _configureDataLinesDirection(configureDataLinesDirection), _triggerEnable(triggerEnable) { }
+    [[nodiscard]] constexpr auto shouldConfigureDataLinesDirection() const noexcept { return _configureDataLinesDirection; }
+    [[nodiscard]] constexpr auto shouldControlTriggerEnable() const noexcept { return _triggerEnable; }
+    bool _configureDataLinesDirection;
+    bool _triggerEnable;
+};
+constexpr EBIOperationDescription defaultConfiguration (true, true);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -881,12 +889,12 @@ struct i960Interface final {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
-  template<bool configureDataLineDirection = true>
+  template<EBIOperationDescription description = defaultConfiguration>
   static inline void 
   write16(uint8_t address, uint16_t value) noexcept {
       /// @todo once new board comes in we can implement the fixed direction
       /// design
-      if constexpr (configureDataLineDirection) {
+      if constexpr (description.shouldConfigureDataLinesDirection()) {
         EBIInterface::setDataLinesDirection<OUTPUT>();
       }
       EBIInterface::setAddress(address);
@@ -894,27 +902,35 @@ struct i960Interface final {
 
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      digitalWriteFast(Pin::EBI_EN, LOW);
+      if constexpr (description.shouldControlTriggerEnable()) {
+          digitalToggleFast(Pin::EBI_EN);
+      }
       fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_EN, HIGH);
+      if constexpr (description.shouldControlTriggerEnable()) {
+          digitalToggleFast(Pin::EBI_EN);
+      }
       // update the address
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
-  template<bool configureDataLineDirection = true>
+  template<EBIOperationDescription description = defaultConfiguration>
   static inline uint16_t
   read16(uint8_t address) noexcept {
       // the CH351 has some very strict requirements
       // This function will take at least 230 ns to complete
-      if constexpr (configureDataLineDirection) {
+      if constexpr (description.shouldConfigureDataLinesDirection()) {
         EBIInterface::setDataLinesDirection<INPUT>();
       }
       EBIInterface::setAddress(address);
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      digitalWriteFast(Pin::EBI_EN, LOW);
+      if constexpr (description.shouldControlTriggerEnable()) {
+          digitalToggleFast(Pin::EBI_EN);
+      }
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      uint16_t output = EBIInterface::readDataLines();
       fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      digitalWriteFast(Pin::EBI_EN, HIGH);
+      uint16_t output = EBIInterface::readDataLines();
+      if constexpr (description.shouldControlTriggerEnable()) {
+          digitalToggleFast(Pin::EBI_EN);
+      }
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
@@ -953,14 +969,14 @@ public:
   isReadOperation() noexcept {
     return digitalReadFast(Pin::WR) == LOW;
   }
+
   static SplitWord32
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
-      EBIInterface::setDataLinesDirection<INPUT>();
       SplitWord32 value;
       for (int i = 0; i < 2; ++i ) {
-          value.shorts[i] = read16<false>(addressLines.getBaseAddress() + i);
+          value.shorts[i] = read16(addressLines.getBaseAddress() + i);
       }
       return value;
   }
@@ -978,7 +994,7 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          write16<false>(dataLines.getDataPortWriteAddressBase(), 0);
+          write16(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -996,7 +1012,7 @@ public:
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
           //SerialUSB1.printf("0x%04x, ", value);
-          write16<false>(dataLines.getDataPortWriteAddressBase(), value);
+          write16(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
           } else {
@@ -1009,7 +1025,7 @@ public:
   }
     static uint16_t
     readDataLines() noexcept {
-        return read16<false>(dataLines.getDataPortReadAddressBase());
+        return read16(dataLines.getDataPortReadAddressBase());
     }
   enum class ActionKind : uint8_t {
       Full16,
@@ -1173,11 +1189,13 @@ public:
       TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
       auto address = getAddress();
       //SerialUSB1.printf("Address: 0x%08x(%c) -> ", address.value, isReadTransaction ? 'R' : 'W');
+#if 0
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
           EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
       }
+#endif
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);

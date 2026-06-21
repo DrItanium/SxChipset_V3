@@ -35,12 +35,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 bool
 EBIWrapperInterface::begin() noexcept {
-    
+    pinMode(Pin::EBI_EN, OUTPUT);
+    digitalWriteFast(Pin::EBI_EN, HIGH);
     for (auto a : {
             Pin::EBI_A0,
             Pin::EBI_A1,
             Pin::EBI_A2,
-            Pin::EBI_EN,
             Pin::EBI_D0,
             Pin::EBI_D1,
             Pin::EBI_D2,
@@ -63,7 +63,6 @@ EBIWrapperInterface::begin() noexcept {
     }
     // force EBI_A4 and A5 to low  since we will never be accessing that
     setAddress(0);
-    digitalWriteFast(Pin::EBI_EN, HIGH);
     setDataLines(0);
     return true;
 }
