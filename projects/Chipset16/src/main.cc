@@ -1021,10 +1021,10 @@ public:
       }
       signalReady();
   }
-    static uint16_t
-    readDataLines() noexcept {
-        return read16<getDataLinesConfiguration>(dataLines.getDataPortReadAddressBase());
-    }
+  static uint16_t
+  readDataLines() noexcept {
+      return read16<getDataLinesConfiguration>(dataLines.getDataPortReadAddressBase());
+  }
   enum class ActionKind : uint8_t {
       Full16,
       Low8,
@@ -1072,7 +1072,6 @@ public:
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
       TimeTracker<TrackDoWriteAction> tracker(__PRETTY_FUNCTION__);
-      //SerialUSB1.printf("0x%04x, ", dataLines);
       switch (kind) {
           case ActionKind::Full16:
               target.setWord(offset, dataLines);
@@ -1092,11 +1091,15 @@ public:
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          doWriteAction(target, wordOffset, readDataLines(), determineActionKind());
+          auto dataLines = readDataLines();
+          auto kind = determineActionKind();
           if (isBurstLast()) {
+              doWriteAction(target, wordOffset, dataLines, kind);
               break;
           } else {
-              signalReady();
+              digitalToggleFast(Pin::READY);
+              doWriteAction(target, wordOffset, dataLines, kind);
+              waitForReadySignal();
           }
       }
       signalReady();
