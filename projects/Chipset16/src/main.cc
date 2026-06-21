@@ -844,6 +844,7 @@ constexpr EBIOperationDescription defaultConfiguration (true, true, true);
 constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true);
 constexpr EBIOperationDescription getAddressConfiguration(false, false, true);
 constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false);
+constexpr EBIOperationDescription getDataLinesConfiguration(false, true, false);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -1009,7 +1010,6 @@ public:
       // there is no need to overlay operations while testing things out
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
-          //SerialUSB1.printf("0x%04x, ", value);
           write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
@@ -1023,7 +1023,7 @@ public:
   }
     static uint16_t
     readDataLines() noexcept {
-        return read16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortReadAddressBase());
+        return read16<getDataLinesConfiguration>(dataLines.getDataPortReadAddressBase());
     }
   enum class ActionKind : uint8_t {
       Full16,
@@ -1190,6 +1190,8 @@ public:
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
           EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
+      } else {
+          EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
       }
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
