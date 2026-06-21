@@ -827,6 +827,9 @@ constexpr InterfaceTimingDescription defaultWrite8{
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
+constexpr InterfaceTimingDescription customRead16 { 50, 40, 10, 25 };
+constexpr InterfaceTimingDescription customWrite16 { 25, 15, 50, 75 };
+#if 0
 constexpr InterfaceTimingDescription customWrite8 {
     10, // address wait
     0,  // setup time
@@ -839,8 +842,9 @@ constexpr InterfaceTimingDescription customWrite8 {
 constexpr InterfaceTimingDescription customRead8 {
     10, 20, 0, 0 
 }; // 30ns worth of delay (pulling hold time down any further prevents booting)
-constexpr auto WriteConfiguration = defaultWrite8;
-constexpr auto ReadConfiguration = defaultRead8;
+#endif
+constexpr auto WriteConfiguration = customWrite16;
+constexpr auto ReadConfiguration = customRead16;
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -956,8 +960,6 @@ public:
       for (int i = 0; i < 2; ++i ) {
           value.shorts[i] = read16(addressLines.getBaseAddress() + i);
       }
-      //value.shorts[1] = read16(addressLines.getBaseAddress()+1);
-      //value.shorts[0] = read16(addressLines.getBaseAddress());
       return value;
   }
   static inline bool
