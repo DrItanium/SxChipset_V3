@@ -839,6 +839,7 @@ struct EBIOperationDescription final {
     bool _triggerEnable;
 };
 constexpr EBIOperationDescription defaultConfiguration (true, true);
+constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -960,9 +961,10 @@ public:
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
+      EBIInterface::setDataLinesDirection<INPUT>();
       SplitWord32 value;
       for (int i = 0; i < 2; ++i ) {
-          value.shorts[i] = read16(addressLines.getBaseAddress() + i);
+          value.shorts[i] = read16<dataLinesDirectionAlreadyConfigured>(addressLines.getBaseAddress() + i);
       }
       return value;
   }
@@ -1011,7 +1013,7 @@ public:
   }
     static uint16_t
     readDataLines() noexcept {
-        return read16(dataLines.getDataPortReadAddressBase());
+        return read16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortReadAddressBase());
     }
   enum class ActionKind : uint8_t {
       Full16,
@@ -1174,14 +1176,11 @@ public:
   doMemoryTransaction() noexcept {
       TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
       auto address = getAddress();
-      //SerialUSB1.printf("Address: 0x%08x(%c) -> ", address.value, isReadTransaction ? 'R' : 'W');
-#if 0
       if constexpr (isReadTransaction) {
           // this will stay this way for the rest of the transaction
           EBIInterface::setDataLinesDirection<OUTPUT>();
           EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
       }
-#endif
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
