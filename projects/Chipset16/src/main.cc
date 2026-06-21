@@ -828,7 +828,7 @@ constexpr InterfaceTimingDescription customWrite16 { 10, 0, 20, 0 }; // 30ns tot
 constexpr InterfaceTimingDescription defaultRead8 {
     100, 80, 20, 50
 }; // 250ns worth of delay
-constexpr InterfaceTimingDescription customRead16 { 10, 20, 10, 0 }; // 40ns total
+constexpr InterfaceTimingDescription customRead16 { 10, 0, 30, 0 }; // 40ns total
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
 struct EBIOperationDescription final {
