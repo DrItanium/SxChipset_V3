@@ -1029,17 +1029,16 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
-      // this 16-bit impl will be the straightforward implementation since
-      // there is no need to overlay operations while testing things out
+      // start overlaying operations ahead of time
       EBIInterface::setDataLines(target.getWord((offset >> 1)));
       for (auto wordOffset = (offset >> 1); ;) {
-          // we don't care what we are writing in this case just carry out the
-          // delay state
+          // now update the IO expander itself
           write16<setDataLinesConfiguration>();
           if (isBurstLast()) {
               break;
           } else {
               digitalToggleFast(Pin::READY);
+              // load the next word and set the data lines ahead of time
               ++wordOffset;
               EBIInterface::setDataLines(target.getWord(wordOffset));
               waitForReadySignal();
