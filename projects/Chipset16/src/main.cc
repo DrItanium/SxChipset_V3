@@ -949,6 +949,14 @@ struct i960Interface final {
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
+  template<EBIOperationDescription description>
+  static inline uint16_t
+  read16() noexcept {
+      static_assert(!description.shouldConfigureAddressLines(), "This function should only be used when the target address lines are configured ahead of time!");
+      // doesn't matter what address we "set"
+      return read16<description>(0);
+  }
+
 
 
   static void
@@ -1043,10 +1051,6 @@ public:
       }
       signalReady();
   }
-  static uint16_t
-  readDataLines() noexcept {
-      return read16<getDataLinesConfiguration>(dataLines.getDataPortReadAddressBase());
-  }
   enum class ActionKind : uint8_t {
       Full16,
       Low8,
@@ -1113,7 +1117,7 @@ public:
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          auto dataLines = readDataLines();
+          auto dataLines = read16<getDataLinesConfiguration>();
           auto kind = determineActionKind();
           if (isBurstLast()) {
               doWriteAction(target, wordOffset, dataLines, kind);
