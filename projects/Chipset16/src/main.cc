@@ -1056,6 +1056,7 @@ public:
       // to be high during a legal transaction. The only time that BE0 and
       // BE1 are high is outside a given transaction or when FAIL is setup.
       // So this is a safe optimization.
+#if 0
       if (digitalReadFast(Pin::FULL16_ENABLE) == LOW) {
           return ActionKind::Full16;
       } else if (byteEnableLow()) {
@@ -1063,6 +1064,16 @@ public:
       } else {
           return ActionKind::Hi8;
       }
+#else
+      switch ( static_cast<uint8_t>((GPIO9_PSR >> 7) & 0b11)) {
+          case 0b00:
+              return ActionKind::Full16;
+          case 0b10:
+              return ActionKind::Low8;
+          default:
+              return ActionKind::Hi8;
+      }
+#endif
   }
   template<MemoryCell MC>
   static void
