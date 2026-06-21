@@ -982,7 +982,7 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          write16(dataLines.getDataPortWriteAddressBase(), 0);
+          write16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -1000,7 +1000,7 @@ public:
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
           //SerialUSB1.printf("0x%04x, ", value);
-          write16(dataLines.getDataPortWriteAddressBase(), value);
+          write16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
           } else {
