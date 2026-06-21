@@ -911,6 +911,12 @@ struct i960Interface final {
       // update the address
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
+  template<EBIOperationDescription description>
+  static inline void
+  write16(uint8_t address) noexcept {
+      static_assert(!description.shouldConfigureDataLines(), "This function should only be used when the data lines are configured ahead of time");
+      write16<description>(address, 0);
+  }
   template<EBIOperationDescription description = defaultConfiguration>
   static inline uint16_t
   read16(uint8_t address) noexcept {
@@ -1015,7 +1021,8 @@ public:
       // there is no need to overlay operations while testing things out
       EBIInterface::setDataLines(target.getWord((offset >> 1)));
       for (auto wordOffset = (offset >> 1); ;) {
-          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
+          // we don't care what we are writing in this case so just pass zero
+          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase());
           if (isBurstLast()) {
               break;
           } else {
