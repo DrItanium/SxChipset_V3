@@ -877,44 +877,6 @@ struct i960Interface final {
   //        maximum time: 33ns
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
-#if 0
-  template<bool configureDataLineDirection = true>
-  static inline void write8(uint8_t address, uint8_t value) noexcept {
-      /// @todo once new board comes in we can implement the fixed direction
-      /// design
-      if constexpr (configureDataLineDirection) {
-        EBIInterface::setDataLinesDirection<OUTPUT>();
-      }
-      EBIInterface::setAddress(address);
-      EBIInterface::setDataLines(value);
-
-      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      digitalWriteFast(Pin::EBI_EN, LOW);
-      fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-      digitalWriteFast(Pin::EBI_EN, HIGH);
-      // update the address
-      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
-  }
-  template<bool configureDataLineDirection = true>
-  static inline uint8_t
-  read8(uint8_t address) noexcept {
-      // the CH351 has some very strict requirements
-      // This function will take at least 230 ns to complete
-      if constexpr (configureDataLineDirection) {
-        EBIInterface::setDataLinesDirection<INPUT>();
-      }
-      EBIInterface::setAddress(address);
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      digitalWriteFast(Pin::EBI_EN, LOW);
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      uint8_t output = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      digitalWriteFast(Pin::EBI_EN, HIGH);
-      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-      return output;
-  }
-#else
   template<bool configureDataLineDirection = true>
   static inline void write16(uint8_t address, uint16_t value) noexcept {
       /// @todo once new board comes in we can implement the fixed direction
@@ -951,30 +913,10 @@ struct i960Interface final {
       fixedDelayNanoseconds<ReadConfiguration.afterTime>();
       return output;
   }
-#endif
 
 
   static void
   begin() noexcept {
-#if 0
-      // okay, we need to synchronize the initial ready out state since it
-      // could be different comparatively than expected.
-      write8(addressLines.getConfigPortBaseAddress(), 0);
-      write8(addressLines.getConfigPortBaseAddress() + 1, 0);
-      write8(addressLines.getConfigPortBaseAddress() + 2, 0);
-      write8(addressLines.getConfigPortBaseAddress() + 3, 0);
-      // lower 16-bits are for the i960 read port
-      write8(dataLines.getConfigPortBaseAddress() + 0, 0xFF);
-      write8(dataLines.getConfigPortBaseAddress() + 1, 0xFF);
-      write8(dataLines.getDataPortBaseAddress() + 0, 0);
-      write8(dataLines.getDataPortBaseAddress() + 1, 0);
-      // upper 16-bits are for the i960 write port
-      write8(dataLines.getConfigPortBaseAddress() + 2, 0);
-      write8(dataLines.getConfigPortBaseAddress() + 3, 0);
-      // after this point, the code will no longer change directions since
-      // it is unnecessary
-      EBIInterface::setDataLines(0);
-#else
       // configure the address lower lines for input
       write16(addressLines.getConfigPortBaseAddress(), 0);
       // configure the address upper lines for input 
@@ -987,7 +929,6 @@ struct i960Interface final {
       write16(dataLines.getConfigPortBaseAddress()+1, 0);
       // Make sure that the data lines are set to zero
       EBIInterface::setDataLines(0);
-#endif
   }
 public:
   static void
@@ -1007,15 +948,6 @@ public:
   isReadOperation() noexcept {
     return digitalReadFast(Pin::WR) == LOW;
   }
-  /*
-  static inline uint8_t fastRead8() noexcept {
-      fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      auto value = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      return value;
-  }
-  */
   static inline uint16_t fastRead() noexcept {
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
@@ -1030,23 +962,8 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
-#if 0
-      digitalToggleFast(Pin::EBI_EN);
-      EBIInterface::setDataLinesDirection<INPUT>();
-      // apparently, you can burst read from the CH351! I have confirmed this
-      // through testing
-      EBIInterface::setAddress<addressLines.getBaseAddress()>();
-      value.shorts[0] = fastRead();
-
-      EBIInterface::setAddress<addressLines.getBaseAddress()+1>();
-      value.shorts[1] = fastRead();
-
-      digitalToggleFast(Pin::EBI_EN);
-      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
-#else
       value.shorts[0] = read16(addressLines.getBaseAddress());
       value.shorts[1] = read16(addressLines.getBaseAddress()+1);
-#endif
       return value;
   }
   static inline bool
@@ -1072,52 +989,6 @@ public:
       // we can actually setup for the next cycle because it will show up!
       signalReady();
   }
-#if 0
-  template<bool UpdateBoth = false>
-  static void
-  writeDataLines(uint16_t value) noexcept {
-      TimeTracker<TrackWriteDataLines> tracker(__PRETTY_FUNCTION__);
-      // burst writes do work, you just have to be very careful. First you must
-      // update the address lines and wait. After the wait period has expired,
-      // it is safe to update the data lines. The hold time of 10ns before
-      // restarting the loop is also very safe as well. It is very important to
-      // make sure that we are writing to the upper piece before we turn off
-      // write mode.
-      //
-      // What we are doing is overlaying the act of setting things up with
-      // toggling the write pin. What needs to be checked is if more delays are
-      // necessary to preven asserts and such. My hope is that it isn't a
-      // problem now since the toggles happen far less frequently.
-      digitalToggleFast(Pin::EBI_EN); 
-      if constexpr (UpdateBoth) {
-          SplitWord16 sp{value};
-          for (uint32_t i = 0, j = dataLines.getDataPortWriteAddressBase(); i < sizeof(uint16_t); ++i, ++j) {
-              EBIInterface::setAddress(j);
-              fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-              EBIInterface::setDataLines(sp.bytes[i]);
-              fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-              fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-          }
-      } else {
-          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-
-          // this address assignment and wait is necessary to make sure that
-          // the new data to be set doesn't overwrite the previous address cell
-          //
-          // Remember that we are technically playing fast and loose with the
-          // timings here so these delays are very important!
-
-          EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase() + 1>();
-          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-          EBIInterface::setDataLines(value >> 8);
-          fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-          fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-      }
-
-      digitalToggleFast(Pin::EBI_EN);
-      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
-  }
-#endif
   template<bool SetAddress = true>
   static void 
   commitOutputDataLines(uint16_t value) noexcept {
@@ -1125,13 +996,13 @@ public:
       // to work with. We do not need to constantly set the address but for
       // simplicity of implementation lets start with it that way
       TimeTracker<TrackWriteDataLines> tracker(__PRETTY_FUNCTION__);
-      digitalToggleFast(Pin::EBI_EN);
       if constexpr (SetAddress) {
           EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
       }
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       EBIInterface::setDataLines(value);
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
+      digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
       digitalToggleFast(Pin::EBI_EN);
       fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
@@ -1141,38 +1012,6 @@ public:
   static void
   doMemoryCellReadTransaction(const MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
-#if 0
-      // pull the value ahead of time to start this process off but place it
-      // after the address assignment to use this as a "delay with work"
-      //
-      // Also, at this point, the WR pin is not pulled low so it won't cause
-      // problems with accidental writes anyway!
-      uint16_t currentWord = target.getWord((offset >> 1));
-      EBIInterface::setDataLines(currentWord);
-      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      for (auto wordOffset = (offset >> 1); ;) {
-          // write the current word
-          writeDataLines(currentWord);
-          if (isBurstLast()) {
-              break;
-          } else {
-              // overlay operations
-              digitalToggleFast(Pin::READY);
-              EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
-              // "delay" with work by setting the address first and then use
-              // the accessing of the target word and other logic acting as the
-              // delay as well
-              ++wordOffset; // advance wordOffset first
-              currentWord = target.getWord(wordOffset); // get the next value
-                                                        // reset the target address to the lower lines before we get the all
-                                                        // clear to continue
-              //fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-              EBIInterface::setDataLines(currentWord);
-              fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-              waitForReadySignal(); // then wait for the ready signal to change
-          }
-      }
-#else
       // this 16-bit impl will be the straightforward implementation since
       // there is no need to overlay operations while testing things out
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
@@ -1188,63 +1027,13 @@ public:
               signalReady();
           }
       }
-#endif
       signalReady();
   }
-#if 0
-  static uint16_t
-  readDataLines() noexcept {
-      TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
-      SplitWord16 value;
-      for (uint32_t i = 0, k = dataLines.getDataPortReadAddressBase(); i < sizeof(uint16_t); ++i, ++k) {
-          EBIInterface::setAddress(k);
-          //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-          fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-          value.bytes[i] = EBIInterface::readDataLines();
-          fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      }
-      return value.value;
-  }
-  static uint16_t readLo8() noexcept {
-      TimeTracker<TrackReadLo8> tracker(__PRETTY_FUNCTION__);
-      uint16_t value;
-      EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
-      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value = EBIInterface::readDataLines();
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      return value;
-  }
-  static uint16_t readHi8() noexcept {
-      TimeTracker<TrackReadHi8> tracker(__PRETTY_FUNCTION__);
-      uint16_t value;
-      EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()+1>();
-      //fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-      fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-      value = static_cast<uint16_t>(EBIInterface::readDataLines()) << 8;
-      fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-      return value;
-  }
-#else
     template<bool SetAddress = true>
     static uint16_t
     readDataLines() noexcept {
-        // unlike the 8-bit bus layout, it is fine to just read in the full
-        // 16-bits once and have the teensy just mask the bits out later
-        //
-        // This is the initial implementation and should be as simple as
-        // possible
-        TimeTracker<TrackReadDataLines> tracker(__PRETTY_FUNCTION__);
-        if constexpr (SetAddress) {
-            EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
-        }
-        fixedDelayNanoseconds<ReadConfiguration.addressWait>();
-        fixedDelayNanoseconds<ReadConfiguration.setupTime>(); // wait for things to get selected properly
-        uint16_t value = EBIInterface::readDataLines();
-        fixedDelayNanoseconds<ReadConfiguration.holdTime>();
-        return value;
+        return read16<SetAddress>(dataLines.getDataPortReadAddressBase());
     }
-#endif
   enum class ActionKind : uint8_t {
       Full16,
       Low8,
@@ -1284,20 +1073,6 @@ public:
           return ActionKind::Hi8;
       }
   }
-#if 0
-  static uint16_t readDataLines(ActionKind kind) noexcept {
-      switch (kind) {
-          case ActionKind::Full16:
-              return readDataLines();
-          case ActionKind::Low8:
-              return readLo8();
-          case ActionKind::Hi8:
-              return readHi8();
-          default:
-              return 0;
-      }
-  }
-#else
   static uint16_t readDataLines(ActionKind kind) noexcept {
       // we just read in the full 16-bits and then mask out the upper or lower
       // parts as needed
@@ -1310,7 +1085,6 @@ public:
               return readDataLines();
       }
   }
-#endif
   template<MemoryCell MC>
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
@@ -1333,42 +1107,20 @@ public:
       }
   }
   template<MemoryCell MC>
-  static inline void
-  writeActionCycle(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
-      TimeTracker<TrackWriteActionCycle> tracker(__PRETTY_FUNCTION__);
-      digitalToggleFast(Pin::READY);
-      // perform the write operation itself after we got the data off the bus
-      // and told the i960 that we want the next block of data. This design
-      // allows the i960 to be informed of the need first and then we use the
-      // time in between the ready signal toggle and the wait for it to finish
-      // to carry out the operation. 
-      doWriteAction(target, offset, dataLines, kind);
-      waitForReadySignal();
-  }
-  template<MemoryCell MC>
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      digitalToggleFast(Pin::EBI_EN);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           auto kind = determineActionKind();
           auto dataLines = readDataLines(kind);
-          // we keep the burst last check here so the compiler won't get too
-          // creative with optimizations. The duplication is necessary since
-          // isBurstLast will be invalid by the time we return from
-          // writeActionCycle. If the writeActionCycle function includes the
-          // lookup logic then it becomes possible that the compiler could
-          // rearrange where the isBurstLast call takes place. This design
-          // forces the matter
+          doWriteAction(target, wordOffset, dataLines, kind);
           if (isBurstLast()) {
-              writeActionCycle(target, wordOffset, dataLines, kind);
               break;
           } else {
-              writeActionCycle(target, wordOffset, dataLines, kind);
+              signalReady();
           }
       }
-      digitalToggleFast(Pin::EBI_EN);
-      fixedDelayNanoseconds<ReadConfiguration.afterTime>();
+      signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
