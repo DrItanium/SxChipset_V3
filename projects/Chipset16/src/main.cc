@@ -1065,13 +1065,13 @@ public:
           return ActionKind::Hi8;
       }
 #else
-      switch ( static_cast<uint8_t>((GPIO9_PSR >> 7) & 0b11)) {
-          case 0b00:
-              return ActionKind::Full16;
-          case 0b10:
-              return ActionKind::Low8;
+      switch (GPIO9_PSR & 0b110000000) {
+          case 0b100000000:
+             return ActionKind::Low8;
+          case 0b110000000:
+             return ActionKind::Hi8;
           default:
-              return ActionKind::Hi8;
+             return ActionKind::Full16;
       }
 #endif
   }
