@@ -1087,7 +1087,6 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      digitalToggleFast(Pin::EBI_EN);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           doWriteAction(target, wordOffset, readDataLines(), determineActionKind());
           if (isBurstLast()) {
@@ -1096,7 +1095,6 @@ public:
               signalReady();
           }
       }
-      digitalToggleFast(Pin::EBI_EN);
       signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
@@ -1194,6 +1192,7 @@ public:
           EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
       } else {
           EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
+          digitalToggleFast(Pin::EBI_EN);
       }
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
@@ -1206,7 +1205,9 @@ public:
               doNothingTransaction<isReadTransaction>();
               break;
       }
-      //SerialUSB1.println();
+      if constexpr (!isReadTransaction) {
+          digitalToggleFast(Pin::EBI_EN);
+      }
   }
   static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
