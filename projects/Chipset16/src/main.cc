@@ -832,19 +832,22 @@ constexpr InterfaceTimingDescription customRead16 { 10, 0, 20, 0 }; // 30ns tota
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
 struct EBIOperationDescription final {
-    constexpr EBIOperationDescription(bool configureDataLinesDirection, bool triggerEnable, bool setAddress) : _configureDataLinesDirection(configureDataLinesDirection), _triggerEnable(triggerEnable), _setAddress(setAddress) { }
+    constexpr EBIOperationDescription(bool configureDataLinesDirection, bool triggerEnable, bool setAddress, bool setDataLines) : _configureDataLinesDirection(configureDataLinesDirection), _triggerEnable(triggerEnable), _setAddress(setAddress), _setDataLines(setDataLines) { }
     [[nodiscard]] constexpr auto shouldConfigureDataLinesDirection() const noexcept { return _configureDataLinesDirection; }
     [[nodiscard]] constexpr auto shouldControlTriggerEnable() const noexcept { return _triggerEnable; }
     [[nodiscard]] constexpr auto shouldConfigureAddressLines() const noexcept { return _setAddress; }
+    [[nodiscard]] constexpr auto shouldConfigureDataLines() const noexcept { return _setDataLines; }
     bool _configureDataLinesDirection;
     bool _triggerEnable;
     bool _setAddress;
+    bool _setDataLines; 
 };
-constexpr EBIOperationDescription defaultConfiguration (true, true, true);
-constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true);
-constexpr EBIOperationDescription getAddressConfiguration(false, false, true);
-constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false);
-constexpr EBIOperationDescription getDataLinesConfiguration(false, false, false);
+constexpr EBIOperationDescription defaultConfiguration (true, true, true, true);
+constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true, true);
+constexpr EBIOperationDescription getAddressConfiguration(false, false, true, true);
+constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false, false);
+constexpr EBIOperationDescription doNothingSetDataLinesConfiguration(false, true, false, true);
+constexpr EBIOperationDescription getDataLinesConfiguration(false, false, false, true);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -893,7 +896,9 @@ struct i960Interface final {
           EBIInterface::setAddress(address);
           fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       }
-      EBIInterface::setDataLines(value);
+      if constexpr (description.shouldConfigureDataLines()) {
+          EBIInterface::setDataLines(value);
+      }
 
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
       if constexpr (description.shouldControlTriggerEnable()) {
@@ -993,7 +998,7 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
+          write16<doNothingSetDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -1008,15 +1013,16 @@ public:
       TimeTracker<TrackDoMemoryCellReadTransaction> tracker(__PRETTY_FUNCTION__);
       // this 16-bit impl will be the straightforward implementation since
       // there is no need to overlay operations while testing things out
-      for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
-          auto value = target.getWord(wordOffset);
-          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), value);
+      EBIInterface::setDataLines(target.getWord((offset >> 1)));
+      for (auto wordOffset = (offset >> 1); ;) {
+          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
           if (isBurstLast()) {
               break;
           } else {
-              // okay so we are currently hanging inside of signal ready which
-              // is not surprising!
-              signalReady();
+              digitalToggleFast(Pin::READY);
+              ++wordOffset;
+              EBIInterface::setDataLines(target.getWord(wordOffset));
+              waitForReadySignal();
           }
       }
       signalReady();
