@@ -840,6 +840,7 @@ struct EBIOperationDescription final {
 };
 constexpr EBIOperationDescription defaultConfiguration (true, true);
 constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true);
+constexpr EBIOperationDescription readOperationConfiguration(false, false);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -963,9 +964,11 @@ public:
       // this takes around 219-228 cycles to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       SplitWord32 value;
+      digitalToggleFast(Pin::EBI_EN);
       for (int i = 0; i < 2; ++i ) {
-          value.shorts[i] = read16<dataLinesDirectionAlreadyConfigured>(addressLines.getBaseAddress() + i);
+          value.shorts[i] = read16<readOperationConfiguration>(addressLines.getBaseAddress() + i);
       }
+      digitalToggleFast(Pin::EBI_EN);
       return value;
   }
   static inline bool
