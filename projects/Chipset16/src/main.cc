@@ -843,6 +843,7 @@ struct EBIOperationDescription final {
 constexpr EBIOperationDescription defaultConfiguration (true, true, true);
 constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true);
 constexpr EBIOperationDescription getAddressConfiguration(false, false, true);
+constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -887,7 +888,9 @@ struct i960Interface final {
       if constexpr (description.shouldConfigureDataLinesDirection()) {
         EBIInterface::setDataLinesDirection<OUTPUT>();
       }
-      EBIInterface::setAddress(address);
+      if constexpr (description.shouldConfigureAddressLines()) {
+          EBIInterface::setAddress(address);
+      }
       EBIInterface::setDataLines(value);
 
       fixedDelayNanoseconds<WriteConfiguration.addressWait>();
@@ -910,7 +913,9 @@ struct i960Interface final {
       if constexpr (description.shouldConfigureDataLinesDirection()) {
         EBIInterface::setDataLinesDirection<INPUT>();
       }
-      EBIInterface::setAddress(address);
+      if constexpr (description.shouldConfigureAddressLines()) {
+          EBIInterface::setAddress(address);
+      }
       fixedDelayNanoseconds<ReadConfiguration.addressWait>();
       if constexpr (description.shouldControlTriggerEnable()) {
           digitalToggleFast(Pin::EBI_EN);
@@ -987,7 +992,7 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          write16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortWriteAddressBase(), 0);
+          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -1005,7 +1010,7 @@ public:
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
           //SerialUSB1.printf("0x%04x, ", value);
-          write16<dataLinesDirectionAlreadyConfigured>(dataLines.getDataPortWriteAddressBase(), value);
+          write16<setDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
           } else {
