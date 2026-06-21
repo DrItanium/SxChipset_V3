@@ -787,7 +787,7 @@ struct CH351 final {
     return _dataPortBaseAddress;
   }
   [[nodiscard]] constexpr auto getDataPortReadAddressBase() const noexcept {
-          return _dataPortBaseAddress + 2;
+          return _dataPortBaseAddress + 1;
   }
   [[nodiscard]] constexpr auto getDataPortWriteAddressBase() const noexcept {
       return _dataPortBaseAddress;
