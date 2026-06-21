@@ -953,8 +953,11 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       SplitWord32 value;
-      value.shorts[0] = read16(addressLines.getBaseAddress());
-      value.shorts[1] = read16(addressLines.getBaseAddress()+1);
+      for (int i = 0; i < 2; ++i ) {
+          value.shorts[i] = read16(addressLines.getBaseAddress() + i);
+      }
+      //value.shorts[1] = read16(addressLines.getBaseAddress()+1);
+      //value.shorts[0] = read16(addressLines.getBaseAddress());
       return value;
   }
   static inline bool
@@ -971,32 +974,13 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          commitOutputDataLines(0);
-          //writeDataLines<true>(0);
+          write16(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
       }
       // we can actually setup for the next cycle because it will show up!
       signalReady();
-  }
-  template<bool SetAddress = true>
-  static void 
-  commitOutputDataLines(uint16_t value) noexcept {
-      // unlike the 8-bit design, this 16-bit design is far cleaner and easier
-      // to work with. We do not need to constantly set the address but for
-      // simplicity of implementation lets start with it that way
-      TimeTracker<TrackWriteDataLines> tracker(__PRETTY_FUNCTION__);
-      if constexpr (SetAddress) {
-          EBIInterface::setAddress<dataLines.getDataPortWriteAddressBase()>();
-      }
-      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
-      EBIInterface::setDataLines(value);
-      fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
-      digitalToggleFast(Pin::EBI_EN);
-      fixedDelayNanoseconds<WriteConfiguration.holdTime>(); // tWL hold for at least 80ns
-      digitalToggleFast(Pin::EBI_EN);
-      fixedDelayNanoseconds<WriteConfiguration.afterTime>(); // data hold after WR + tWH + breathe (50ns)
   }
 
   template<MemoryCell MC>
@@ -1008,7 +992,7 @@ public:
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
           SerialUSB1.printf("0x%04x, ", value);
-          commitOutputDataLines(value);
+          write16(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
           } else {
@@ -1062,18 +1046,6 @@ public:
           return ActionKind::Hi8;
       }
   }
-  static uint16_t readDataLines(ActionKind kind) noexcept {
-      // we just read in the full 16-bits and then mask out the upper or lower
-      // parts as needed
-      switch (kind) {
-          case ActionKind::Low8:
-              return readDataLines() & 0x00FF;
-          case ActionKind::Hi8:
-              return readDataLines() & 0xFF00;
-          default:
-              return readDataLines();
-      }
-  }
   template<MemoryCell MC>
   static void
   doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
@@ -1098,8 +1070,7 @@ public:
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          auto kind = determineActionKind();
-          doWriteAction(target, wordOffset, readDataLines(kind), kind);
+          doWriteAction(target, wordOffset, readDataLines(), determineActionKind());
           if (isBurstLast()) {
               break;
           } else {
