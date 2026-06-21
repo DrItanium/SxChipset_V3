@@ -1010,10 +1010,6 @@ public:
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
   }
-  static inline bool
-  byteEnableLow() noexcept {
-    return digitalReadFast(Pin::BE0) == LOW;
-  }
 
   template<bool isReadTransaction>
   static inline void
@@ -1116,7 +1112,7 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
+      for (uint8_t wordOffset = (offset >> 1); ; ) {
           auto dataLines = read16<getDataLinesConfiguration>();
           auto kind = determineActionKind();
           if (isBurstLast()) {
@@ -1125,6 +1121,7 @@ public:
           } else {
               digitalToggleFast(Pin::READY);
               doWriteAction(target, wordOffset, dataLines, kind);
+              ++wordOffset;
               waitForReadySignal();
           }
       }
