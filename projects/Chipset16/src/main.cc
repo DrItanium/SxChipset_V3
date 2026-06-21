@@ -891,10 +891,10 @@ struct i960Interface final {
       }
       if constexpr (description.shouldConfigureAddressLines()) {
           EBIInterface::setAddress(address);
+          fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       }
       EBIInterface::setDataLines(value);
 
-      fixedDelayNanoseconds<WriteConfiguration.addressWait>();
       fixedDelayNanoseconds<WriteConfiguration.setupTime>(); // setup time (tDS), normally 30
       if constexpr (description.shouldControlTriggerEnable()) {
           digitalToggleFast(Pin::EBI_EN);
