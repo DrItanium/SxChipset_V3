@@ -832,15 +832,17 @@ constexpr InterfaceTimingDescription customRead16 { 10, 20, 10, 0 }; // 40ns tot
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
 struct EBIOperationDescription final {
-    constexpr EBIOperationDescription(bool configureDataLinesDirection, bool triggerEnable) : _configureDataLinesDirection(configureDataLinesDirection), _triggerEnable(triggerEnable) { }
+    constexpr EBIOperationDescription(bool configureDataLinesDirection, bool triggerEnable, bool setAddress) : _configureDataLinesDirection(configureDataLinesDirection), _triggerEnable(triggerEnable), _setAddress(setAddress) { }
     [[nodiscard]] constexpr auto shouldConfigureDataLinesDirection() const noexcept { return _configureDataLinesDirection; }
     [[nodiscard]] constexpr auto shouldControlTriggerEnable() const noexcept { return _triggerEnable; }
+    [[nodiscard]] constexpr auto shouldConfigureAddressLines() const noexcept { return _setAddress; }
     bool _configureDataLinesDirection;
     bool _triggerEnable;
+    bool _setAddress;
 };
-constexpr EBIOperationDescription defaultConfiguration (true, true);
-constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true);
-constexpr EBIOperationDescription readOperationConfiguration(false, false);
+constexpr EBIOperationDescription defaultConfiguration (true, true, true);
+constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true);
+constexpr EBIOperationDescription getAddressConfiguration(false, false, true);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -963,10 +965,10 @@ public:
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
       EBIInterface::setDataLinesDirection<INPUT>();
-      SplitWord32 value;
       digitalToggleFast(Pin::EBI_EN);
+      SplitWord32 value;
       for (int i = 0; i < 2; ++i ) {
-          value.shorts[i] = read16<readOperationConfiguration>(addressLines.getBaseAddress() + i);
+          value.shorts[i] = read16<getAddressConfiguration>(addressLines.getBaseAddress() + i);
       }
       digitalToggleFast(Pin::EBI_EN);
       return value;
