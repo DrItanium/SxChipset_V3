@@ -844,7 +844,7 @@ constexpr EBIOperationDescription defaultConfiguration (true, true, true);
 constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true);
 constexpr EBIOperationDescription getAddressConfiguration(false, false, true);
 constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false);
-constexpr EBIOperationDescription getDataLinesConfiguration(false, true, false);
+constexpr EBIOperationDescription getDataLinesConfiguration(false, false, false);
 struct i960Interface final {
   i960Interface() = delete;
   ~i960Interface() = delete;
@@ -1087,6 +1087,7 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
+      digitalToggleFast(Pin::EBI_EN);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
           doWriteAction(target, wordOffset, readDataLines(), determineActionKind());
           if (isBurstLast()) {
@@ -1095,6 +1096,7 @@ public:
               signalReady();
           }
       }
+      digitalToggleFast(Pin::EBI_EN);
       signalReady();
   }
   template<bool isReadTransaction, MemoryCell MC>
