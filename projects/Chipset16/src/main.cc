@@ -882,7 +882,8 @@ struct i960Interface final {
   // TOF : Read strobe deassert to data out invalid time :
   //        maximum time: 25ns
   template<bool configureDataLineDirection = true>
-  static inline void write16(uint8_t address, uint16_t value) noexcept {
+  static inline void 
+  write16(uint8_t address, uint16_t value) noexcept {
       /// @todo once new board comes in we can implement the fixed direction
       /// design
       if constexpr (configureDataLineDirection) {
@@ -956,9 +957,10 @@ public:
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
       // this takes around 219-228 cycles to complete
+      EBIInterface::setDataLinesDirection<INPUT>();
       SplitWord32 value;
       for (int i = 0; i < 2; ++i ) {
-          value.shorts[i] = read16(addressLines.getBaseAddress() + i);
+          value.shorts[i] = read16<false>(addressLines.getBaseAddress() + i);
       }
       return value;
   }
@@ -976,7 +978,7 @@ public:
   doNothingTransaction() noexcept {
       TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
       if constexpr (isReadTransaction) {
-          write16(dataLines.getDataPortWriteAddressBase(), 0);
+          write16<false>(dataLines.getDataPortWriteAddressBase(), 0);
       }
       while (!isBurstLast()) {
           signalReady();
@@ -994,7 +996,7 @@ public:
       for (auto wordOffset = (offset >> 1); ; ++wordOffset) {
           auto value = target.getWord(wordOffset);
           //SerialUSB1.printf("0x%04x, ", value);
-          write16(dataLines.getDataPortWriteAddressBase(), value);
+          write16<false>(dataLines.getDataPortWriteAddressBase(), value);
           if (isBurstLast()) {
               break;
           } else {
@@ -1007,7 +1009,7 @@ public:
   }
     static uint16_t
     readDataLines() noexcept {
-        return read16(dataLines.getDataPortReadAddressBase());
+        return read16<false>(dataLines.getDataPortReadAddressBase());
     }
   enum class ActionKind : uint8_t {
       Full16,
