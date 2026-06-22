@@ -996,7 +996,6 @@ public:
   static SplitWord32
   getAddress() noexcept {
       TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
-      // this takes around 219-228 cycles to complete
       EBIInterface::setDataLinesDirection<INPUT>();
       digitalToggleFast(Pin::EBI_EN);
       SplitWord32 value;
