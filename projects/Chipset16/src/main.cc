@@ -57,11 +57,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
-constexpr auto UseDirectPortManipulation = true;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
-constexpr bool RealtimeShellActive = false;
-constexpr bool AccessFlexIODirectly = true;
 enum class TimerTrackingTargets {
     None,
     GetAddress,
