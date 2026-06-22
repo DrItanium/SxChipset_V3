@@ -84,19 +84,19 @@ constexpr bool shouldEnableTimeTracking(TimerTrackingTargets target) noexcept {
 #define X(func) \
     constexpr auto Track ## func = shouldEnableTimeTracking(TimerTrackingTargets:: func ) 
 X(GetAddress);
+X(DoNothingTransaction);
 X(ReadLo8);
 X(ReadHi8);
-X(ReadDataLines);
-X(DoNothingTransaction);
 X(WriteDataLines);
-X(DoMemoryCellReadTransaction);
 X(DetermineActionKind);
 X(DoWriteAction);
 X(WriteActionCycle);
+X(DoMemoryCellReadTransaction);
 X(DoMemoryCellWriteTransaction);
 X(DoMemoryCellTransaction);
-X(TransmitConstantMemoryCell);
 X(DoMemoryTransaction);
+X(TransmitConstantMemoryCell);
+X(ReadDataLines);
 #undef X
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;

@@ -83,12 +83,21 @@ public:
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
+#if 0
       auto value = GPIO6_GDIR & 0x0000'FFFF;
       if constexpr (auto value = GPIO6_GDIR & 0x0000'FFFF; direction == OUTPUT) {
           GPIO6_GDIR = (value | 0xFFFF'0000);
       } else {
           GPIO6_GDIR = value;
       }
+#else
+      static_assert (direction == OUTPUT || direction == INPUT, "Invalid direction design");
+      if constexpr (direction == OUTPUT) {
+         GPIO6_GDIR = (GPIO6_GDIR | 0xFFFF'0000);
+      } else {
+          GPIO6_GDIR = (GPIO6_GDIR & 0x0000'FFFF);
+      }
+#endif
   }
 };
 using EBIInterface = EBIWrapperInterface;
