@@ -1356,6 +1356,7 @@ setupRTC() noexcept {
         auto now = rtc.now();
         Serial.printf("unixtime: %d\n", now.unixtime());
     }
+    // @todo take advantage of the rtc built into the teensy
 }
 void
 sinkWire() noexcept {
