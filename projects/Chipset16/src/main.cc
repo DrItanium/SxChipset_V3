@@ -980,18 +980,6 @@ public:
     return digitalReadFast(Pin::WR) == LOW;
   }
 
-  static SplitWord32
-  getAddress() noexcept {
-      TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
-      EBIInterface::setDataLinesDirection<INPUT>();
-      digitalToggleFast(Pin::EBI_EN);
-      SplitWord32 value;
-      for (int i = 0; i < 2; ++i) {
-          value.shorts[i] = read16<getAddressConfiguration>(addressLines.getBaseAddress() + i);
-      }
-      digitalToggleFast(Pin::EBI_EN);
-      return value;
-  }
   static inline bool
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
@@ -1187,6 +1175,18 @@ public:
               doNothingTransaction<isReadTransaction>();
               break;
       }
+  }
+  static SplitWord32
+  getAddress() noexcept {
+      TimeTracker<TrackGetAddress> tracker(__PRETTY_FUNCTION__);
+      EBIInterface::setDataLinesDirection<INPUT>();
+      digitalToggleFast(Pin::EBI_EN);
+      SplitWord32 value;
+      for (int i = 0; i < 2; ++i) {
+          value.shorts[i] = read16<getAddressConfiguration>(addressLines.getBaseAddress() + i);
+      }
+      digitalToggleFast(Pin::EBI_EN);
+      return value;
   }
   template<bool isReadTransaction>
   static inline void
