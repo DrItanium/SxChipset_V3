@@ -1097,17 +1097,24 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      for (uint8_t wordOffset = (offset >> 1); ; ) {
-          auto dataLines = read16<getDataLinesConfiguration>();
-          auto kind = determineActionKind();
+      for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
+          switch(determineActionKind()) {
+            case ActionKind::Full16:
+                target.setWord(wordOffset, read16<getDataLinesConfiguration>());
+                break;
+            case ActionKind::Low8:
+                target.setWord(wordOffset, read16<getDataLinesConfiguration>(), true, false);
+                break;
+            case ActionKind::Hi8:
+                target.setWord(wordOffset, read16<getDataLinesConfiguration>(), false, true);
+                break;
+            default:
+                break;
+          }
           if (isBurstLast()) {
-              doWriteAction(target, wordOffset, dataLines, kind);
               break;
           } else {
-              digitalToggleFast(Pin::READY);
-              doWriteAction(target, wordOffset, dataLines, kind);
-              ++wordOffset;
-              waitForReadySignal();
+              signalReady();
           }
       }
       signalReady();
