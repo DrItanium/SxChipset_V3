@@ -777,21 +777,11 @@ RawFilesystemInterface sdcardInterface;
 
 struct CH351 final {
   constexpr explicit CH351(uint8_t baseAddress) noexcept : _baseAddress(baseAddress & 0b010), _dataPortBaseAddress(baseAddress & 0b010), _cfgPortBaseAddress((baseAddress & 0b010) | 0b100) { }
-  [[nodiscard]] constexpr auto getBaseAddress() const noexcept {
-    return _baseAddress;
-  }
-  [[nodiscard]] constexpr auto getDataPortBaseAddress() const noexcept {
-    return _dataPortBaseAddress;
-  }
-  [[nodiscard]] constexpr auto getDataPortReadAddressBase() const noexcept {
-          return _dataPortBaseAddress + 1;
-  }
-  [[nodiscard]] constexpr auto getDataPortWriteAddressBase() const noexcept {
-      return _dataPortBaseAddress;
-  }
-  [[nodiscard]] constexpr auto getConfigPortBaseAddress() const noexcept {
-    return _cfgPortBaseAddress;
-  }
+  [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return _baseAddress; }
+  [[nodiscard]] constexpr auto getDataPortBaseAddress() const noexcept { return _dataPortBaseAddress; }
+  [[nodiscard]] constexpr auto getDataPortReadAddressBase() const noexcept { return _dataPortBaseAddress + 1; }
+  [[nodiscard]] constexpr auto getDataPortWriteAddressBase() const noexcept { return _dataPortBaseAddress; }
+  [[nodiscard]] constexpr auto getConfigPortBaseAddress() const noexcept { return _cfgPortBaseAddress; }
 private:
   uint8_t _baseAddress;
   uint8_t _dataPortBaseAddress;
@@ -996,7 +986,7 @@ public:
       EBIInterface::setDataLinesDirection<INPUT>();
       digitalToggleFast(Pin::EBI_EN);
       SplitWord32 value;
-      for (int i = 0; i < 2; ++i ) {
+      for (int i = 0; i < 2; ++i) {
           value.shorts[i] = read16<getAddressConfiguration>(addressLines.getBaseAddress() + i);
       }
       digitalToggleFast(Pin::EBI_EN);
