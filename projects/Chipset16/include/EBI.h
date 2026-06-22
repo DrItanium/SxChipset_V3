@@ -46,17 +46,6 @@ public:
   EBIWrapperInterface(EBIWrapperInterface&&) = delete;
   EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
   EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
-  static constexpr uint32_t EBIAddressTable[256] {
-#define X(value) makeAddress(value), 
-#include "Entry255.def"
-#undef X
-  };
-
-  static constexpr uint32_t EBIOutputTransformation[256] {
-#define X(value) ((static_cast<uint32_t>(value) << 24) & 0xFF00'0000),
-#include "Entry255.def"
-#undef X
-  };
   static bool begin() noexcept;
   // in the 16-bit bus design, we can easily just assign data without needing
   // to have a strange lookup table for all of this
@@ -77,27 +66,27 @@ public:
   }
   template<uint8_t address>
   static inline void setAddress() noexcept {
-      setAddress(address);
+      constexpr auto convertedAddress = address & 0b111;
+      if constexpr (convertedAddress == 0b000) {
+          GPIO7_DR_CLEAR = 0x0007'0000;
+      } else if constexpr (convertedAddress == 0b111) {
+          GPIO7_DR_SET = 0x0007'0000;
+      } else {
+          GPIO7_DR_CLEAR = 0x0007'0000;
+          constexpr uint32_t computedAddress = static_cast<uint32_t>(convertedAddress) << 16;
+          GPIO7_DR_SET = computedAddress;
+      }
   }
 
   template<PinDirection direction>
   static void
   setDataLinesDirection() noexcept {
-#if 0
-      auto value = GPIO6_GDIR & 0x0000'FFFF;
-      if constexpr (auto value = GPIO6_GDIR & 0x0000'FFFF; direction == OUTPUT) {
-          GPIO6_GDIR = (value | 0xFFFF'0000);
-      } else {
-          GPIO6_GDIR = value;
-      }
-#else
       static_assert (direction == OUTPUT || direction == INPUT, "Invalid direction design");
       if constexpr (direction == OUTPUT) {
-         GPIO6_GDIR = (GPIO6_GDIR | 0xFFFF'0000);
+          GPIO6_GDIR = (GPIO6_GDIR | 0xFFFF'0000);
       } else {
           GPIO6_GDIR = (GPIO6_GDIR & 0x0000'FFFF);
       }
-#endif
   }
 };
 using EBIInterface = EBIWrapperInterface;
