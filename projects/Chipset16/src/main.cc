@@ -966,13 +966,11 @@ public:
   waitForReadySignal() noexcept {
       rdyFeedback.wait();
   }
-  template<uint32_t readyDelayTimer = 0>
   static inline void
   signalReady() noexcept {
       // run and block until we get the completion pulse
       digitalToggleFast(Pin::READY);
       waitForReadySignal();
-      fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
   }
 
   static inline bool
