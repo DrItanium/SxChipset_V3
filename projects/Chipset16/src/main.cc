@@ -1077,24 +1077,6 @@ public:
   }
   template<MemoryCell MC>
   static void
-  doWriteAction(MC& target, uint8_t offset, uint16_t dataLines, ActionKind kind) noexcept {
-      TimeTracker<TrackDoWriteAction> tracker(__PRETTY_FUNCTION__);
-      switch (kind) {
-          case ActionKind::Full16:
-              target.setWord(offset, dataLines);
-              break;
-          case ActionKind::Low8:
-              target.setWord(offset, dataLines, true, false);
-              break;
-          case ActionKind::Hi8:
-              target.setWord(offset, dataLines, false, true);
-              break;
-          default:
-              break;
-      }
-  }
-  template<MemoryCell MC>
-  static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
