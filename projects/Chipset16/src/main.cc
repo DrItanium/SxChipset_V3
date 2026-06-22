@@ -1038,6 +1038,9 @@ public:
       Hi8,
   };
   using WriteActionKind = ActionKind;
+  static constexpr uint32_t ActionKind_EnableMask = 0b110000000;
+  static constexpr uint32_t ActionKind_Low8Mask   = 0b100000000;
+  static constexpr uint32_t ActionKind_Hi8Mask    = 0b110000000;
   static inline ActionKind determineActionKind() noexcept {
       TimeTracker<TrackDetermineActionKind> tracker(__PRETTY_FUNCTION__);
       // the i960Sx exposes two byte enable signals, BE0 and BE1
@@ -1066,10 +1069,10 @@ public:
 
       // I remapped the pinout for BE0 and FULL16 to be accessible from a
       // single port read operation
-      switch (GPIO9_PSR & 0b110000000) {
-          case 0b100000000:
+      switch (GPIO9_PSR & ActionKind_EnableMask) {
+          case ActionKind_Low8Mask:
              return ActionKind::Low8;
-          case 0b110000000:
+          case ActionKind_Hi8Mask:
              return ActionKind::Hi8;
           default:
              return ActionKind::Full16;
