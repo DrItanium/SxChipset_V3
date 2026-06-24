@@ -1201,6 +1201,7 @@ public:
           EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
           digitalToggleFast(Pin::EBI_EN);
       }
+
       switch (address.components.targetBlock) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
@@ -1212,6 +1213,7 @@ public:
               doNothingTransaction<isReadTransaction>();
               break;
       }
+
       if constexpr (!isReadTransaction) {
           digitalToggleFast(Pin::EBI_EN);
       }
