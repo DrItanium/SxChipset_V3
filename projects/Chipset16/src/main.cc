@@ -213,20 +213,23 @@ struct USBSerialBlock {
     }
 };
 struct TimingRelatedThings {
+    void begin(MemoryCellBlock& block) noexcept {
+        _backingStorage = &block;
+    }
     void clear() noexcept { 
-        _backingStorage.clear();
+        _backingStorage->clear();
     }
 private:
     void updateDataContainerForRead(uint8_t offset) const noexcept {
         switch (offset) {
             case 0:
-                _backingStorage.setWord32(0, millis());
+                _backingStorage->setWord32(0, millis());
                 break;
             case 2:
-                _backingStorage.setWord32(1, micros());
+                _backingStorage->setWord32(1, micros());
                 break;
             case 4:
-                _backingStorage.setWord32(2, getCurrentCycleCount());
+                _backingStorage->setWord32(2, getCurrentCycleCount());
                 break;
             default:
                 break;
@@ -235,12 +238,12 @@ private:
 public:
     uint16_t getWord(uint8_t offset) const noexcept {
         updateDataContainerForRead(offset);
-        return _backingStorage.getWord(offset);
+        return _backingStorage->getWord(offset);
     }
     void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
 
 private:
-    mutable MemoryCellBlock _backingStorage;
+    mutable MemoryCellBlock* _backingStorage = nullptr;
 };
 struct RandomSourceRelatedThings {
     void clear() noexcept {
@@ -591,6 +594,7 @@ struct i960Interface final {
       block.setWord32(0, 4096); // eeprom capacity
       block.setWord32(1, OnboardSRAMCacheSize); 
       block.setWord32(2, OnboardSRAM2CacheSize); 
+      timingInfo.begin(builtinDeviceStorage[1]);
   }
 public:
   static void
