@@ -216,12 +216,26 @@ struct TimingRelatedThings {
     void clear() noexcept { 
         _backingStorage.clear();
     }
-    void update() noexcept {
-        _backingStorage.setWord32(0, millis());
-        _backingStorage.setWord32(1, micros());
-        _backingStorage.setWord32(2, getCurrentCycleCount());
+    void update() noexcept { }
+private:
+    void updateDataContainerForRead(uint8_t offset) noexcept {
+        switch (offset) {
+            case 0:
+                _backingStorage.setWord32(0, millis());
+                break;
+            case 2:
+                _backingStorage.setWord32(1, micros());
+                break;
+            case 4:
+                _backingStorage.setWord32(2, getCurrentCycleCount());
+                break;
+            default:
+                break;
+        }
     }
+public:
     uint16_t getWord(uint8_t offset) const noexcept {
+        updateDataContainerForRead(offset);
         return _backingStorage.getWord(offset);
     }
     void setWord(uint8_t, uint16_t) noexcept { }
