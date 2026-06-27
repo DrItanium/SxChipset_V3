@@ -962,7 +962,7 @@ void setupRandomSeed() noexcept {
 #undef X
   newSeed += rtc.now().unixtime();
   randomSeed(newSeed);
-  Serial.printf("Random Seed: 0x%x\n", newSeed);
+  //Serial.printf("Random Seed: 0x%x\n", newSeed);
 }
 void setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
@@ -1083,7 +1083,7 @@ setup() {
     if (!configureFlexIO(inTransactionDetector, rdyFeedback)) {
         Serial.println("Halting...");
         while (true) {
-            delay(10);
+            delay(1000);
         }
     }
     Entropy.Initialize();
