@@ -177,41 +177,6 @@ struct EEPROMWrapper {
         uint16_t _baseOffset = 0;
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
-struct USBSerialBlock {
-    void clear() noexcept { }
-    uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset & 0b11) {
-            case 0:
-            case 4:
-                return Serial.read();
-            default:
-                return 0;
-        }
-    }
-    void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
-        // 16-bit value offset so
-        // 0 -> Serial.write
-        // 1 -> nil
-        // 2 -> flush
-        // 3 -> nil
-        // 4 -> Serial.write
-        // 5 -> nil
-        // 6 -> flush
-        // 7 -> nil
-        switch (offset) {
-            case 0:
-            case 4:
-                Serial.write(static_cast<uint8_t>(value));
-                break;
-            case 2:
-            case 6:
-                Serial.flush();
-                break;
-            default:
-                break;
-        }
-    }
-};
 struct RandomSourceRelatedThings {
     void clear() noexcept {
         _backingStorage.clear();
@@ -296,7 +261,6 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
     }
 }
 
-USBSerialBlock usbSerial;
 RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 // with the 16-bit data bus connection, things have changed somewhat
