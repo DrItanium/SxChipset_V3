@@ -39,8 +39,6 @@ template<typename T>
 concept MemoryCell = requires(T a) {
     // only operate on 16-bit words
     { a.getWord(0) } -> std::same_as<uint16_t>;
-    { a.setWord(0, 0) };
-    { a.setWord(0, 0, true, true) };
     { a.setWord(0, 0, ActionKind::Full16) };
     { a.clear() };
 };
@@ -58,17 +56,6 @@ public:
       }
   }
   [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
-  inline void setWord(uint8_t offset, uint16_t value) noexcept { shorts[offset & 0b111] = value; }
-  inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
-    // convert to an 8-bit setup so we can do conversions as needed
-    uint8_t baseOffset = (offset << 1) & 0b1110;
-    if (updateLo) {
-        bytes[baseOffset] = static_cast<uint8_t>(value);
-    }
-    if (updateHi) {
-        bytes[baseOffset+1] = static_cast<uint8_t>(value >> 8);
-    }
-  }
   inline void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
       uint8_t byteOffset = (offset << 1) & 0b1110;
       switch (kind) {

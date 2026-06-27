@@ -155,25 +155,18 @@ struct EEPROMWrapper {
         uint16_t value = 0;
         return EEPROM.get<uint16_t>(_baseOffset + ((offset << 1) & 0b1110), value);
     }
-    void setWord(uint8_t offset, uint16_t value, bool updateLo = true, bool updateHi = true) noexcept {
-        auto computedOffset = ((offset << 1)) & 0b1110;
-        if (updateLo) {
-            EEPROM.put(_baseOffset + computedOffset, static_cast<uint8_t>(value));
-        }
-        if (updateHi) {
-            EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
-        }
-    }
     void setWord(uint8_t offset, uint16_t value, ActionKind kind) {
+        auto computedOffset = ((offset << 1)) & 0b1110;
         switch (kind) {
             case ActionKind::Full16:
-                setWord(offset, value, true, true);
+                EEPROM.put(_baseOffset + computedOffset, static_cast<uint8_t>(value));
+                EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
                 break;
             case ActionKind::Low8:
-                setWord(offset, value, true, false);
+                EEPROM.put(_baseOffset + computedOffset, static_cast<uint8_t>(value));
                 break;
             case ActionKind::Hi8:
-                setWord(offset, value, false, true);
+                EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
                 break;
             default:
                 break;
@@ -194,13 +187,6 @@ struct USBSerialBlock {
             default:
                 return 0;
         }
-    }
-    void setWord(uint8_t offset, uint16_t value) noexcept {
-        setWord(offset, value, ActionKind::Full16);
-    }
-    void setWord(uint8_t offset, uint16_t value, bool, bool) noexcept {
-        // ignore the hi and lo operations
-        setWord(offset, value, ActionKind::Full16);
     }
     void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
         // 16-bit value offset so
@@ -252,8 +238,6 @@ public:
         updateDataContainerForRead(offset);
         return _backingStorage.getWord(offset);
     }
-    void setWord(uint8_t, uint16_t) noexcept { }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
     void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
 
 private:
@@ -274,8 +258,6 @@ struct CapacityInformation {
             default: return 0;
         }
     }
-    void setWord(uint8_t, uint16_t) noexcept { }
-    void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
     void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
 private:
     static constexpr uint32_t _eepromCapacity = 4096;
@@ -309,10 +291,6 @@ public:
     uint16_t getWord(uint8_t offset) const noexcept {
         updateDataContainerForRead(offset);
         return _backingStorage.getWord(offset);
-    }
-    void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
-        _backingStorage.setWord(offset, value, enableLo, enableHi);
-        updateDataContainerForWrite(offset);
     }
     void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
         _backingStorage.setWord(offset, value, kind);
@@ -370,10 +348,6 @@ struct RTCMemoryBlock {
         uint16_t getWord(uint8_t offset) const noexcept {
             updateDataContainerForRead(offset);
             return _backingStorage.getWord(offset);
-        }
-        void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
-            _backingStorage.setWord(offset, value, enableLo, enableHi);
-            updateDataContainerForWrite(offset);
         }
         void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
             _backingStorage.setWord(offset, value, kind);
@@ -737,19 +711,7 @@ public:
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
       for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
-          switch(determineActionKind()) {
-            case ActionKind::Full16:
-                target.setWord(wordOffset, read16<getDataLinesConfiguration>());
-                break;
-            case ActionKind::Low8:
-                target.setWord(wordOffset, read16<getDataLinesConfiguration>(), true, false);
-                break;
-            case ActionKind::Hi8:
-                target.setWord(wordOffset, read16<getDataLinesConfiguration>(), false, true);
-                break;
-            default:
-                break;
-          }
+          target.setWord(wordOffset, read16<getDataLinesConfiguration>(), determineActionKind());
           if (isBurstLast()) {
               break;
           } else {
