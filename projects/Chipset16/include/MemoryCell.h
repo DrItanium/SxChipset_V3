@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <concepts>
 #include <type_traits>
 
+
 enum class ActionKind : uint8_t {
     Full16,
     Low8,
@@ -40,7 +41,6 @@ concept MemoryCell = requires(T a) {
     // only operate on 16-bit words
     { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0, ActionKind::Full16) };
-    { a.clear() };
 };
 
 union MemoryCellBlock {

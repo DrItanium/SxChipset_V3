@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "EBI.h"
 
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
+constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 volatile bool systemCounterEnabled = false;
@@ -532,7 +533,7 @@ private:
               ioSpaceCache[3].setWord32(2, Entropy.random());
               break;
           case 0x00'44: // sram cache size (~61k)
-              ioSpaceCache[4].setWord32(1, (256 * (256-16))); 
+              ioSpaceCache[4].setWord32(1, OnboardSRAM1CacheSize);
               break;
           case 0x00'48:
               ioSpaceCache[4].setWord32(2, OnboardSRAM2CacheSize); 
