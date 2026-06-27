@@ -28,6 +28,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <concepts>
 #include <type_traits>
 
+enum class ActionKind : uint8_t {
+    Full16,
+    Low8,
+    Hi8,
+};
+using WriteActionKind = ActionKind;
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
@@ -35,6 +41,7 @@ concept MemoryCell = requires(T a) {
     { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0) };
     { a.setWord(0, 0, true, true) };
+    { a.setWord(0, 0, ActionKind::Full16) };
     { a.clear() };
 };
 
@@ -61,6 +68,22 @@ public:
     if (updateHi) {
         bytes[baseOffset+1] = static_cast<uint8_t>(value >> 8);
     }
+  }
+  inline void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
+      uint8_t byteOffset = (offset << 1) & 0b1110;
+      switch (kind) {
+          case ActionKind::Full16:
+              shorts[offset & 0b111] = value;
+              break;
+          case ActionKind::Low8:
+              bytes[byteOffset] = static_cast<uint8_t>(value);
+              break;
+          case ActionKind::Hi8:
+              bytes[byteOffset + 1] = static_cast<uint8_t>(value >> 8);
+              break;
+          default:
+              break;
+      }
   }
   inline void setWord32(uint8_t offset, uint32_t value) noexcept {
       words[offset & 0b11] = value;

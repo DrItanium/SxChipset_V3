@@ -164,6 +164,21 @@ struct EEPROMWrapper {
             EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
         }
     }
+    void setWord(uint8_t offset, uint16_t value, ActionKind kind) {
+        switch (kind) {
+            case ActionKind::Full16:
+                setWord(offset, value, true, true);
+                break;
+            case ActionKind::Low8:
+                setWord(offset, value, true, false);
+                break;
+            case ActionKind::Hi8:
+                setWord(offset, value, false, true);
+                break;
+            default:
+                break;
+        }
+    }
 
     private:
         uint16_t _baseOffset = 0;
@@ -181,10 +196,13 @@ struct USBSerialBlock {
         }
     }
     void setWord(uint8_t offset, uint16_t value) noexcept {
-        setWord(offset, value, true, true);
+        setWord(offset, value, ActionKind::Full16);
     }
-    void setWord(uint8_t offset, uint16_t value, bool hi, bool lo) noexcept {
+    void setWord(uint8_t offset, uint16_t value, bool, bool) noexcept {
         // ignore the hi and lo operations
+        setWord(offset, value, ActionKind::Full16);
+    }
+    void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
         // 16-bit value offset so
         // 0 -> Serial.write
         // 1 -> nil
@@ -214,7 +232,7 @@ struct TimingRelatedThings {
     }
     void update() noexcept { }
 private:
-    void updateDataContainerForRead(uint8_t offset) noexcept {
+    void updateDataContainerForRead(uint8_t offset) const noexcept {
         switch (offset) {
             case 0:
                 _backingStorage.setWord32(0, millis());
@@ -236,9 +254,10 @@ public:
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+    void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
 
 private:
-    MemoryCellBlock _backingStorage;
+    mutable MemoryCellBlock _backingStorage;
 };
 struct CapacityInformation {
     void clear() noexcept { }
@@ -257,6 +276,7 @@ struct CapacityInformation {
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
+    void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
 private:
     static constexpr uint32_t _eepromCapacity = 4096;
 };
@@ -266,7 +286,7 @@ struct RandomSourceRelatedThings {
     }
     void update() noexcept { }
 private:
-    void updateDataContainerForRead(uint8_t offset) noexcept {
+    void updateDataContainerForRead(uint8_t offset) const noexcept {
         switch (offset) {
             case 0:
                 _backingStorage.setWord32(0, random());
@@ -294,8 +314,12 @@ public:
         _backingStorage.setWord(offset, value, enableLo, enableHi);
         updateDataContainerForWrite(offset);
     }
+    void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
+        _backingStorage.setWord(offset, value, kind);
+        updateDataContainerForWrite(offset);
+    }
 private:
-    MemoryCellBlock _backingStorage;
+    mutable MemoryCellBlock _backingStorage;
 };
 
 template<typename From>
@@ -311,7 +335,7 @@ struct RTCMemoryBlock {
         }
         void update() noexcept { }
     private:
-        void updateDataContainerForRead(uint8_t offset) noexcept {
+        void updateDataContainerForRead(uint8_t offset) const noexcept {
             switch (offset) {
                 case 0:
                     _backingStorage.setWord32(0, rtc.now().unixtime());
@@ -351,8 +375,12 @@ struct RTCMemoryBlock {
             _backingStorage.setWord(offset, value, enableLo, enableHi);
             updateDataContainerForWrite(offset);
         }
+        void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
+            _backingStorage.setWord(offset, value, kind);
+            updateDataContainerForWrite(offset);
+        }
     private:
-        MemoryCellBlock _backingStorage;
+        mutable MemoryCellBlock _backingStorage;
 };
 // ----- hard memory space definitions begin
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
@@ -664,12 +692,6 @@ public:
       }
       signalReady();
   }
-  enum class ActionKind : uint8_t {
-      Full16,
-      Low8,
-      Hi8,
-  };
-  using WriteActionKind = ActionKind;
   static constexpr uint32_t ActionKind_EnableMask = 0b110000000;
   static constexpr uint32_t ActionKind_Low8Mask   = 0b100000000;
   static constexpr uint32_t ActionKind_Hi8Mask    = 0b110000000;
