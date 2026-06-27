@@ -157,7 +157,6 @@ uint32_t extractBitPattern(From value) noexcept {
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 // this is the backing storage of the first 64k of io space
 MemoryCellBlock ioSpaceCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
@@ -584,9 +583,6 @@ public:
                   onBuiltinDeviceWrite(static_cast<uint16_t>(address));
               }
               break;
-          case 0x01'0000 ... 0x01'FFFF: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[sramIndex], lineOffset);
-              break;
           default:
               doMemoryCellTransaction<isReadTransaction>(nullSink, lineOffset);
               break;
@@ -761,9 +757,6 @@ void setupMemory() noexcept {
   }
   Serial.println("Clearing SRAM Caches");
   for (auto& cell : ioSpaceCache) {
-      cell.clear();
-  }
-  for (auto& cell : sramCache2) {
       cell.clear();
   }
 }
@@ -963,23 +956,15 @@ constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
 constexpr bool isPSRAMAddress(uint32_t address) noexcept {
     return address < 0x0100'0000;
 }
-constexpr bool isSRAM2Address(uint32_t address) noexcept {
-    return (address & 0xFFFF'0000) == 0xFE01'0000;
-}
 constexpr bool inValidMemorySpace(uint32_t address) noexcept {
     return isPSRAMAddress(address) || isSRAM2Address(address);
 }
 constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
     return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
 }
-constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
-    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
-}
 constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
     if (isPSRAMAddress(address)) {
         return computePSRAMOffset(address);
-    } else if (isSRAM2Address(address)) {
-        return computeSRAM2Offset(address);
     } else {
         // don't allow the i960 to mess with teensy internals
         return 0xFFFF'FFFF;
