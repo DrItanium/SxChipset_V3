@@ -617,7 +617,7 @@ public:
 private:
   struct MemoryBlockSink final {
         void clear() { }
-        uint16_t getWord(uint8_t) const noexcept { return 0; }
+        [[nodiscard]] uint16_t getWord(uint8_t) const noexcept { return 0; }
         void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
   };
   static inline MemoryBlockSink nullSink;
