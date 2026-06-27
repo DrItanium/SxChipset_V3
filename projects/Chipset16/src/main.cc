@@ -509,6 +509,9 @@ private:
           case 0x00'18:
               ioSpaceCache[1].setWord32(2, getCurrentCycleCount());
               break;
+          case 0x00'1c:
+              ioSpaceCache[1].setWord32(3, rtc_get());
+              break;
           case 0x00'20:
               ioSpaceCache[2].setWord32(0, rtc.now().unixtime());
               break;
@@ -520,6 +523,9 @@ private:
               break;
           case 0x00'30:
               ioSpaceCache[3].setWord32(0, random());
+              break;
+          case 0x00'38:
+              ioSpaceCache[3].setWord32(2, Entropy.random());
               break;
           case 0x00'44:
               ioSpaceCache[4].setWord32(1, OnboardSRAMCacheSize); 
@@ -770,6 +776,9 @@ setupRTC() noexcept {
         auto now = rtc.now();
         Serial.printf("unixtime: %d\n", now.unixtime());
     }
+    // use the onboard rtc to act as uptime counter instead!
+    rtc_set(0);
+    Serial.printf("onboard rtc value (time since startup): %d\n", rtc_get());
     // @todo take advantage of the rtc built into the teensy
 }
 void
