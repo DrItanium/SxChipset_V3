@@ -243,25 +243,6 @@ public:
 private:
     mutable MemoryCellBlock _backingStorage;
 };
-struct CapacityInformation {
-    void clear() noexcept { }
-    void update() noexcept { }
-    uint16_t getWord(uint8_t offset) const noexcept {
-        switch (offset) {
-#define X(idx, value) \
-            case idx: return static_cast<uint16_t>(value); \
-            case (idx+1): return static_cast<uint16_t>(value >> 16)
-            X(0, _eepromCapacity);
-            X(2, OnboardSRAMCacheSize);
-            X(4, OnboardSRAM2CacheSize);
-#undef X
-            default: return 0;
-        }
-    }
-    void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
-private:
-    static constexpr uint32_t _eepromCapacity = 4096;
-};
 struct RandomSourceRelatedThings {
     void clear() noexcept {
         _backingStorage.clear();
@@ -398,7 +379,6 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
 
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
-CapacityInformation capacityInfo;
 RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
@@ -606,6 +586,12 @@ struct i960Interface final {
       write16(dataLines.getConfigPortBaseAddress()+1, 0);
       // Make sure that the data lines are set to zero
       EBIInterface::setDataLines(0);
+
+      // configure the initial capacity information
+      auto& block = builtinDeviceStorage[4];
+      block.setWord32(0, 4096); // eeprom capacity
+      block.setWord32(1, OnboardSRAMCacheSize); 
+      block.setWord32(2, OnboardSRAM2CacheSize); 
   }
 public:
   static void
@@ -765,7 +751,7 @@ public:
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
               break;
           case 0x40 ... 0x4f:
-              doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
+              transmitConstantMemoryCell<isReadTransaction>(builtinDeviceStorage[4], lineOffset);
               break;
           default:
               doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
@@ -849,7 +835,6 @@ public:
       builtinDeviceStorage[0].setWord32(0, clk1);
       builtinDeviceStorage[0].setWord32(1, clk2);
   }
-private:
 };
 
 namespace i960 {
