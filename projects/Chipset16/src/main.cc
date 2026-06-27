@@ -177,43 +177,6 @@ struct EEPROMWrapper {
         uint16_t _baseOffset = 0;
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
-struct RandomSourceRelatedThings {
-    void clear() noexcept {
-        _backingStorage.clear();
-    }
-    void update() noexcept { }
-private:
-    void updateDataContainerForRead(uint8_t offset) const noexcept {
-        switch (offset) {
-            case 0:
-                _backingStorage.setWord32(0, random());
-                break;
-            default:
-                break;
-        }
-    }
-    void updateDataContainerForWrite(uint8_t offset) noexcept {
-        switch (offset) {
-            case 2:
-                // see if we need to enable the system counter
-                systemCounterEnabled = _backingStorage.getWord(2) != 0;
-                break;
-            default:
-                break;
-        }
-    }
-public:
-    uint16_t getWord(uint8_t offset) const noexcept {
-        updateDataContainerForRead(offset);
-        return _backingStorage.getWord(offset);
-    }
-    void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
-        _backingStorage.setWord(offset, value, kind);
-        updateDataContainerForWrite(offset);
-    }
-private:
-    mutable MemoryCellBlock _backingStorage;
-};
 
 template<typename From>
 uint32_t extractBitPattern(From value) noexcept {
@@ -261,7 +224,6 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
     }
 }
 
-RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
@@ -598,7 +560,7 @@ public:
   }
 private:
   static inline MemoryCellBlock builtinDeviceStorage[16] = { { 0 } };
-  static void updateDataContainerForRead(uint8_t offset) noexcept {
+  static void onBuiltinDeviceRead(uint8_t offset) noexcept {
       // unlike the memory blocks, the address used here is byte related so we
       // have to compensate for it
       //
@@ -633,6 +595,9 @@ private:
           case 0x28:
               builtinDeviceStorage[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
               break;
+          case 0x30:
+              builtinDeviceStorage[3].setWord32(0, random());
+              break;
           case 0x40:
               builtinDeviceStorage[4].setWord32(0, 4096); // eeprom capacity
               break;
@@ -646,7 +611,7 @@ private:
               break;
       }
   }
-  static void handleDataContainerWriteOperation(uint8_t offset) noexcept {
+  static void onBuiltinDeviceWrite(uint8_t offset) noexcept {
     // operations that should be performed when writing the most significant
     // address (after committing the data)
     switch (offset) {
@@ -664,6 +629,9 @@ private:
                 rtc.disable32K();
             }
             break;
+        case 0x34: // system counter enable
+            systemCounterEnabled = builtinDeviceStorage[3].getWord(2) != 0;
+            break;
         default:
             break;
     }
@@ -674,19 +642,11 @@ public:
   handleBuiltinDevices(uint8_t offset) noexcept {
       auto lineOffset = offset & 0x0f;
       if constexpr (isReadTransaction) {
-          updateDataContainerForRead(offset);
+          onBuiltinDeviceRead(offset);
       }
-      switch (offset) {
-          case 0x30 ... 0x3f:
-              // new entropy related stuff
-              doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
-              break;
-          default:
-              doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
-              break;
-      }
+      doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
       if constexpr (!isReadTransaction) {
-          handleDataContainerWriteOperation(offset);
+          onBuiltinDeviceWrite(offset);
       }
   }
   template<bool isReadTransaction>
