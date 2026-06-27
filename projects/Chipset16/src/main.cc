@@ -706,6 +706,10 @@ private:
               break;
       }
   }
+  static void handleDataContainerWriteOperation(uint8_t offset) noexcept {
+    // operations that should be performed when writing the most significant
+    // address (after committing the data)
+  }
 public:
   template<bool isReadTransaction>
   static inline void
@@ -734,6 +738,9 @@ public:
           default:
               doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
               break;
+      }
+      if constexpr (!isReadTransaction) {
+          handleDataContainerWriteOperation(offset);
       }
   }
   template<bool isReadTransaction>
