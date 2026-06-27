@@ -256,26 +256,39 @@ struct RandomSourceRelatedThings {
     void clear() noexcept {
         _backingStorage.clear();
     }
-    void update() noexcept {
-        _backingStorage.setWord32(0, random());
+    void update() noexcept { }
+private:
+    void updateDataContainerForRead(uint8_t offset) noexcept {
+        switch (offset) {
+            case 0:
+                _backingStorage.setWord32(0, random());
+                break;
+            default:
+                break;
+        }
     }
-
+    void updateDataContainerForWrite(uint8_t offset) noexcept {
+        switch (offset) {
+            case 2:
+                // see if we need to enable the system counter
+                systemCounterEnabled = _backingStorage.getWord(2) != 0;
+                break;
+            default:
+                break;
+        }
+    }
+public:
     uint16_t getWord(uint8_t offset) const noexcept {
+        updateDataContainerForRead(offset);
         return _backingStorage.getWord(offset);
     }
     void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept { 
         _backingStorage.setWord(offset, value, enableLo, enableHi);
+        updateDataContainerForWrite(offset);
     }
-    void onFinish() noexcept {
-        systemCounterEnabled = _backingStorage.getWord(2) != 0;
-    }
+    void onFinish() noexcept { }
 private:
     MemoryCellBlock _backingStorage;
-};
-template<typename From, typename To>
-union Converter {
-    From from;
-    To to;
 };
 
 template<typename From>

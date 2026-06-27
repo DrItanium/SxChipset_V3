@@ -164,6 +164,12 @@ inline uint32_t nanosecondsToCycles(uint32_t nsec) noexcept {
     return ((F_CPU_ACTUAL>>16) * nsec) / (1000000000UL>>16);
 }
 
+template<typename From, typename To>
+union Converter {
+    From from;
+    To to;
+};
+
 /**
  * @brief Track how many cycles elapsed for the given scope
  */
