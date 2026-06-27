@@ -188,41 +188,6 @@ uint32_t extractBitPattern(From value) noexcept {
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
 DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
-// for the i960 interface side, we pass an i960 memory address in and must
-// translate it to a teensy address
-//
-// The spaces we accept i960 addresses from are:
-// 1) PSRAM
-// 2) OnboardSRAM2
-constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
-    // the lowest 6 bits must be all zeros
-    return (address & 0b111111) == 0;
-}
-constexpr bool isPSRAMAddress(uint32_t address) noexcept {
-    return address < 0x0100'0000;
-}
-constexpr bool isSRAM2Address(uint32_t address) noexcept {
-    return (address & 0xFFFF'0000) == 0xFE01'0000;
-}
-constexpr bool inValidMemorySpace(uint32_t address) noexcept {
-    return isPSRAMAddress(address) || isSRAM2Address(address);
-}
-constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
-    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
-}
-constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
-    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
-}
-constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
-    if (isPSRAMAddress(address)) {
-        return computePSRAMOffset(address);
-    } else if (isSRAM2Address(address)) {
-        return computeSRAM2Offset(address);
-    } else {
-        // don't allow the i960 to mess with teensy internals
-        return 0xFFFF'FFFF;
-    }
-}
 
 EEPROMWrapper eeprom{0};
 // with the 16-bit data bus connection, things have changed somewhat
@@ -1036,6 +1001,41 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
 // ------ Filesystem components begin ------
 
 #if 0
+// for the i960 interface side, we pass an i960 memory address in and must
+// translate it to a teensy address
+//
+// The spaces we accept i960 addresses from are:
+// 1) PSRAM
+// 2) OnboardSRAM2
+constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
+    // the lowest 6 bits must be all zeros
+    return (address & 0b111111) == 0;
+}
+constexpr bool isPSRAMAddress(uint32_t address) noexcept {
+    return address < 0x0100'0000;
+}
+constexpr bool isSRAM2Address(uint32_t address) noexcept {
+    return (address & 0xFFFF'0000) == 0xFE01'0000;
+}
+constexpr bool inValidMemorySpace(uint32_t address) noexcept {
+    return isPSRAMAddress(address) || isSRAM2Address(address);
+}
+constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
+}
+constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
+}
+constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
+    if (isPSRAMAddress(address)) {
+        return computePSRAMOffset(address);
+    } else if (isSRAM2Address(address)) {
+        return computeSRAM2Offset(address);
+    } else {
+        // don't allow the i960 to mess with teensy internals
+        return 0xFFFF'FFFF;
+    }
+}
 // The old fileystem interface design from the old days provided a fixed number
 // of File "slots" that the old chipset iterated over to find the first open
 // slot and use that to make a request. This works but also was implemented
