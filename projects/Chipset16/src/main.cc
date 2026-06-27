@@ -740,6 +740,9 @@ public:
           doNothingTransaction<isReadTransaction>();
       }
   }
+private:
+  static inline MemoryCellBlock builtinDeviceStorage[16] = { { 0 } };
+public:
   template<bool isReadTransaction>
   static inline void
   handleBuiltinDevices(uint8_t offset) noexcept {
@@ -764,9 +767,6 @@ public:
           case 0x40 ... 0x4F:
               doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
               break;
-          //case 0x50 ... 0x5F:
-          //    doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
-          //    break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
