@@ -256,56 +256,6 @@ uint32_t extractBitPattern(From value) noexcept {
     converter.from = value;
     return converter.to;
 }
-struct RTCMemoryBlock {
-    public:
-        void clear() noexcept { 
-            _backingStorage.clear();
-        }
-        void update() noexcept { }
-    private:
-        void updateDataContainerForRead(uint8_t offset) const noexcept {
-            switch (offset) {
-                case 0:
-                    _backingStorage.setWord32(0, rtc.now().unixtime());
-                    break;
-                case 2:
-                    _backingStorage.setWord32(1, rtc.now().secondstime());
-                    break;
-                case 4:
-                    _backingStorage.setWord32(2, extractBitPattern(rtc.getTemperature()));
-                    break;
-                default:
-                    break;
-            }
-        }
-        void updateDataContainerForWrite(uint8_t offset) noexcept {
-            // write to the upper word means that we need to determine what we
-            // are operating on.
-            switch (offset) {
-                case 7:
-                    if (_backingStorage.getWord(6) != 0) {
-                        rtc.enable32K();
-                    } else {
-                        rtc.disable32K();
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-    public:
-        uint16_t getWord(uint8_t offset) const noexcept {
-            updateDataContainerForRead(offset);
-            return _backingStorage.getWord(offset);
-        }
-        void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
-            _backingStorage.setWord(offset, value, kind);
-            updateDataContainerForWrite(offset);
-        }
-    private:
-        mutable MemoryCellBlock _backingStorage;
-};
 // ----- hard memory space definitions begin
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
@@ -349,7 +299,6 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
 USBSerialBlock usbSerial;
 RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
-RTCMemoryBlock rtcInterface;
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
 // 0b001 -> Data Lines Receive Port (implicit read)
@@ -555,10 +504,6 @@ struct i960Interface final {
       EBIInterface::setDataLines(0);
 
       // configure the initial capacity information
-      auto& block = builtinDeviceStorage[4];
-      block.setWord32(0, 4096); // eeprom capacity
-      block.setWord32(1, OnboardSRAMCacheSize); 
-      block.setWord32(2, OnboardSRAM2CacheSize); 
   }
 public:
   static void
@@ -692,7 +637,17 @@ private:
   static void updateDataContainerForRead(uint8_t offset) noexcept {
       // unlike the memory blocks, the address used here is byte related so we
       // have to compensate for it
+      //
+      // Some of these operations are wasteful but it is consistent which
+      // should eliminate some of the headaches if you write to the underlying
+      // cells.
       switch (offset) {
+          case 0x00:
+              builtinDeviceStorage[0].setWord32(0, CLK1Value);
+              break;
+          case 0x04:
+              builtinDeviceStorage[0].setWord32(1, CLK2Value);
+              break;
           case 0x10:
               builtinDeviceStorage[1].setWord32(0, millis());
               break;
@@ -710,6 +665,15 @@ private:
               break;
           case 0x28:
               builtinDeviceStorage[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
+              break;
+          case 0x40:
+              builtinDeviceStorage[4].setWord32(0, 4096); // eeprom capacity
+              break;
+          case 0x44:
+              builtinDeviceStorage[4].setWord32(1, OnboardSRAMCacheSize); 
+              break;
+          case 0x48:
+              builtinDeviceStorage[4].setWord32(2, OnboardSRAM2CacheSize); 
               break;
           default:
               break;
@@ -739,18 +703,12 @@ public:
           updateDataContainerForRead(offset);
       }
       switch (offset) {
-          case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction>(builtinDeviceStorage[0], lineOffset);
-              break;
           case 0x08 ... 0x0f:
               doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
               break;
           case 0x30 ... 0x3f:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
-              break;
-          case 0x40 ... 0x4f:
-              transmitConstantMemoryCell<isReadTransaction>(builtinDeviceStorage[4], lineOffset);
               break;
           default:
               doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
@@ -834,9 +792,12 @@ public:
   }
   static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
-      builtinDeviceStorage[0].setWord32(0, clk1);
-      builtinDeviceStorage[0].setWord32(1, clk2);
+      CLK2Value = clk2;
+      CLK1Value = clk1;
   }
+private:
+  static inline uint32_t CLK2Value = 0;
+  static inline uint32_t CLK1Value = 0;
 };
 
 namespace i960 {
