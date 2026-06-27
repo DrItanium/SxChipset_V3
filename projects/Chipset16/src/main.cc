@@ -648,6 +648,9 @@ private:
           case 0x04:
               builtinDeviceStorage[0].setWord32(1, CLK2Value);
               break;
+          case 0x08:
+              builtinDeviceStorage[0].setWord32(2, Serial.read());
+              break;
           case 0x10:
               builtinDeviceStorage[1].setWord32(0, millis());
               break;
@@ -683,6 +686,13 @@ private:
     // operations that should be performed when writing the most significant
     // address (after committing the data)
     switch (offset) {
+        case 0x08:
+            // okay, so we actually only care about the lower word anyways
+            Serial.write(static_cast<uint8_t>(builtinDeviceStorage[0].getWord(4)));
+            break;
+        case 0x0c:
+            Serial.flush();
+            break;
         case 0x2e: 
             if (builtinDeviceStorage[2].getWord32(3) != 0) {
                 rtc.enable32K();
@@ -703,9 +713,6 @@ public:
           updateDataContainerForRead(offset);
       }
       switch (offset) {
-          case 0x08 ... 0x0f:
-              doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
-              break;
           case 0x30 ... 0x3f:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
