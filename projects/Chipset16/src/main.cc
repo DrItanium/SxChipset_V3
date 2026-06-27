@@ -482,16 +482,6 @@ public:
           doMemoryCellWriteTransaction(target, offset);
       }
   }
-  template<bool isReadTransaction, MemoryCell MC>
-  static inline void 
-  transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
-      TimeTracker<TrackTransmitConstantMemoryCell> tracker(__PRETTY_FUNCTION__);
-      if constexpr (isReadTransaction) {
-          doMemoryCellReadTransaction(cell, offset);
-      } else {
-          doMemoryCellWriteTransaction(nullSink, offset);
-      }
-  }
 private:
   static void onBuiltinDeviceRead(uint16_t offset) noexcept {
       // unlike the memory blocks, the address used here is byte related so we
