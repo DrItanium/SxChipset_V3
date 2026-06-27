@@ -458,7 +458,6 @@ constexpr EBIOperationDescription defaultConfiguration (true, true, true, true);
 constexpr EBIOperationDescription dataLinesDirectionAlreadyConfigured(false, true, true, true);
 constexpr EBIOperationDescription getAddressConfiguration(false, false, true, true);
 constexpr EBIOperationDescription setDataLinesConfiguration(false, true, false, false);
-constexpr EBIOperationDescription doNothingSetDataLinesConfiguration(false, true, false, true);
 constexpr EBIOperationDescription getDataLinesConfiguration(false, false, false, true);
 struct i960Interface final {
   i960Interface() = delete;
@@ -615,20 +614,14 @@ public:
   isBurstLast() noexcept {
     return digitalReadFast(Pin::BLAST) == LOW;
   }
-
-  template<bool isReadTransaction>
-  static inline void
-  doNothingTransaction() noexcept {
-      TimeTracker<TrackDoNothingTransaction> tracker(__PRETTY_FUNCTION__);
-      if constexpr (isReadTransaction) {
-          write16<doNothingSetDataLinesConfiguration>(dataLines.getDataPortWriteAddressBase(), 0);
-      }
-      while (!isBurstLast()) {
-          signalReady();
-      }
-      // we can actually setup for the next cycle because it will show up!
-      signalReady();
-  }
+private:
+  struct MemoryBlockSink final {
+        void clear() { }
+        uint16_t getWord(uint8_t) const noexcept { return 0; }
+        void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
+  };
+  static inline MemoryBlockSink nullSink;
+public:
 
   template<MemoryCell MC>
   static void
@@ -715,14 +708,6 @@ public:
           doMemoryCellWriteTransaction(target, offset);
       }
   }
-private:
-  struct MemoryBlockSink final {
-        void clear() { }
-        uint16_t getWord(uint8_t) const noexcept { return 0; }
-        void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
-  };
-  static inline MemoryBlockSink nullSink;
-public:
   template<bool isReadTransaction, MemoryCell MC>
   static inline void 
   transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
@@ -791,7 +776,7 @@ public:
               doMemoryCellTransaction<isReadTransaction>(sramCache[sramIndex], lineOffset);
               break;
           default:
-              doNothingTransaction<isReadTransaction>();
+              doMemoryCellTransaction<isReadTransaction>(nullSink, lineOffset);
               break;
       }
   }
@@ -829,7 +814,7 @@ public:
               doIOTransaction<isReadTransaction>(address.value);
               break;
           default:
-              doNothingTransaction<isReadTransaction>();
+              doMemoryCellTransaction<isReadTransaction>(nullSink, address.components.offset);
               break;
       }
 
