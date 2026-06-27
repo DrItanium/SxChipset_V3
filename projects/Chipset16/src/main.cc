@@ -1002,7 +1002,7 @@ displayClockSpeedInformation() noexcept {
     SplitWord64 clk3;
     managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
             clk3.bytes, sizeof(clk3));
-    Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
+    //Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
 void

@@ -32,21 +32,6 @@ struct TreatAs final {
 union SplitWord16 {
     uint16_t value;
     uint8_t bytes[2];
-    void clear() noexcept { value = 0 ; }
-    inline void setWord(uint8_t, uint16_t value, bool updateLo, bool updateHi) noexcept {
-        if (updateLo) {
-            bytes[0] = static_cast<uint8_t>(value);
-        }
-        if (updateHi) {
-            bytes[1] = static_cast<uint8_t>(value);
-        }
-    }
-    inline void setWord(uint8_t, uint16_t val) noexcept {
-        value = val;
-    }
-    [[nodiscard]] inline constexpr uint16_t getWord(uint8_t) const noexcept { return value; }
-    void update() noexcept { }
-    void onFinish() noexcept { }
     constexpr SplitWord16(uint16_t v= 0) noexcept : value(v) { }
 };
 union SplitWord32 {
@@ -67,37 +52,6 @@ union SplitWord32 {
         uint8_t offset : 4;
         uint32_t index : 12;
     } sramAddress;
-    inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
-        switch (offset & 0b1) {
-            case 0:
-                if (updateLo) {
-                    bytes[0] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[1] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            case 1:
-                if (updateLo) {
-                    bytes[2] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[3] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    inline void setWord(uint8_t offset, uint16_t value) noexcept {
-        shorts[offset & 0b1] = value;
-    }
-    [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b1]; }
-    void update() noexcept {
-
-    }
-    void clear() noexcept { value = 0; }
-    void onFinish() noexcept { }
     // simple conversion operators
     explicit operator uint32_t() const noexcept { return value; }
     explicit operator uint8_t() const noexcept { return bytes[0]; }
@@ -109,51 +63,6 @@ union SplitWord64 {
     uint16_t shorts[sizeof(uint64_t) / sizeof(uint16_t)];
     uint32_t words[sizeof(uint64_t) / sizeof(uint32_t)];
     uint64_t value;
-    void clear() noexcept { value = 0; }
-    void update() noexcept { }
-    void onFinish() noexcept { }
-    inline void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
-        switch (offset & 0b11) {
-            case 0:
-                if (updateLo) {
-                    bytes[0] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[1] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            case 1:
-                if (updateLo) {
-                    bytes[2] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[3] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            case 2:
-                if (updateLo) {
-                    bytes[4] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[5] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            case 3:
-                if (updateLo) {
-                    bytes[6] = static_cast<uint8_t>(value);
-                } 
-                if (updateHi) {
-                    bytes[7] = static_cast<uint8_t>(value >> 8);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    inline void setWord(uint8_t offset, uint16_t value) noexcept {
-        shorts[offset & 0b11] = value;
-    }
-    [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b11]; }
 };
 
 inline uint32_t getCurrentCycleCount() noexcept {

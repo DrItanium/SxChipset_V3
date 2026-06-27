@@ -57,16 +57,15 @@ public:
   }
   [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
   inline void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
-      uint8_t byteOffset = (offset << 1) & 0b1110;
       switch (kind) {
           case ActionKind::Full16:
               shorts[offset & 0b111] = value;
               break;
           case ActionKind::Low8:
-              bytes[byteOffset] = static_cast<uint8_t>(value);
+              bytes[(offset << 1) & 0b1110] = static_cast<uint8_t>(value);
               break;
           case ActionKind::Hi8:
-              bytes[byteOffset + 1] = static_cast<uint8_t>(value >> 8);
+              bytes[((offset << 1) & 0b1110)+1] = static_cast<uint8_t>(value >> 8);
               break;
           default:
               break;
