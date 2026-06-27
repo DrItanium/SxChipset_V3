@@ -212,36 +212,6 @@ struct USBSerialBlock {
         }
     }
 };
-struct TimingRelatedThings {
-    void clear() noexcept { 
-        _backingStorage.clear();
-    }
-private:
-    void updateDataContainerForRead(uint8_t offset) const noexcept {
-        switch (offset) {
-            case 0:
-                _backingStorage.setWord32(0, millis());
-                break;
-            case 2:
-                _backingStorage.setWord32(1, micros());
-                break;
-            case 4:
-                _backingStorage.setWord32(2, getCurrentCycleCount());
-                break;
-            default:
-                break;
-        }
-    }
-public:
-    uint16_t getWord(uint8_t offset) const noexcept {
-        updateDataContainerForRead(offset);
-        return _backingStorage.getWord(offset);
-    }
-    void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
-
-private:
-    mutable MemoryCellBlock _backingStorage;
-};
 struct RandomSourceRelatedThings {
     void clear() noexcept {
         _backingStorage.clear();
@@ -377,7 +347,6 @@ constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
 }
 
 USBSerialBlock usbSerial;
-TimingRelatedThings timingInfo;
 RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
@@ -720,20 +689,37 @@ public:
   }
 private:
   static inline MemoryCellBlock builtinDeviceStorage[16] = { { 0 } };
+  static void updateDataContainerForRead(uint8_t offset) noexcept {
+      // unlike the memory blocks, the address used here is byte related so we
+      // have to compensate for it
+      switch (offset) {
+          case 0x10:
+              builtinDeviceStorage[1].setWord32(0, millis());
+              break;
+          case 0x14:
+              builtinDeviceStorage[1].setWord32(1, micros());
+              break;
+          case 0x18:
+              builtinDeviceStorage[1].setWord32(2, getCurrentCycleCount());
+              break;
+          default:
+              break;
+      }
+  }
 public:
   template<bool isReadTransaction>
   static inline void
   handleBuiltinDevices(uint8_t offset) noexcept {
       auto lineOffset = offset & 0x0f;
+      if constexpr (isReadTransaction) {
+          updateDataContainerForRead(offset);
+      }
       switch (offset) {
           case 0x00 ... 0x07:
               transmitConstantMemoryCell<isReadTransaction>(builtinDeviceStorage[0], lineOffset);
               break;
           case 0x08 ... 0x0f:
               doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
-              break;
-          case 0x10 ... 0x1f:
-              doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
               break;
           case 0x20 ... 0x2f:
               doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
