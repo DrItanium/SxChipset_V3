@@ -746,29 +746,29 @@ public:
   template<bool isReadTransaction>
   static inline void
   handleBuiltinDevices(uint8_t offset) noexcept {
-      auto lineOffset = offset & 0xF;
+      auto lineOffset = offset & 0x0f;
       switch (offset) {
           case 0x00 ... 0x07:
-              transmitConstantMemoryCell<isReadTransaction>(CLKValues, lineOffset);
+              transmitConstantMemoryCell<isReadTransaction>(builtinDeviceStorage[0], lineOffset);
               break;
-          case 0x08 ... 0x0F:
+          case 0x08 ... 0x0f:
               doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
               break;
-          case 0x10 ... 0x1F:
+          case 0x10 ... 0x1f:
               doMemoryCellTransaction<isReadTransaction>(timingInfo, lineOffset);
               break;
-          case 0x20 ... 0x2F:
+          case 0x20 ... 0x2f:
               doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
               break;
-          case 0x30 ... 0x3F:
+          case 0x30 ... 0x3f:
               // new entropy related stuff
               doMemoryCellTransaction<isReadTransaction>(randomSource, lineOffset);
               break;
-          case 0x40 ... 0x4F:
+          case 0x40 ... 0x4f:
               doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
               break;
           default:
-              doNothingTransaction<isReadTransaction>();
+              doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(offset >> 4) & 0x0f], lineOffset);
               break;
       }
   }
@@ -846,12 +846,10 @@ public:
   }
   static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
-      CLKValues.setWord32(0, clk1);
-      CLKValues.setWord32(1, clk2);
+      builtinDeviceStorage[0].setWord32(0, clk1);
+      builtinDeviceStorage[0].setWord32(1, clk2);
   }
 private:
-  // allocate a 2k memory cache like the avr did
-  static inline MemoryCellBlock CLKValues{12 * 1000 * 1000, 6 * 1000 * 1000 };
 };
 
 namespace i960 {
