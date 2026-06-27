@@ -702,6 +702,15 @@ private:
           case 0x18:
               builtinDeviceStorage[1].setWord32(2, getCurrentCycleCount());
               break;
+          case 0x20:
+              builtinDeviceStorage[2].setWord32(0, rtc.now().unixtime());
+              break;
+          case 0x24:
+              builtinDeviceStorage[2].setWord32(1, rtc.now().secondstime());
+              break;
+          case 0x28:
+              builtinDeviceStorage[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
+              break;
           default:
               break;
       }
@@ -709,6 +718,17 @@ private:
   static void handleDataContainerWriteOperation(uint8_t offset) noexcept {
     // operations that should be performed when writing the most significant
     // address (after committing the data)
+    switch (offset) {
+        case 0x2e: 
+            if (builtinDeviceStorage[2].getWord32(3) != 0) {
+                rtc.enable32K();
+            } else {
+                rtc.disable32K();
+            }
+            break;
+        default:
+            break;
+    }
   }
 public:
   template<bool isReadTransaction>
@@ -724,9 +744,6 @@ public:
               break;
           case 0x08 ... 0x0f:
               doMemoryCellTransaction<isReadTransaction>(usbSerial, lineOffset);
-              break;
-          case 0x20 ... 0x2f:
-              doMemoryCellTransaction<isReadTransaction>(rtcInterface, lineOffset);
               break;
           case 0x30 ... 0x3f:
               // new entropy related stuff

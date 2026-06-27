@@ -71,9 +71,8 @@ public:
               break;
       }
   }
-  inline void setWord32(uint8_t offset, uint32_t value) noexcept {
-      words[offset & 0b11] = value;
-  }
+  inline void setWord32(uint8_t offset, uint32_t value) noexcept { words[offset & 0b11] = value; }
+  [[nodiscard]] inline constexpr uint32_t getWord32(uint8_t offset) const noexcept { return words[offset & 0b11]; }
 };
 
 #endif // end !defined CHIPSET_MEMORY_CELL_H__
