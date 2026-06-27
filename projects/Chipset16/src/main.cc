@@ -559,80 +559,81 @@ public:
       }
   }
 private:
-  using MemoryCellPage = MemoryCellBlock[16];
-  static inline MemoryCellPage builtinDeviceStorage[16] = { { { 0 } } };
+  //using MemoryCellPage = MemoryCellBlock[16];
+  static inline MemoryCellBlock builtinDeviceStorage[256] = { { 0 } };
+  //static inline MemoryCellPage builtinDeviceStorage[16] = { { { 0 } } };
   static_assert(sizeof(builtinDeviceStorage) == 4096);
-  static void onBuiltinDeviceRead(uint8_t offset, MemoryCellPage& page) noexcept {
+  static void onBuiltinDeviceRead(uint16_t offset) noexcept {
       // unlike the memory blocks, the address used here is byte related so we
       // have to compensate for it
       //
       // Some of these operations are wasteful but it is consistent which
       // should eliminate some of the headaches if you write to the underlying
       // cells.
-      switch (offset) {
-          case 0x00:
-              page[0].setWord32(0, CLK1Value);
+      switch (offset & 0xFFF) {
+          case 0x0'00:
+              builtinDeviceStorage[0].setWord32(0, CLK1Value);
               break;
-          case 0x04:
-              page[0].setWord32(1, CLK2Value);
+          case 0x0'04:
+              builtinDeviceStorage[0].setWord32(1, CLK2Value);
               break;
-          case 0x08:
-              page[0].setWord32(2, Serial.read());
+          case 0x0'08:
+              builtinDeviceStorage[0].setWord32(2, Serial.read());
               break;
-          case 0x10:
-              page[1].setWord32(0, millis());
+          case 0x0'10:
+              builtinDeviceStorage[1].setWord32(0, millis());
               break;
-          case 0x14:
-              page[1].setWord32(1, micros());
+          case 0x0'14:
+              builtinDeviceStorage[1].setWord32(1, micros());
               break;
-          case 0x18:
-              page[1].setWord32(2, getCurrentCycleCount());
+          case 0x0'18:
+              builtinDeviceStorage[1].setWord32(2, getCurrentCycleCount());
               break;
-          case 0x20:
-              page[2].setWord32(0, rtc.now().unixtime());
+          case 0x0'20:
+              builtinDeviceStorage[2].setWord32(0, rtc.now().unixtime());
               break;
-          case 0x24:
-              page[2].setWord32(1, rtc.now().secondstime());
+          case 0x0'24:
+              builtinDeviceStorage[2].setWord32(1, rtc.now().secondstime());
               break;
-          case 0x28:
-              page[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
+          case 0x0'28:
+              builtinDeviceStorage[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
               break;
-          case 0x30:
-              page[3].setWord32(0, random());
+          case 0x0'30:
+              builtinDeviceStorage[3].setWord32(0, random());
               break;
-          case 0x40:
-              page[4].setWord32(0, 4096); // eeprom capacity
+          case 0x0'40:
+              builtinDeviceStorage[4].setWord32(0, 4096); // eeprom capacity
               break;
-          case 0x44:
-              page[4].setWord32(1, OnboardSRAMCacheSize); 
+          case 0x0'44:
+              builtinDeviceStorage[4].setWord32(1, OnboardSRAMCacheSize); 
               break;
-          case 0x48:
-              page[4].setWord32(2, OnboardSRAM2CacheSize); 
+          case 0x0'48:
+              builtinDeviceStorage[4].setWord32(2, OnboardSRAM2CacheSize); 
               break;
           default:
               break;
       }
   }
-  static void onBuiltinDeviceWrite(uint8_t offset, MemoryCellPage& page) noexcept {
+  static void onBuiltinDeviceWrite(uint16_t offset) noexcept {
     // operations that should be performed when writing the most significant
     // address (after committing the data)
     switch (offset) {
-        case 0x08:
+        case 0x0'08:
             // okay, so we actually only care about the lower word anyways
-            Serial.write(static_cast<uint8_t>(page[0].getWord(4)));
+            Serial.write(static_cast<uint8_t>(builtinDeviceStorage[0].getWord(4)));
             break;
-        case 0x0c:
+        case 0x0'0c:
             Serial.flush();
             break;
-        case 0x2e: 
-            if (page[2].getWord32(3) != 0) {
+        case 0x0'2e: 
+            if (builtinDeviceStorage[2].getWord32(3) != 0) {
                 rtc.enable32K();
             } else {
                 rtc.disable32K();
             }
             break;
-        case 0x34: // system counter enable
-            systemCounterEnabled = page[3].getWord(2) != 0;
+        case 0x0'34: // system counter enable
+            systemCounterEnabled = builtinDeviceStorage[3].getWord(2) != 0;
             break;
         default:
             break;
@@ -641,15 +642,14 @@ private:
 public:
   template<bool isReadTransaction>
   static inline void
-  handleBuiltinDevices(uint8_t offset) noexcept {
+  handleBuiltinDevices(uint16_t offset) noexcept {
       auto lineOffset = offset & 0x0f;
-      auto& page = builtinDeviceStorage[0];
       if constexpr (isReadTransaction) {
-          onBuiltinDeviceRead(offset, page);
+          onBuiltinDeviceRead(offset);
       }
-      doMemoryCellTransaction<isReadTransaction>(page[(offset >> 4) & 0x0f], lineOffset);
+      doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[static_cast<uint8_t>(offset >> 4)], lineOffset);
       if constexpr (!isReadTransaction) {
-          onBuiltinDeviceWrite(offset, page);
+          onBuiltinDeviceWrite(offset);
       }
   }
   template<bool isReadTransaction>
@@ -658,11 +658,10 @@ public:
       auto lineOffset = address & 0xF;
       auto sramIndex = (address >> 4) & 0xFFF;
       switch (address & 0xFF'FFFF) {
-          case 0x00'0000 ... 0x00'00FF:
+          // first 4k of io space is just a block of memory that read/write
+          // operations act upon
+          case 0x00'0000 ... 0x00'0FFF:
               handleBuiltinDevices<isReadTransaction>(static_cast<uint8_t>(address));
-              break;
-          case 0x00'0100 ... 0x00'0FFF: // rest of teh internal storage
-              doMemoryCellTransaction<isReadTransaction>(builtinDeviceStorage[(address >> 8) & 0b1111][static_cast<uint8_t>(address >> 4) & 0b1111], lineOffset);
               break;
           case 0x00'1000 ... 0x00'1FFF: // EEPROM
               eeprom.updateBaseAddress(static_cast<uint16_t>(address));
