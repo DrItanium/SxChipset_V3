@@ -527,8 +527,8 @@ private:
           case 0x00'38:
               ioSpaceCache[3].setWord32(2, Entropy.random());
               break;
-          case 0x00'44:
-              ioSpaceCache[4].setWord32(1, OnboardSRAMCacheSize); 
+          case 0x00'44: // sram cache size (~61k)
+              ioSpaceCache[4].setWord32(1, (256 * (256-16))); 
               break;
           case 0x00'48:
               ioSpaceCache[4].setWord32(2, OnboardSRAM2CacheSize); 
