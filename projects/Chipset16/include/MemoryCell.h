@@ -31,12 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // A high speed interface that we can abstract contents of memory 
 template<typename T>
 concept MemoryCell = requires(T a) {
-    { a.update() };
     // only operate on 16-bit words
     { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0) };
     { a.setWord(0, 0, true, true) };
-    { a.onFinish() };
     { a.clear() };
 };
 
@@ -47,9 +45,6 @@ private:
   uint16_t shorts[8];
   uint32_t words[4];
 public:
-  void update() noexcept {
-
-  }
   void clear() noexcept {
       for (auto& a : words) {
           a = 0;
@@ -70,7 +65,6 @@ public:
   inline void setWord32(uint8_t offset, uint32_t value) noexcept {
       words[offset & 0b11] = value;
   }
-  void onFinish() noexcept { }
 };
 
 #endif // end !defined CHIPSET_MEMORY_CELL_H__

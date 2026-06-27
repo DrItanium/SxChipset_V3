@@ -151,7 +151,6 @@ struct EEPROMWrapper {
         _baseOffset = base & 0x0FF0;
     }
     void clear() noexcept { }
-    void update() noexcept { }
     uint16_t getWord(uint8_t offset) const noexcept {
         uint16_t value = 0;
         return EEPROM.get<uint16_t>(_baseOffset + ((offset << 1) & 0b1110), value);
@@ -165,16 +164,13 @@ struct EEPROMWrapper {
             EEPROM.put(_baseOffset + computedOffset + 1, static_cast<uint8_t>(value >> 8));
         }
     }
-    void onFinish() noexcept { }
 
     private:
         uint16_t _baseOffset = 0;
 };
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 struct USBSerialBlock {
-    void update() noexcept { }
     void clear() noexcept { }
-    void onFinish() noexcept { }
     uint16_t getWord(uint8_t offset) const noexcept {
         switch (offset & 0b11) {
             case 0:
@@ -240,7 +236,6 @@ public:
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
-    void onFinish() noexcept { }
 
 private:
     MemoryCellBlock _backingStorage;
@@ -262,7 +257,6 @@ struct CapacityInformation {
     }
     void setWord(uint8_t, uint16_t) noexcept { }
     void setWord(uint8_t, uint16_t, bool, bool) noexcept { }
-    void onFinish() noexcept { }
 private:
     static constexpr uint32_t _eepromCapacity = 4096;
 };
@@ -300,7 +294,6 @@ public:
         _backingStorage.setWord(offset, value, enableLo, enableHi);
         updateDataContainerForWrite(offset);
     }
-    void onFinish() noexcept { }
 private:
     MemoryCellBlock _backingStorage;
 };
@@ -358,7 +351,6 @@ struct RTCMemoryBlock {
             _backingStorage.setWord(offset, value, enableLo, enableHi);
             updateDataContainerForWrite(offset);
         }
-        void onFinish() noexcept { }
     private:
         MemoryCellBlock _backingStorage;
 };
@@ -368,7 +360,7 @@ MemoryCellBlock sramCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
 DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 // ------ Filesystem components begin ------
 
-
+#if 0
 // The old fileystem interface design from the old days provided a fixed number
 // of File "slots" that the old chipset iterated over to find the first open
 // slot and use that to make a request. This works but also was implemented
@@ -606,42 +598,7 @@ class FileTracker {
         uint32_t _lfsrState = 0;
         std::map<uint64_t, File> _openFiles;
 };
-FileTracker sdcardTracker;
-// for the i960 interface side, we pass an i960 memory address in and must
-// translate it to a teensy address
-//
-// The spaces we accept i960 addresses from are:
-// 1) PSRAM
-// 2) OnboardSRAM2
-constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
-    // the lowest 6 bits must be all zeros
-    return (address & 0b111111) == 0;
-}
-constexpr bool isPSRAMAddress(uint32_t address) noexcept {
-    return address < 0x0100'0000;
-}
-constexpr bool isSRAM2Address(uint32_t address) noexcept {
-    return (address & 0xFFFF'0000) == 0xFE01'0000;
-}
-constexpr bool inValidMemorySpace(uint32_t address) noexcept {
-    return isPSRAMAddress(address) || isSRAM2Address(address);
-}
-constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
-    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
-}
-constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
-    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
-}
-constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
-    if (isPSRAMAddress(address)) {
-        return computePSRAMOffset(address);
-    } else if (isSRAM2Address(address)) {
-        return computeSRAM2Offset(address);
-    } else {
-        // don't allow the i960 to mess with teensy internals
-        return 0xFFFF'FFFF;
-    }
-}
+//FileTracker sdcardTracker;
 constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
     return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
 }
@@ -806,6 +763,43 @@ private:
     // layout for this 16-byte page is:
     //
 };
+RawFilesystemInterface sdcardInterface;
+#endif
+// for the i960 interface side, we pass an i960 memory address in and must
+// translate it to a teensy address
+//
+// The spaces we accept i960 addresses from are:
+// 1) PSRAM
+// 2) OnboardSRAM2
+constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
+    // the lowest 6 bits must be all zeros
+    return (address & 0b111111) == 0;
+}
+constexpr bool isPSRAMAddress(uint32_t address) noexcept {
+    return address < 0x0100'0000;
+}
+constexpr bool isSRAM2Address(uint32_t address) noexcept {
+    return (address & 0xFFFF'0000) == 0xFE01'0000;
+}
+constexpr bool inValidMemorySpace(uint32_t address) noexcept {
+    return isPSRAMAddress(address) || isSRAM2Address(address);
+}
+constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
+}
+constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
+}
+constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
+    if (isPSRAMAddress(address)) {
+        return computePSRAMOffset(address);
+    } else if (isSRAM2Address(address)) {
+        return computeSRAM2Offset(address);
+    } else {
+        // don't allow the i960 to mess with teensy internals
+        return 0xFFFF'FFFF;
+    }
+}
 
 USBSerialBlock usbSerial;
 TimingRelatedThings timingInfo;
@@ -813,7 +807,6 @@ CapacityInformation capacityInfo;
 RandomSourceRelatedThings randomSource;
 EEPROMWrapper eeprom{0};
 RTCMemoryBlock rtcInterface;
-RawFilesystemInterface sdcardInterface;
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
 // 0b001 -> Data Lines Receive Port (implicit read)
@@ -1154,13 +1147,11 @@ public:
   static inline void
   doMemoryCellTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellTransaction> tracker(__PRETTY_FUNCTION__);
-      target.update();
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(target, offset);
       } else {
           doMemoryCellWriteTransaction(target, offset);
       }
-      target.onFinish();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void 
@@ -1196,9 +1187,9 @@ public:
           case 0x40 ... 0x4F:
               doMemoryCellTransaction<isReadTransaction>(capacityInfo, lineOffset);
               break;
-          case 0x50 ... 0x5F:
-              doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
-              break;
+          //case 0x50 ... 0x5F:
+          //    doMemoryCellTransaction<isReadTransaction>(sdcardInterface, lineOffset);
+          //    break;
           default:
               doNothingTransaction<isReadTransaction>();
               break;
@@ -1351,7 +1342,7 @@ setupSDCard() noexcept {
         Serial.println("No SDCARD found!");
         return;
     } 
-    sdcardTracker.begin();
+    //sdcardTracker.begin();
     Serial.println("SDCARD Found");
     if (!SD.exists("prog.bin")) {
         Serial.println("prog.bin not found! No boot image will be installed");
