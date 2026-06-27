@@ -272,35 +272,66 @@ struct RandomSourceRelatedThings {
 private:
     MemoryCellBlock _backingStorage;
 };
+template<typename From, typename To>
+union Converter {
+    From from;
+    To to;
+};
+
+template<typename From>
+uint32_t extractBitPattern(From value) noexcept {
+    Converter<float, uint32_t> converter;
+    converter.from = value;
+    return converter.to;
+}
 struct RTCMemoryBlock {
     public:
         void clear() noexcept { 
             _backingStorage.clear();
         }
-        void update() noexcept {
-            auto now = rtc.now();
-            _backingStorage.setWord32(0, now.unixtime());
-            _backingStorage.setWord32(1, now.secondstime());
-            union {
-                float in;
-                uint32_t out;
-            } q;
-            q.in = rtc.getTemperature();
-            _backingStorage.setWord32(2, q.out);
+        void update() noexcept { }
+    private:
+        void updateDataContainerForRead(uint8_t offset) noexcept {
+            switch (offset) {
+                case 0:
+                    _backingStorage.setWord32(0, rtc.now().unixtime());
+                    break;
+                case 2:
+                    _backingStorage.setWord32(1, rtc.now().secondstime());
+                    break;
+                case 4:
+                    _backingStorage.setWord32(2, extractBitPattern(rtc.getTemperature()));
+                    break;
+                default:
+                    break;
+            }
         }
+        void updateDataContainerForWrite(uint8_t offset) noexcept {
+            // write to the upper word means that we need to determine what we
+            // are operating on.
+            switch (offset) {
+                case 7:
+                    if (_backingStorage.getWord(6) != 0) {
+                        rtc.enable32K();
+                    } else {
+                        rtc.disable32K();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+    public:
         uint16_t getWord(uint8_t offset) const noexcept {
+            updateDataContainerForRead(offset);
             return _backingStorage.getWord(offset);
         }
         void setWord(uint8_t offset, uint16_t value, bool enableLo = true, bool enableHi = true) noexcept {
             _backingStorage.setWord(offset, value, enableLo, enableHi);
+            updateDataContainerForWrite(offset);
         }
-        void onFinish() noexcept { 
-            if (_backingStorage.getWord(6) != 0) {
-                rtc.enable32K();
-            } else {
-                rtc.disable32K();
-            }
-        }
+        void onFinish() noexcept { }
     private:
         MemoryCellBlock _backingStorage;
 };
