@@ -490,6 +490,10 @@ private:
       // Some of these operations are wasteful but it is consistent which
       // should eliminate some of the headaches if you write to the underlying
       // cells.
+      //
+      // However, only the initial address is taken into account here. So doing
+      // a burst read or burst write will result in only the lowest register
+      // being updated. This is a fine design as this is how we operate anyway!
       switch (offset) {
           case 0x00'00:
               ioSpaceCache[0].setWord32(0, CLK1Value);
@@ -538,29 +542,35 @@ private:
       }
   }
   static void onBuiltinDeviceWrite(uint16_t offset) noexcept {
-    // operations that should be performed when writing the most significant
-    // address (after committing the data)
-    switch (offset) {
-        case 0x00'08:
-            // okay, so we actually only care about the lower word anyways
-            Serial.write(static_cast<uint8_t>(ioSpaceCache[0].getWord(4)));
-            break;
-        case 0x00'0c:
-            Serial.flush();
-            break;
-        case 0x00'2e: 
-            if (ioSpaceCache[2].getWord32(3) != 0) {
-                rtc.enable32K();
-            } else {
-                rtc.disable32K();
-            }
-            break;
-        case 0x00'34: // system counter enable
-            systemCounterEnabled = ioSpaceCache[3].getWord(2) != 0;
-            break;
-        default:
-            break;
-    }
+      // operations will be invoked on the lowest address since a 32-bit
+      // operation is actually comprised of 2 parts. Thus, it makes more sense
+      // to just see what the base address is. 
+      //
+      // This design works well when you are operating on one register at a
+      // time. You can burst commit but it won't actually trigger anything
+      // properly. Only the lowest mapped device.
+      //
+      switch (offset) {
+          case 0x00'08:
+              // okay, so we actually only care about the lower word anyways
+              Serial.write(static_cast<uint8_t>(ioSpaceCache[0].getWord(4)));
+              break;
+          case 0x00'0c:
+              Serial.flush();
+              break;
+          case 0x00'2e: 
+              if (ioSpaceCache[2].getWord32(3) != 0) {
+                  rtc.enable32K();
+              } else {
+                  rtc.disable32K();
+              }
+              break;
+          case 0x00'34: // system counter enable
+              systemCounterEnabled = ioSpaceCache[3].getWord(2) != 0;
+              break;
+          default:
+              break;
+      }
   }
   
 public:
@@ -576,9 +586,9 @@ public:
               [lineOffset, address, sramIndex]() {
                   if constexpr (isReadTransaction) {
                       onBuiltinDeviceRead(static_cast<uint16_t>(address));
-                  }
-                  doMemoryCellTransaction<isReadTransaction>(ioSpaceCache[sramIndex], lineOffset);
-                  if constexpr (!isReadTransaction) {
+                      doMemoryCellReadTransaction(ioSpaceCache[sramIndex], lineOffset);
+                  } else {
+                      doMemoryCellWriteTransaction(ioSpaceCache[sramIndex], lineOffset);
                       onBuiltinDeviceWrite(static_cast<uint16_t>(address));
                   }
               }();
