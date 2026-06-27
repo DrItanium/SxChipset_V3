@@ -216,7 +216,6 @@ struct TimingRelatedThings {
     void clear() noexcept { 
         _backingStorage.clear();
     }
-    void update() noexcept { }
 private:
     void updateDataContainerForRead(uint8_t offset) const noexcept {
         switch (offset) {
