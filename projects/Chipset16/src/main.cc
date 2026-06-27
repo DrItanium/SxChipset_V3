@@ -715,6 +715,14 @@ public:
           doMemoryCellWriteTransaction(target, offset);
       }
   }
+private:
+  struct MemoryBlockSink final {
+        void clear() { }
+        uint16_t getWord(uint8_t) const noexcept { return 0; }
+        void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
+  };
+  static inline MemoryBlockSink nullSink;
+public:
   template<bool isReadTransaction, MemoryCell MC>
   static inline void 
   transmitConstantMemoryCell(const MC& cell, uint8_t offset) noexcept {
@@ -722,7 +730,7 @@ public:
       if constexpr (isReadTransaction) {
           doMemoryCellReadTransaction(cell, offset);
       } else {
-          doNothingTransaction<isReadTransaction>();
+          doMemoryCellWriteTransaction(nullSink, offset);
       }
   }
 private:
