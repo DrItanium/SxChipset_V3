@@ -579,14 +579,14 @@ private:
 public:
   template<bool isReadTransaction>
   static void
-  doIOTransaction(uint32_t address) noexcept {
-      auto lineOffset = address & 0xF;
-      auto sramIndex = (address >> 4) & 0xFFF;
-      switch (static_cast<uint8_t>(address >> 16)) {
+  doIOTransaction(SplitWord32 address) noexcept {
+      auto lineOffset = address.value & 0xF;
+      auto sramIndex = (address.value >> 4) & 0xFFF;
+      switch (static_cast<uint8_t>(address.value >> 16)) {
           // first 4k of io space is just a block of memory that read/write
           // operations act upon
           case 0x00:
-              [lineOffset, offset = static_cast<uint16_t>(address), &cacheLine = ioSpaceCache[sramIndex]]() {
+              [lineOffset, offset = static_cast<uint16_t>(address.value), &cacheLine = ioSpaceCache[sramIndex]]() {
                   //auto& cacheLine = ioSpaceCache[sramIndex];
                   if constexpr (isReadTransaction) {
                       onBuiltinDeviceRead(offset, cacheLine);
@@ -618,6 +618,16 @@ public:
       return value;
   }
   template<bool isReadTransaction>
+  static void 
+  doPSRAM0Transaction(SplitWord32 address) noexcept {
+      doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
+  }
+  template<bool isReadTransaction>
+  static void
+  doNothingTransaction(SplitWord32 address) noexcept {
+      doMemoryCellTransaction<isReadTransaction>(nullSink, address.components.offset);
+  }
+  template<bool isReadTransaction>
   static inline void
   doMemoryTransaction() noexcept {
       TimeTracker<TrackDoMemoryTransaction> tracker(__PRETTY_FUNCTION__);
@@ -630,16 +640,16 @@ public:
           EBIInterface::setAddress<dataLines.getDataPortReadAddressBase()>();
           digitalToggleFast(Pin::EBI_EN);
       }
-
+      // dispatch on the upper most 8-bits of the address
       switch (static_cast<uint8_t>(address.value >> 24)) {
           case 0x00: // PSRAM
-              doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
+              doPSRAM0Transaction<isReadTransaction>(address);
               break;
           case 0xFE: // IO Space
-              doIOTransaction<isReadTransaction>(address.value);
+              doIOTransaction<isReadTransaction>(address);
               break;
           default:
-              doMemoryCellTransaction<isReadTransaction>(nullSink, address.components.offset);
+              doNothingTransaction<isReadTransaction>(address);
               break;
       }
 
