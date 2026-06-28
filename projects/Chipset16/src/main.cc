@@ -631,7 +631,7 @@ public:
           digitalToggleFast(Pin::EBI_EN);
       }
 
-      switch (address.components.targetBlock) {
+      switch (static_cast<uint8_t>(address.value >> 24)) {
           case 0x00: // PSRAM
               doMemoryCellTransaction<isReadTransaction>(memory960[address.components.targetCellBlock], address.components.offset);
               break;
