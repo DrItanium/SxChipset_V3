@@ -484,7 +484,8 @@ public:
       }
   }
 private:
-  static void onBuiltinDeviceRead(uint16_t offset) noexcept {
+  static void onBuiltinDeviceRead(uint16_t offset, MemoryCellBlock& cacheLine) noexcept {
+      //auto& cacheLine = ioSpaceCache[(offset >> 4)&0xFFF];
       // unlike the memory blocks, the address used here is byte related so we
       // have to compensate for it
       //
@@ -497,52 +498,53 @@ private:
       // being updated. This is a fine design as this is how we operate anyway!
       switch (offset) {
           case 0x00'00:
-              ioSpaceCache[0].setWord32(0, CLK1Value);
+              cacheLine.setWord32(0, CLK1Value);
               break;
           case 0x00'04:
-              ioSpaceCache[0].setWord32(1, CLK2Value);
+              cacheLine.setWord32(1, CLK2Value);
               break;
           case 0x00'08:
-              ioSpaceCache[0].setWord32(2, Serial.read());
+              cacheLine.setWord32(2, Serial.read());
               break;
           case 0x00'10:
-              ioSpaceCache[1].setWord32(0, millis());
+              cacheLine.setWord32(0, millis());
               break;
           case 0x00'14:
-              ioSpaceCache[1].setWord32(1, micros());
+              cacheLine.setWord32(1, micros());
               break;
           case 0x00'18:
-              ioSpaceCache[1].setWord32(2, getCurrentCycleCount());
+              cacheLine.setWord32(2, getCurrentCycleCount());
               break;
           case 0x00'1c:
-              ioSpaceCache[1].setWord32(3, rtc_get());
+              cacheLine.setWord32(3, rtc_get());
               break;
           case 0x00'20:
-              ioSpaceCache[2].setWord32(0, rtc.now().unixtime());
+              cacheLine.setWord32(0, rtc.now().unixtime());
               break;
           case 0x00'24:
-              ioSpaceCache[2].setWord32(1, rtc.now().secondstime());
+              cacheLine.setWord32(1, rtc.now().secondstime());
               break;
           case 0x00'28:
-              ioSpaceCache[2].setWord32(2, extractBitPattern(rtc.getTemperature()));
+              cacheLine.setWord32(2, extractBitPattern(rtc.getTemperature()));
               break;
           case 0x00'30:
-              ioSpaceCache[3].setWord32(0, random());
+              cacheLine.setWord32(0, random());
               break;
           case 0x00'38:
-              ioSpaceCache[3].setWord32(2, Entropy.random());
+              cacheLine.setWord32(2, Entropy.random());
               break;
           case 0x00'44: // sram cache size (~61k)
-              ioSpaceCache[4].setWord32(1, OnboardSRAM1CacheSize);
+              cacheLine.setWord32(1, OnboardSRAM1CacheSize);
               break;
           case 0x00'48:
-              ioSpaceCache[4].setWord32(2, OnboardSRAM2CacheSize); 
+              cacheLine.setWord32(2, OnboardSRAM2CacheSize); 
               break;
           default:
               break;
       }
   }
-  static void onBuiltinDeviceWrite(uint16_t offset) noexcept {
+  static void onBuiltinDeviceWrite(uint16_t offset, const MemoryCellBlock& cacheLine) noexcept {
+      //auto& cacheLine = ioSpaceCache[(offset >> 4)&0xFFF];
       // operations will be invoked on the lowest address since a 32-bit
       // operation is actually comprised of 2 parts. Thus, it makes more sense
       // to just see what the base address is. 
@@ -554,20 +556,20 @@ private:
       switch (offset) {
           case 0x00'08:
               // okay, so we actually only care about the lower word anyways
-              Serial.write(static_cast<uint8_t>(ioSpaceCache[0].getWord(4)));
+              Serial.write(static_cast<uint8_t>(cacheLine.getWord(4)));
               break;
           case 0x00'0c:
               Serial.flush();
               break;
           case 0x00'2e: 
-              if (ioSpaceCache[2].getWord32(3) != 0) {
+              if (cacheLine.getWord32(3) != 0) {
                   rtc.enable32K();
               } else {
                   rtc.disable32K();
               }
               break;
           case 0x00'34: // system counter enable
-              systemCounterEnabled = ioSpaceCache[3].getWord(2) != 0;
+              systemCounterEnabled = cacheLine.getWord(2) != 0;
               break;
           default:
               break;
@@ -584,13 +586,14 @@ public:
           // first 4k of io space is just a block of memory that read/write
           // operations act upon
           case 0x00:
-              [lineOffset, address, sramIndex]() {
+              [lineOffset, offset = static_cast<uint16_t>(address), &cacheLine = ioSpaceCache[sramIndex]]() {
+                  //auto& cacheLine = ioSpaceCache[sramIndex];
                   if constexpr (isReadTransaction) {
-                      onBuiltinDeviceRead(static_cast<uint16_t>(address));
-                      doMemoryCellReadTransaction(ioSpaceCache[sramIndex], lineOffset);
-                  } else {
-                      doMemoryCellWriteTransaction(ioSpaceCache[sramIndex], lineOffset);
-                      onBuiltinDeviceWrite(static_cast<uint16_t>(address));
+                      onBuiltinDeviceRead(offset, cacheLine);
+                  } 
+                  doMemoryCellTransaction<isReadTransaction>(cacheLine, lineOffset);
+                  if constexpr (!isReadTransaction) {
+                      onBuiltinDeviceWrite(offset, cacheLine);
                   }
               }();
               break;
