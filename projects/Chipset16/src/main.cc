@@ -463,12 +463,15 @@ public:
   static void
   doMemoryCellWriteTransaction(MC& target, uint8_t offset) noexcept {
       TimeTracker<TrackDoMemoryCellWriteTransaction> tracker(__PRETTY_FUNCTION__);
-      for (uint8_t wordOffset = (offset >> 1); ; ++wordOffset) {
+      for (uint8_t wordOffset = (offset >> 1); ;) {
           target.setWord(wordOffset, read16<getDataLinesConfiguration>(), determineActionKind());
           if (isBurstLast()) {
               break;
           } else {
-              signalReady();
+              digitalToggleFast(Pin::READY);
+              // load the next word and set the data lines ahead of time
+              ++wordOffset;
+              waitForReadySignal();
           }
       }
       signalReady();
