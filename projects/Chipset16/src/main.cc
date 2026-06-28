@@ -611,8 +611,8 @@ public:
       EBIInterface::setDataLinesDirection<INPUT>();
       digitalToggleFast(Pin::EBI_EN);
       SplitWord32 value;
-      for (int i = 0; i < 2; ++i) {
-          value.shorts[i] = read16<getAddressConfiguration>(addressLines.getBaseAddress() + i);
+      for (uint8_t i = 0, addr = addressLines.getBaseAddress(); i < 2; ++i, ++addr) {
+          value.shorts[i] = read16<getAddressConfiguration>(addr);
       }
       digitalToggleFast(Pin::EBI_EN);
       return value;
