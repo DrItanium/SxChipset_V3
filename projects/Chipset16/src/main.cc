@@ -861,9 +861,9 @@ triggerSystemTimer() noexcept {
     }
 }
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
-bool configureFlexIO(TD&, RD&) noexcept;
-void setupDisplayConnection() noexcept;
-void 
+FLASHMEM bool configureFlexIO(TD&, RD&) noexcept;
+FLASHMEM void setupDisplayConnection() noexcept;
+FLASHMEM void 
 setup() {
     cpuIsRunning = false;
     Serial.begin(115200);
