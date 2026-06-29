@@ -1258,6 +1258,8 @@ setupDisplayConnection() noexcept {
     Serial.print("Image Format: 0x"); Serial.println(x, HEX);
     x = tft.readcommand8(ILI9341_RDSELFDIAG);
     Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+    Serial.print("Display Width: "); Serial.println(tft.width());
+    Serial.print("Display Height: "); Serial.println(tft.height());
     // try do do the system clear setup
     Serial.println(F("Benchmark                Time (microseconds)"));
     delay(10);
