@@ -699,36 +699,37 @@ namespace {
         }
     }
 }
-void
+// until this function is used more than once we should keep it in flashmem
+FLASHMEM void
 putCPUInReset() noexcept {
     doFixedWriteOperation<ManagementEngineReceiveOpcode::PutInReset>();
     cpuIsRunning = false;
 }
 
-void
+FLASHMEM void
 pullCPUOutOfReset() noexcept {
     doFixedWriteOperation<ManagementEngineReceiveOpcode::PullOutOfReset>();
     cpuIsRunning = true;
 }
-bool
+FLASHMEM bool
 cpuRunning() noexcept {
     return cpuIsRunning;
 }
-void
+FLASHMEM void
 holdBus() noexcept {
     doFixedWriteOperation<ManagementEngineReceiveOpcode::HoldBus>();
 }
-void
+FLASHMEM void
 releaseBus() noexcept {
     doFixedWriteOperation<ManagementEngineReceiveOpcode::ReleaseBus>();
 }
 
-bool
+FLASHMEM bool
 isBusLocked() noexcept {
     return (requestByte<ManagementEngineRequestOpcode::BusIsLocked>() > 0);
 }
 
-bool
+FLASHMEM bool
 isBusHeld() noexcept {
     return (requestByte<ManagementEngineRequestOpcode::BusIsHeld>() > 0);
 }
