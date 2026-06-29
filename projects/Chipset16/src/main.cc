@@ -44,6 +44,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // gamepad qt
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
+// interface to virtual TFT display
+#include <Adafruit_ILI9341.h>
 
 
 #include "Pinout.h"
@@ -102,6 +104,8 @@ X(ReadDataLines);
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
+Adafruit_ILI9341 display(static_cast<int>(Pin::DISPLAY_CS),
+                         static_cast<int>(Pin::DISPLAY_DC));
 // state machines
 // right now, transaction detection is working right! Woo!
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN };
@@ -853,6 +857,7 @@ triggerSystemTimer() noexcept {
 }
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
 bool configureFlexIO(TD&, RD&) noexcept;
+void setupDisplayConnection() noexcept;
 void 
 setup() {
     cpuIsRunning = false;
@@ -924,6 +929,8 @@ setup() {
     Entropy.Initialize();
     systemTimer.begin(triggerSystemTimer, 100'000);
     displayClockSpeedInformation();
+    // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
+    setupDisplayConnection();
     Serial.println("-------");
     pullCPUOutOfReset();
 }
@@ -975,7 +982,25 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     }
     return true;
 }
-
+void
+setupDisplayConnection() noexcept {
+    // we are sending commands to an ILI9341 display which is actually an
+    // RP2040 Feather DVI that exposes that exposes an HDMI connection
+    Serial.println("Configuring ILI9341 generic display interface");
+    display.begin();
+    // taken from the graphicstest.ino example
+    uint8_t x = display.readcommand8(ILI9341_RDMODE);
+    Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
+    x = display.readcommand8(ILI9341_RDMADCTL);
+    Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
+    x = display.readcommand8(ILI9341_RDPIXFMT);
+    Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
+    x = display.readcommand8(ILI9341_RDIMGFMT);
+    Serial.print("Image Format: 0x"); Serial.println(x, HEX);
+    x = display.readcommand8(ILI9341_RDSELFDIAG);
+    Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+    Serial.println("Display Connection setup complete!");
+}
 // ------ Filesystem components begin ------
 
 #if 0
