@@ -355,7 +355,7 @@ struct i960Interface final {
 
 
 
-  static void
+  FLASHMEM static void
   begin() noexcept {
       // configure the address lower lines for input
       write16(addressLines.getConfigPortBaseAddress(), 0);
@@ -735,7 +735,7 @@ isBusHeld() noexcept {
 
 }
 
-void 
+FLASHMEM void 
 setupSDCard() noexcept {
     if (!SD.begin(BUILTIN_SDCARD)) {
         Serial.println("No SDCARD found!");
@@ -759,7 +759,8 @@ setupSDCard() noexcept {
 }
 
 
-void setupRandomSeed() noexcept {
+FLASHMEM void 
+setupRandomSeed() noexcept {
     // allow the entropy source to actually block until we get enough
     // randomness
   uint32_t newSeed = Entropy.random();
@@ -786,7 +787,8 @@ void setupRandomSeed() noexcept {
   randomSeed(newSeed);
   //Serial.printf("Random Seed: 0x%x\n", newSeed);
 }
-void setupMemory() noexcept {
+FLASHMEM void 
+setupMemory() noexcept {
   Serial.println("Clearing PSRAM");
   for (auto& a : memory960) {
       a.clear();
@@ -799,7 +801,7 @@ void setupMemory() noexcept {
       cell.clear();
   }
 }
-void
+FLASHMEM void
 setupRTC() noexcept {
     if (rtc.begin(&Wire2)) {
         if (rtc.lostPower()) {
@@ -822,7 +824,7 @@ sinkWire() noexcept {
 }
 const uint8_t setCPUClockMode_CLKAll [] { 0, 0 };
 
-void
+FLASHMEM void
 displayClockSpeedInformation() noexcept {
     SplitWord64 clk3;
     managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
@@ -830,7 +832,7 @@ displayClockSpeedInformation() noexcept {
     //Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
-void
+FLASHMEM void
 waitForAVRToComeUp() noexcept {
     static const uint8_t InstructionSequence[] {
         static_cast<uint8_t>(ManagementEngineReceiveOpcode::SetMode),
@@ -929,17 +931,17 @@ setup() {
     setupSDCard();
     setupRandomSeed();
     Entropy.Initialize();
-    systemTimer.begin(triggerSystemTimer, 100'000);
-    displayClockSpeedInformation();
     // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
     setupDisplayConnection();
+    systemTimer.begin(triggerSystemTimer, 100'000);
+    displayClockSpeedInformation();
     Serial.println("-------");
     pullCPUOutOfReset();
 }
 inline bool shouldServiceTransaction() noexcept {
     return inTransactionDetector.inTransaction();
 }
-void 
+inline void 
 tryDoTransaction() noexcept {
     if (shouldServiceTransaction()) {
         if (i960Interface::isReadOperation()) {
@@ -984,7 +986,8 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     }
     return true;
 }
-unsigned long testFillScreen() {
+// graphics interface routines
+FLASHMEM unsigned long testFillScreen() {
   unsigned long start = micros();
   tft.fillScreen(ILI9341_BLACK);
   yield();
@@ -999,7 +1002,7 @@ unsigned long testFillScreen() {
   return micros() - start;
 }
 
-unsigned long testText() {
+FLASHMEM unsigned long testText() {
   tft.fillScreen(ILI9341_BLACK);
   unsigned long start = micros();
   tft.setCursor(0, 0);
@@ -1026,7 +1029,7 @@ unsigned long testText() {
   return micros() - start;
 }
 
-unsigned long testLines(uint16_t color) {
+FLASHMEM unsigned long testLines(uint16_t color) {
   unsigned long start, t;
   int           x1, y1, x2, y2,
                 w = tft.width(),
@@ -1085,7 +1088,7 @@ unsigned long testLines(uint16_t color) {
   return micros() - start;
 }
 
-unsigned long testFastLines(uint16_t color1, uint16_t color2) {
+FLASHMEM unsigned long testFastLines(uint16_t color1, uint16_t color2) {
   unsigned long start;
   int           x, y, w = tft.width(), h = tft.height();
 
@@ -1097,7 +1100,7 @@ unsigned long testFastLines(uint16_t color1, uint16_t color2) {
   return micros() - start;
 }
 
-unsigned long testRects(uint16_t color) {
+FLASHMEM unsigned long testRects(uint16_t color) {
   unsigned long start;
   int           n, i, i2,
                 cx = tft.width()  / 2,
@@ -1114,7 +1117,7 @@ unsigned long testRects(uint16_t color) {
   return micros() - start;
 }
 
-unsigned long testFilledRects(uint16_t color1, uint16_t color2) {
+FLASHMEM unsigned long testFilledRects(uint16_t color1, uint16_t color2) {
   unsigned long start, t = 0;
   int           n, i, i2,
                 cx = tft.width()  / 2 - 1,
@@ -1135,7 +1138,7 @@ unsigned long testFilledRects(uint16_t color1, uint16_t color2) {
   return t;
 }
 
-unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
+FLASHMEM unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
   unsigned long start;
   int x, y, w = tft.width(), h = tft.height(), r2 = radius * 2;
 
@@ -1150,7 +1153,7 @@ unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
   return micros() - start;
 }
 
-unsigned long testCircles(uint8_t radius, uint16_t color) {
+FLASHMEM unsigned long testCircles(uint8_t radius, uint16_t color) {
   unsigned long start;
   int           x, y, r2 = radius * 2,
                 w = tft.width()  + radius,
@@ -1168,7 +1171,7 @@ unsigned long testCircles(uint8_t radius, uint16_t color) {
   return micros() - start;
 }
 
-unsigned long testTriangles() {
+FLASHMEM unsigned long testTriangles() {
   unsigned long start;
   int           n, i, cx = tft.width()  / 2 - 1,
                       cy = tft.height() / 2 - 1;
@@ -1187,7 +1190,7 @@ unsigned long testTriangles() {
   return micros() - start;
 }
 
-unsigned long testFilledTriangles() {
+FLASHMEM unsigned long testFilledTriangles() {
   unsigned long start, t = 0;
   int           i, cx = tft.width()  / 2 - 1,
                    cy = tft.height() / 2 - 1;
@@ -1207,7 +1210,7 @@ unsigned long testFilledTriangles() {
   return t;
 }
 
-unsigned long testRoundRects() {
+FLASHMEM unsigned long testRoundRects() {
   unsigned long start;
   int           w, i, i2,
                 cx = tft.width()  / 2 - 1,
@@ -1224,7 +1227,7 @@ unsigned long testRoundRects() {
   return micros() - start;
 }
 
-unsigned long testFilledRoundRects() {
+FLASHMEM unsigned long testFilledRoundRects() {
   unsigned long start;
   int           i, i2,
                 cx = tft.width()  / 2 - 1,
@@ -1240,7 +1243,7 @@ unsigned long testFilledRoundRects() {
 
   return micros() - start;
 }
-void
+FLASHMEM void
 setupDisplayConnection() noexcept {
     // we are sending commands to an ILI9341 display which is actually an
     // RP2040 Feather DVI that exposes that exposes an HDMI connection

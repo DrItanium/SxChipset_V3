@@ -46,7 +46,7 @@ public:
   EBIWrapperInterface(EBIWrapperInterface&&) = delete;
   EBIWrapperInterface& operator=(const EBIWrapperInterface&) = delete;
   EBIWrapperInterface& operator=(EBIWrapperInterface&&) = delete;
-  static bool begin() noexcept;
+  FLASHMEM static bool begin() noexcept;
   // in the 16-bit bus design, we can easily just assign data without needing
   // to have a strange lookup table for all of this
   static void

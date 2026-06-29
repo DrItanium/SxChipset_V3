@@ -62,7 +62,7 @@ struct FlexIOReadyPulseToLevelConverter final {
         using TriggerOperation = void(*)(void);
         constexpr FlexIOReadyPulseToLevelConverter(uint8_t pulseIn, uint8_t levelOut) : _in(pulseIn), _out(levelOut) { }
         constexpr FlexIOReadyPulseToLevelConverter(Pin pulseIn, Pin levelOut) : FlexIOReadyPulseToLevelConverter(static_cast<uint8_t>(pulseIn), static_cast<uint8_t>(levelOut)) { }
-        [[nodiscard]] bool begin() noexcept;
+        [[nodiscard]] FLASHMEM bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] uint32_t input() const noexcept { return _ioDevice->port().PIN; }
         [[nodiscard]] uint32_t getReadyLevel() const noexcept { return input() & (1 << _outFlexPin); }
@@ -89,7 +89,7 @@ struct FlexIOTransactionDetector final {
             : FlexIOTransactionDetector(
                 static_cast<uint8_t>(ads),
                 static_cast<uint8_t>(den)) { }
-        [[nodiscard]] bool begin() noexcept;
+        [[nodiscard]] FLASHMEM bool begin() noexcept;
         [[nodiscard]] uint32_t currentState() const noexcept { return _ioDevice->port().SHIFTSTATE; }
         [[nodiscard]] bool inTransaction() const noexcept { 
             // we know that if the current state is actually state2 then we are in the proper transaction state
