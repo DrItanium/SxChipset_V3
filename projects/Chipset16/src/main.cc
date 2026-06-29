@@ -60,11 +60,6 @@ constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
-// ----- hard memory space definitions begin
-EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
-// this is the backing storage of the first 64k of io space
-MemoryCellBlock ioSpaceCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 enum class TimerTrackingTargets {
@@ -164,6 +159,12 @@ uint32_t extractBitPattern(From value) noexcept {
     converter.from = value;
     return converter.to;
 }
+
+// ----- hard memory space definitions begin
+EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
+// this is the backing storage of the first 64k of io space
+MemoryCellBlock ioSpaceCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
+DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
 
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
