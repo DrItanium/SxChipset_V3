@@ -986,6 +986,7 @@ void
 setupDisplayConnection() noexcept {
     // we are sending commands to an ILI9341 display which is actually an
     // RP2040 Feather DVI that exposes that exposes an HDMI connection
+    // by this point it should be safe to just talk to the ILI9341
     Serial.println("Configuring ILI9341 generic display interface");
     display.begin();
     // taken from the graphicstest.ino example
