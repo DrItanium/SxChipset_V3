@@ -1252,22 +1252,23 @@ setupDisplayConnection() noexcept {
     // RP2040 Feather DVI that exposes that exposes an HDMI connection
     // by this point it should be safe to just talk to the ILI9341
     Serial.println("Configuring ILI9341 generic display interface");
-    tft.setClock(16000000);
+    tft.setClock(16'000'000);
     tft.begin();
+    tft.fillScreen(ILI9341_BLACK);
     Serial.println("Running graphics tests before boot!");
     // taken from the graphicstest.ino example
     uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-    Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
+    Serial.print(F("Display Power Mode: 0x")); Serial.println(x, HEX);
     x = tft.readcommand8(ILI9341_RDMADCTL);
-    Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
+    Serial.print(F("MADCTL Mode: 0x")); Serial.println(x, HEX);
     x = tft.readcommand8(ILI9341_RDPIXFMT);
-    Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
+    Serial.print(F("Pixel Format: 0x")); Serial.println(x, HEX);
     x = tft.readcommand8(ILI9341_RDIMGFMT);
-    Serial.print("Image Format: 0x"); Serial.println(x, HEX);
+    Serial.print(F("Image Format: 0x")); Serial.println(x, HEX);
     x = tft.readcommand8(ILI9341_RDSELFDIAG);
-    Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
-    Serial.print("Display Width: "); Serial.println(tft.width());
-    Serial.print("Display Height: "); Serial.println(tft.height());
+    Serial.print(F("Self Diagnostic: 0x")); Serial.println(x, HEX); 
+    Serial.print(F("Display Width: ")); Serial.println(tft.width());
+    Serial.print(F("Display Height: ")); Serial.println(tft.height());
     // try do do the system clear setup
     Serial.println(F("Benchmark                Time (microseconds)"));
     delay(10);
