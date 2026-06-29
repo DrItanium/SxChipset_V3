@@ -162,9 +162,11 @@ uint32_t extractBitPattern(From value) noexcept {
 
 // ----- hard memory space definitions begin
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
+template<uint32_t size>
+using DataBlock = MemoryCellBlock[size / sizeof(MemoryCellBlock)];
 // this is the backing storage of the first 64k of io space
-MemoryCellBlock ioSpaceCache[OnboardSRAMCacheSize / sizeof(MemoryCellBlock)];
-DMAMEM MemoryCellBlock sramCache2[OnboardSRAM2CacheSize / sizeof(MemoryCellBlock)];
+DataBlock<OnboardSRAMCacheSize> ioSpaceCache;
+DMAMEM DataBlock<OnboardSRAM2CacheSize> sramCache2;
 
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
