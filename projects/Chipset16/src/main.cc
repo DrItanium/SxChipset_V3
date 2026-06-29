@@ -104,13 +104,14 @@ X(ReadDataLines);
 RTC_DS3231 rtc;
 IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
-Adafruit_ILI9341 display(static_cast<int>(Pin::DISPLAY_CS),
-                         static_cast<int>(Pin::DISPLAY_DC));
 // state machines
 // right now, transaction detection is working right! Woo!
 FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTION_ADS, Pin::STATE_MACHINE__IN_TRANSACTION_DEN };
 // ready pulse to level converter needs to be fixed up
 FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT };
+
+Adafruit_ILI9341 display(static_cast<int>(Pin::DISPLAY_CS),
+                         static_cast<int>(Pin::DISPLAY_DC));
 
 
 /**
@@ -1000,6 +1001,13 @@ setupDisplayConnection() noexcept {
     Serial.print("Image Format: 0x"); Serial.println(x, HEX);
     x = display.readcommand8(ILI9341_RDSELFDIAG);
     Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
+    // try do do the system clear setup
+    display.fillScreen(ILI9341_BLACK);
+    display.fillScreen(ILI9341_RED);
+    display.fillScreen(ILI9341_GREEN);
+    display.fillScreen(ILI9341_BLUE);
+    display.fillScreen(ILI9341_BLACK);
+
     Serial.println("Display Connection setup complete!");
 }
 // ------ Filesystem components begin ------
