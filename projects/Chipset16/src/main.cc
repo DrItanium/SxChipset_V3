@@ -1206,6 +1206,7 @@ setupDisplayConnection() noexcept {
     // by this point it should be safe to just talk to the ILI9341
     Serial.println("Configuring ILI9341 generic display interface");
     tft.begin();
+    tft.setRotation(3); // make sure that text is rendered in the correct way
     tft.fillScreen(ILI9341_BLACK);
     Serial.println("Running graphics tests before boot!");
     // taken from the graphicstest.ino example
