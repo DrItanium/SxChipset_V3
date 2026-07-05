@@ -664,7 +664,7 @@ public:
           digitalToggleFast(Pin::EBI_EN);
       }
   }
-  static void 
+  FLASHMEM static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
       CLK2Value = clk2;
       CLK1Value = clk1;
