@@ -126,9 +126,11 @@ uint32_t extractBitPattern(From value) noexcept {
 EXTMEM MemoryCellBlock memory960[MemoryPoolSizeInBytes / sizeof(MemoryCellBlock)];
 template<uint32_t size>
 using DataBlock = MemoryCellBlock[size / sizeof(MemoryCellBlock)];
+
+using DataBlock64k = DataBlock<0x10000>;
 // this is the backing storage of the first 64k of io space
-DataBlock<OnboardSRAMCacheSize> ioSpaceCache;
-DMAMEM DataBlock<OnboardSRAM2CacheSize> sramCache2;
+DataBlock64k ioSpaceCache;
+DMAMEM DataBlock64k dmaCache;
 
 // with the 16-bit data bus connection, things have changed somewhat
 // 0b000 -> Data Lines Transmit Port (implicit write)
@@ -538,7 +540,6 @@ private:
               break;
       }
   }
-  
 public:
   template<bool isReadTransaction>
   static void
@@ -559,8 +560,8 @@ public:
                          }
                          break;
                      }
-          case 0x01: // SRAM2
-              doMemoryCellTransaction<isReadTransaction>(sramCache2[sramIndex], lineOffset);
+          case 0x01: 
+              doMemoryCellTransaction<isReadTransaction>(dmaCache[sramIndex], lineOffset);
               break;
           default:
               doMemoryCellTransaction<isReadTransaction>(nullSink, lineOffset);
@@ -751,7 +752,7 @@ setupMemory() noexcept {
   for (auto& cell : ioSpaceCache) {
       cell.clear();
   }
-  for (auto& cell : sramCache2) {
+  for (auto& cell: dmaCache) {
       cell.clear();
   }
 }
