@@ -548,18 +548,17 @@ public:
       switch (static_cast<uint8_t>(address.value >> 16)) {
           // first 4k of io space is just a block of memory that read/write
           // operations act upon
-          case 0x00:
-              [lineOffset, offset = static_cast<uint16_t>(address.value), &cacheLine = ioSpaceCache[sramIndex]]() {
-                  //auto& cacheLine = ioSpaceCache[sramIndex];
-                  if constexpr (isReadTransaction) {
-                      onBuiltinDeviceRead(offset, cacheLine);
-                  } 
-                  doMemoryCellTransaction<isReadTransaction>(cacheLine, lineOffset);
-                  if constexpr (!isReadTransaction) {
-                      onBuiltinDeviceWrite(offset, cacheLine);
-                  }
-              }();
-              break;
+          case 0x00: {
+                         auto& cacheLine = ioSpaceCache[sramIndex];
+                         if constexpr (isReadTransaction) {
+                             onBuiltinDeviceRead(static_cast<uint16_t>(address.value), cacheLine);
+                         } 
+                         doMemoryCellTransaction<isReadTransaction>(cacheLine, lineOffset);
+                         if constexpr (!isReadTransaction) {
+                             onBuiltinDeviceWrite(static_cast<uint16_t>(address.value), cacheLine);
+                         }
+                         break;
+                     }
           case 0x01: // SRAM2
               doMemoryCellTransaction<isReadTransaction>(sramCache2[sramIndex], lineOffset);
               break;
