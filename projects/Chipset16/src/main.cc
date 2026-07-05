@@ -45,8 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
 // interface to virtual TFT display
-//#include <Adafruit_ILI9341.h>
-#include <ILI9341_t3.h>
+#include <Adafruit_ILI9341.h>
 
 
 #include "Pinout.h"
@@ -111,7 +110,9 @@ FlexIOTransactionDetector inTransactionDetector{Pin::STATE_MACHINE__IN_TRANSACTI
 // ready pulse to level converter needs to be fixed up
 FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PULSE, Pin::STATE_MACHINE__READY_LEVEL_OUT };
 
-ILI9341_t3 tft(static_cast<int>(Pin::DISPLAY_CS), static_cast<int>(Pin::DISPLAY_DC));
+
+Adafruit_ILI9341 tft(&SPI, static_cast<int>(Pin::DISPLAY_DC),
+                     static_cast<int>(Pin::DISPLAY_CS));
 
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 
@@ -1204,7 +1205,6 @@ setupDisplayConnection() noexcept {
     // RP2040 Feather DVI that exposes that exposes an HDMI connection
     // by this point it should be safe to just talk to the ILI9341
     Serial.println("Configuring ILI9341 generic display interface");
-    tft.setClock(16'000'000);
     tft.begin();
     tft.fillScreen(ILI9341_BLACK);
     Serial.println("Running graphics tests before boot!");
