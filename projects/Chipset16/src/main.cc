@@ -113,44 +113,6 @@ FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PU
 
 ILI9341_t3 tft(static_cast<int>(Pin::DISPLAY_CS), static_cast<int>(Pin::DISPLAY_DC));
 
-
-/**
- * @brief How the data bus lines are configured as seen on the CPU card. The
- * Teensy has no way of knowing this configuration so it is a compile time
- * constant
- */
-enum class CPUDataBusConfiguration : uint8_t {
-    /**
-     * @brief Dual16 means that there are two fixed direction 16-bit data
-     * channels connected to the CH351 IO Expander. Right now, the upper 16
-     * bits are for reads and the lower 16-bits are for writes.
-     */
-    Dual16,
-    /**
-     * @brief Use the two 16-bit data channels and a single 32-bit data
-     * channel. Very expensive
-     */
-    Full32,
-    Unused,
-    /**
-     * @brief Legacy 16-bit data bus that changes directions constantly
-     */
-    Bidirectional16,
-};
-constexpr auto BusConfiguration = CPUDataBusConfiguration::Dual16;
-constexpr bool valid(CPUDataBusConfiguration config) noexcept {
-    switch (config) {
-        case CPUDataBusConfiguration::Bidirectional16:
-        case CPUDataBusConfiguration::Dual16:
-            return true;
-        default:
-            return false;
-    }
-}
-static_assert(valid(BusConfiguration), "Unsupported bus configuration specified");
-
-
-
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 
 template<typename From>
@@ -664,7 +626,7 @@ public:
           digitalToggleFast(Pin::EBI_EN);
       }
   }
-  FLASHMEM static void 
+  static void 
   setClockFrequency(uint32_t clk2, uint32_t clk1) noexcept {
       CLK2Value = clk2;
       CLK1Value = clk1;
