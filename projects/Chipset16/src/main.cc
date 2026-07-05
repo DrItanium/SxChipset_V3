@@ -337,14 +337,6 @@ public:
   waitForReadySignal() noexcept {
       rdyFeedback.wait();
   }
-  template<uint32_t readyDelayTimer = 0>
-  static inline void
-  signalReady() noexcept {
-      // run and block until we get the completion pulse
-      digitalToggleFast(Pin::READY);
-      waitForReadySignal();
-      fixedDelayNanoseconds<readyDelayTimer>(); // wait some amount of time
-  }
 
   static inline bool
   isReadOperation() noexcept {
@@ -374,6 +366,7 @@ public:
           // now update the IO expander itself
           write16<setDataLinesConfiguration>();
           if (isBurstLast()) {
+              digitalToggleFast(Pin::READY);
               break;
           } else {
               digitalToggleFast(Pin::READY);
@@ -383,7 +376,7 @@ public:
               waitForReadySignal();
           }
       }
-      signalReady();
+      waitForReadySignal();
   }
   static constexpr uint32_t ActionKind_EnableMask = 0b110000000;
   static constexpr uint32_t ActionKind_Low8Mask   = 0b100000000;
@@ -432,6 +425,7 @@ public:
       for (uint8_t wordOffset = (offset >> 1); ;) {
           target.setWord(wordOffset, read16<getDataLinesConfiguration>(), determineActionKind());
           if (isBurstLast()) {
+              digitalToggleFast(Pin::READY);
               break;
           } else {
               digitalToggleFast(Pin::READY);
@@ -440,7 +434,7 @@ public:
               waitForReadySignal();
           }
       }
-      signalReady();
+      waitForReadySignal();
   }
   template<bool isReadTransaction, MemoryCell MC>
   static inline void
