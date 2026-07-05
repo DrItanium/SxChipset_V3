@@ -220,13 +220,9 @@ inline void fixedDelayNanoseconds() noexcept {
         delayNanoseconds(value);
     }
 }
-constexpr InterfaceTimingDescription defaultWrite8{
-    50, 30, 100, 150
-}; // 330ns worth of delay
+constexpr InterfaceTimingDescription defaultWrite8{ 50, 30, 100, 150 }; // 330ns worth of delay
+constexpr InterfaceTimingDescription defaultRead8 { 100, 80, 20, 50 }; // 250ns worth of delay
 constexpr InterfaceTimingDescription customWrite16 { 10, 0, 20, 0 }; // 30ns total
-constexpr InterfaceTimingDescription defaultRead8 {
-    100, 80, 20, 50
-}; // 250ns worth of delay
 constexpr InterfaceTimingDescription customRead16 { 10, 0, 20, 0 }; // 30ns total
 constexpr auto WriteConfiguration = customWrite16;
 constexpr auto ReadConfiguration = customRead16;
