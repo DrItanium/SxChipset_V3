@@ -449,6 +449,69 @@ public:
           doMemoryCellWriteTransaction(target, offset);
       }
   }
+
+  enum class GraphicsAction : uint16_t {
+      // taken from the Adafruit_GFX header
+      None,
+      DrawPixel,
+      // from the transaction API
+      StartWrite,
+      EndWrite,
+      WritePixel,
+      WriteFillRect,
+      WriteFastVLine,
+      WriteFastHLine,
+      WriteLine,
+      // control api
+      SetRotation,
+      InvertDisplay,
+      // basic draw api
+      DrawFastVLine,
+      DrawFastHLine,
+      FillRect,
+      FillScreen,
+      DrawLine,
+      DrawRect,
+      DrawCircle,
+      FillCircle,
+      DrawEllipse,
+      FillEllipse,
+      DrawTriangle,
+      FillTriangle,
+      DrawRoundRect,
+      FillRoundRect,
+      DrawRotatedRect,
+      FillRotatedRect,
+      RotatePoint,
+      DrawChar_Square,
+      DrawChar_Rect,
+      SetTextSize_Square,
+      SetTextSize_Rect,
+      SetCursor,
+      SetTextColor,
+      SetTextColor_TransparentBackground,
+      SetTextWrap,
+
+      // @TODO add support for setFont
+      // @TODO add support for drawing bitmaps...
+  };
+  static inline constexpr uint16_t GraphicsDeviceBaseAddress = 0x01'00;
+  static inline constexpr uint16_t GraphicsCommandAddress_ReturnBase = GraphicsDeviceBaseAddress + 0x0c; 
+  // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
+  static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
+  static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
+
+  using GraphicsOperation = std::function<void()>;
+  static inline GraphicsOperation GraphicsOperationTable[] {
+      []() { },
+      [&args = ioSpaceCache[GraphicsCommandBaseAddress >> 4]]() { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      []() { tft.startWrite(); },
+      []() { tft.endWrite(); },
+      [&args = ioSpaceCache[GraphicsCommandBaseAddress >> 4]]() { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+  };
+  static void dispatchDrawOperation() noexcept {
+  }
+
 private:
   static void onBuiltinDeviceRead(uint16_t offset, MemoryCellBlock& cacheLine) noexcept {
       //auto& cacheLine = ioSpaceCache[(offset >> 4)&0xFFF];
@@ -536,6 +599,11 @@ private:
               break;
           case 0x00'34: // system counter enable
               systemCounterEnabled = cacheLine.getWord(2) != 0;
+              break;
+          case 0x01'00: 
+              // carry out a display operation
+              // compute the next cache line here to keep addresses sync'd
+              //dispatchDrawOperation(cacheLine, ioSpaceCache[(offset + 0x10) >> 4]);
               break;
           default:
               break;
