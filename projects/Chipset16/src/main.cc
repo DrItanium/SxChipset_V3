@@ -450,7 +450,7 @@ public:
       }
   }
 
-  enum class GraphicsAction : uint16_t {
+  enum class GraphicsAction : uint8_t {
       // taken from the Adafruit_GFX header
       None,
       DrawPixel,
@@ -463,8 +463,6 @@ public:
       WriteFastHLine,
       WriteLine,
       // control api
-      SetRotation,
-      InvertDisplay,
       // basic draw api
       DrawFastVLine,
       DrawFastHLine,
@@ -496,20 +494,39 @@ public:
       // @TODO add support for drawing bitmaps...
   };
   static inline constexpr uint16_t GraphicsDeviceBaseAddress = 0x01'00;
-  static inline constexpr uint16_t GraphicsCommandAddress_ReturnBase = GraphicsDeviceBaseAddress + 0x0c; 
+  static inline constexpr uint16_t GraphicsDeviceAddress_Available = GraphicsDeviceBaseAddress;
+  static inline constexpr uint16_t GraphicsDeviceAddress_SetRotation = GraphicsDeviceBaseAddress + 0x02;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Width = GraphicsDeviceBaseAddress + 0x04;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Height = GraphicsDeviceBaseAddress + 0x06;
+  static inline constexpr uint16_t GraphicsDeviceAddress_CursorX = GraphicsDeviceBaseAddress + 0x08;
+  static inline constexpr uint16_t GraphicsDeviceAddress_CursorY = GraphicsDeviceBaseAddress + 0x0a;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Invert = GraphicsDeviceBaseAddress + 0x0c;
+  static inline constexpr uint16_t GraphicsCommandAddress_ReturnBase = GraphicsDeviceBaseAddress + 0x0e; 
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
 
-  using GraphicsOperation = std::function<void()>;
-  static inline GraphicsOperation GraphicsOperationTable[] {
-      []() { },
-      [&args = ioSpaceCache[GraphicsCommandBaseAddress >> 4]]() { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
-      []() { tft.startWrite(); },
-      []() { tft.endWrite(); },
-      [&args = ioSpaceCache[GraphicsCommandBaseAddress >> 4]]() { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+  using GraphicsOperation = std::function<void(const MemoryCellBlock&)>;
+  static inline GraphicsOperation GraphicsOperationTable[256] {
+      [](auto) { },
+      [](const MemoryCellBlock& args) { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](auto) { tft.startWrite(); },
+      [](auto) { tft.endWrite(); },
+      [](const auto& args) { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](const auto& args) { tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.fillScreen(args.getWord(1)); },
   };
-  static void dispatchDrawOperation() noexcept {
+  static void dispatchDrawOperation(const MemoryCellBlock& cacheLine) noexcept {
+      auto fn = GraphicsOperationTable[static_cast<uint8_t>(cacheLine.getWord(0))];
+      if (fn) {
+          fn(cacheLine);
+      }
   }
 
 private:
@@ -603,7 +620,9 @@ private:
           case 0x01'00: 
               // carry out a display operation
               // compute the next cache line here to keep addresses sync'd
-              //dispatchDrawOperation(cacheLine, ioSpaceCache[(offset + 0x10) >> 4]);
+              break;
+          case 0x01'10:
+              dispatchDrawOperation(cacheLine);
               break;
           default:
               break;
