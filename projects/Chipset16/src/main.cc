@@ -32,15 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Wire.h>
 #include <SD.h>
-#include <NativeEthernet.h>
 #include <Entropy.h>
-#include <EEPROM.h>
-#include <FastCRC.h>
-#include <LittleFS.h>
-#include <Metro.h>
 #include <RTClib.h>
 #include <IntervalTimer.h>
-//#include <USBHost_t36.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
@@ -977,7 +971,6 @@ setup() {
         }
     }
     Entropy.Initialize();
-    EEPROM.begin();
 
     // put your setup code here, to run once:
     if (EBIInterface::begin()) {
