@@ -481,13 +481,10 @@ public:
       FillRoundRect,
       DrawRotatedRect,
       FillRotatedRect,
-      DrawChar_Square,
-      DrawChar_Rect,
-      SetTextSize_Square,
-      SetTextSize_Rect,
+      DrawChar,
+      SetTextSize,
       SetCursor,
       SetTextColor,
-      SetTextColor_TransparentBackground,
       SetTextWrap,
 
       // @TODO add support for setFont
@@ -535,11 +532,10 @@ public:
       [](const MC& args) noexcept { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
       [](const MC& args) noexcept { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
       [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
       [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.setTextSize(args.getWord(1), args.getWord(2)); },
       [](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
       [](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
-      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1)); },
       [](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
   };
   template<MemoryCell MC>
