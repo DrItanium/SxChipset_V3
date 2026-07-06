@@ -505,11 +505,11 @@ public:
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
-#if 0
   template<MemoryCell MC>
   using GraphicsOperation = void (*)(const MC&) noexcept;
   template<MemoryCell MC>
   static inline const GraphicsOperation<MC> GraphicsOperationTable[256] {
+      // these are direction sensitive
       [](const MC&) noexcept { },
       [](const MC& args) noexcept { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
       [](const MC&) noexcept { tft.startWrite(); },
@@ -542,35 +542,12 @@ public:
       [](const MC& args) noexcept { tft.setTextColor(args.getWord(1)); },
       [](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
   };
-#endif
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
-#if 0
       auto fn = GraphicsOperationTable<MC>[static_cast<uint8_t>(args.getWord(0))];
       if (fn) {
           fn(args);
       }
-#else
-      switch (static_cast<GraphicsAction>(args.getWord(0))) {
-          case GraphicsAction::DrawPixel:
-              tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
-              break;
-          case GraphicsAction::StartWrite:
-              tft.startWrite();
-              break;
-          case GraphicsAction::EndWrite:
-              tft.endWrite();
-              break;
-          case GraphicsAction::WritePixel:
-              tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
-              break;
-          case GraphicsAction::FillScreen:
-              tft.fillScreen(args.getWord(1));
-              break;
-          default:
-              break;
-      }
-#endif
   }
 
 private:
