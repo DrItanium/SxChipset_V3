@@ -112,7 +112,7 @@ FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PU
 
 
 Adafruit_ILI9341 tft(&SPI, static_cast<int>(Pin::DISPLAY_DC), static_cast<int>(Pin::DISPLAY_CS));
-DMAMEM GFXcanvas16 screen0(320, 240);
+DMAMEM GFXcanvas8 screen0(320, 240);
 
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 
@@ -506,27 +506,72 @@ public:
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
+#if 0
+  template<MemoryCell MC>
+  using GraphicsOperation = void (*)(const MC&) noexcept;
+  template<MemoryCell MC>
+  static inline const GraphicsOperation<MC> GraphicsOperationTable[256] {
+      [](const MC&) noexcept { },
+      [](const MC& args) noexcept { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](const MC&) noexcept { tft.startWrite(); },
+      [](const MC&) noexcept { tft.endWrite(); },
+      [](const MC& args) noexcept { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](const MC& args) noexcept { tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.fillScreen(args.getWord(1)); },
+      [](const MC& args) noexcept { tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
+      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
+      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1)); },
+      [](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
+  };
+#endif
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
+#if 0
+      auto fn = GraphicsOperationTable<MC>[static_cast<uint8_t>(args.getWord(0))];
+      if (fn) {
+          fn(args);
+      }
+#else
       switch (static_cast<GraphicsAction>(args.getWord(0))) {
           case GraphicsAction::DrawPixel:
-              screen0.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
               break;
           case GraphicsAction::StartWrite:
-              screen0.startWrite();
+              tft.startWrite();
               break;
           case GraphicsAction::EndWrite:
-              screen0.endWrite();
+              tft.endWrite();
               break;
           case GraphicsAction::WritePixel:
-              screen0.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
               break;
           case GraphicsAction::FillScreen:
-              screen0.fillScreen(args.getWord(1));
+              tft.fillScreen(args.getWord(1));
               break;
           default:
               break;
       }
+#endif
   }
 
 private:
@@ -904,10 +949,6 @@ triggerSystemTimer() noexcept {
         digitalToggleFast(Pin::INT960_0); 
     }
 }
-void
-triggerDisplaySubsystem() noexcept {
-    tft.drawRGBBitmap(0, 0, screen0.getBuffer(), 320, 240);
-}
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
 FLASHMEM bool configureFlexIO(TD&, RD&) noexcept;
 FLASHMEM void setupDisplayConnection() noexcept;
@@ -981,9 +1022,9 @@ setup() {
     setupRandomSeed();
     Entropy.Initialize();
     // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
-    displayEngineTrigger.begin(triggerDisplaySubsystem, 33'333);
     setupDisplayConnection();
     systemTimer.begin(triggerSystemTimer, 100'000);
+    //displayEngineTrigger.begin(triggerDisplaySubsystem, 33'333);
     displayClockSpeedInformation();
     Serial.println("-------");
     pullCPUOutOfReset();
@@ -1037,200 +1078,200 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     return true;
 }
 // graphics interface routines
-FLASHMEM unsigned long testFillScreen(Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFillScreen() {
   unsigned long start = micros();
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
-  gfx.fillScreen(ILI9341_RED);
+  tft.fillScreen(ILI9341_RED);
   yield();
-  gfx.fillScreen(ILI9341_GREEN);
+  tft.fillScreen(ILI9341_GREEN);
   yield();
-  gfx.fillScreen(ILI9341_BLUE);
+  tft.fillScreen(ILI9341_BLUE);
   yield();
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
   return micros() - start;
 }
 
-FLASHMEM unsigned long testText(Adafruit_GFX& gfx) {
-  gfx.fillScreen(ILI9341_BLACK);
+FLASHMEM unsigned long testText() {
+  tft.fillScreen(ILI9341_BLACK);
   unsigned long start = micros();
-  gfx.setCursor(0, 0);
-  gfx.setTextColor(ILI9341_WHITE);  gfx.setTextSize(1);
-  gfx.println("Hello World!");
-  gfx.setTextColor(ILI9341_YELLOW); gfx.setTextSize(2);
-  gfx.println(1234.56);
-  gfx.setTextColor(ILI9341_RED);    gfx.setTextSize(3);
-  gfx.println(0xDEADBEEF, HEX);
-  gfx.println();
-  gfx.setTextColor(ILI9341_GREEN);
-  gfx.setTextSize(5);
-  gfx.println("Groop");
-  gfx.setTextSize(2);
-  gfx.println("I implore thee,");
-  gfx.setTextSize(1);
-  gfx.println("my foonting turlingdromes.");
-  gfx.println("And hooptiously drangle me");
-  gfx.println("with crinkly bindlewurdles,");
-  gfx.println("Or I will rend thee");
-  gfx.println("in the gobberwarts");
-  gfx.println("with my blurglecruncheon,");
-  gfx.println("see if I don't!");
+  tft.setCursor(0, 0);
+  tft.setTextColor(ILI9341_WHITE);  tft.setTextSize(1);
+  tft.println("Hello World!");
+  tft.setTextColor(ILI9341_YELLOW); tft.setTextSize(2);
+  tft.println(1234.56);
+  tft.setTextColor(ILI9341_RED);    tft.setTextSize(3);
+  tft.println(0xDEADBEEF, HEX);
+  tft.println();
+  tft.setTextColor(ILI9341_GREEN);
+  tft.setTextSize(5);
+  tft.println("Groop");
+  tft.setTextSize(2);
+  tft.println("I implore thee,");
+  tft.setTextSize(1);
+  tft.println("my foonting turlingdromes.");
+  tft.println("And hooptiously drangle me");
+  tft.println("with crinkly bindlewurdles,");
+  tft.println("Or I will rend thee");
+  tft.println("in the gobberwarts");
+  tft.println("with my blurglecruncheon,");
+  tft.println("see if I don't!");
   return micros() - start;
 }
 
-FLASHMEM unsigned long testLines(uint16_t color, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testLines(uint16_t color) {
   unsigned long start, t;
   int           x1, y1, x2, y2,
-                w = gfx.width(),
-                h = gfx.height();
+                w = tft.width(),
+                h = tft.height();
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
   
   x1 = y1 = 0;
   y2    = h - 1;
   start = micros();
-  for(x2=0; x2<w; x2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = w - 1;
-  for(y2=0; y2<h; y2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
   t     = micros() - start; // fillScreen doesn't count against timing
 
   yield();
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
 
   x1    = w - 1;
   y1    = 0;
   y2    = h - 1;
   start = micros();
-  for(x2=0; x2<w; x2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = 0;
-  for(y2=0; y2<h; y2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
   t    += micros() - start;
 
   yield();
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
 
   x1    = 0;
   y1    = h - 1;
   y2    = 0;
   start = micros();
-  for(x2=0; x2<w; x2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = w - 1;
-  for(y2=0; y2<h; y2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
   t    += micros() - start;
 
   yield();
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   yield();
 
   x1    = w - 1;
   y1    = h - 1;
   y2    = 0;
   start = micros();
-  for(x2=0; x2<w; x2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(x2=0; x2<w; x2+=6) tft.drawLine(x1, y1, x2, y2, color);
   x2    = 0;
-  for(y2=0; y2<h; y2+=6) gfx.drawLine(x1, y1, x2, y2, color);
+  for(y2=0; y2<h; y2+=6) tft.drawLine(x1, y1, x2, y2, color);
 
   yield();
   return micros() - start;
 }
 
-FLASHMEM unsigned long testFastLines(uint16_t color1, uint16_t color2, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFastLines(uint16_t color1, uint16_t color2) {
   unsigned long start;
-  int           x, y, w = gfx.width(), h = gfx.height();
+  int           x, y, w = tft.width(), h = tft.height();
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   start = micros();
-  for(y=0; y<h; y+=5) gfx.drawFastHLine(0, y, w, color1);
-  for(x=0; x<w; x+=5) gfx.drawFastVLine(x, 0, h, color2);
+  for(y=0; y<h; y+=5) tft.drawFastHLine(0, y, w, color1);
+  for(x=0; x<w; x+=5) tft.drawFastVLine(x, 0, h, color2);
 
   return micros() - start;
 }
 
-FLASHMEM unsigned long testRects(uint16_t color, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testRects(uint16_t color) {
   unsigned long start;
   int           n, i, i2,
-                cx = gfx.width()  / 2,
-                cy = gfx.height() / 2;
+                cx = tft.width()  / 2,
+                cy = tft.height() / 2;
 
-  gfx.fillScreen(ILI9341_BLACK);
-  n     = min(gfx.width(), gfx.height());
+  tft.fillScreen(ILI9341_BLACK);
+  n     = min(tft.width(), tft.height());
   start = micros();
   for(i=2; i<n; i+=6) {
     i2 = i / 2;
-    gfx.drawRect(cx-i2, cy-i2, i, i, color);
+    tft.drawRect(cx-i2, cy-i2, i, i, color);
   }
 
   return micros() - start;
 }
 
-FLASHMEM unsigned long testFilledRects(uint16_t color1, uint16_t color2, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFilledRects(uint16_t color1, uint16_t color2) {
   unsigned long start, t = 0;
   int           n, i, i2,
-                cx = gfx.width()  / 2 - 1,
-                cy = gfx.height() / 2 - 1;
+                cx = tft.width()  / 2 - 1,
+                cy = tft.height() / 2 - 1;
 
-  gfx.fillScreen(ILI9341_BLACK);
-  n = min(gfx.width(), gfx.height());
+  tft.fillScreen(ILI9341_BLACK);
+  n = min(tft.width(), tft.height());
   for(i=n; i>0; i-=6) {
     i2    = i / 2;
     start = micros();
-    gfx.fillRect(cx-i2, cy-i2, i, i, color1);
+    tft.fillRect(cx-i2, cy-i2, i, i, color1);
     t    += micros() - start;
     // Outlines are not included in timing results
-    gfx.drawRect(cx-i2, cy-i2, i, i, color2);
+    tft.drawRect(cx-i2, cy-i2, i, i, color2);
     yield();
   }
 
   return t;
 }
 
-FLASHMEM unsigned long testFilledCircles(uint8_t radius, uint16_t color, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFilledCircles(uint8_t radius, uint16_t color) {
   unsigned long start;
-  int x, y, w = gfx.width(), h = gfx.height(), r2 = radius * 2;
+  int x, y, w = tft.width(), h = tft.height(), r2 = radius * 2;
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   start = micros();
   for(x=radius; x<w; x+=r2) {
     for(y=radius; y<h; y+=r2) {
-      gfx.fillCircle(x, y, radius, color);
+      tft.fillCircle(x, y, radius, color);
     }
   }
 
   return micros() - start;
 }
 
-FLASHMEM unsigned long testCircles(uint8_t radius, uint16_t color, Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testCircles(uint8_t radius, uint16_t color) {
   unsigned long start;
   int           x, y, r2 = radius * 2,
-                w = gfx.width()  + radius,
-                h = gfx.height() + radius;
+                w = tft.width()  + radius,
+                h = tft.height() + radius;
 
   // Screen is not cleared for this one -- this is
   // intentional and does not affect the reported time.
   start = micros();
   for(x=0; x<w; x+=r2) {
     for(y=0; y<h; y+=r2) {
-      gfx.drawCircle(x, y, radius, color);
+      tft.drawCircle(x, y, radius, color);
     }
   }
 
   return micros() - start;
 }
 
-FLASHMEM unsigned long testTriangles(Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testTriangles() {
   unsigned long start;
-  int           n, i, cx = gfx.width()  / 2 - 1,
-                      cy = gfx.height() / 2 - 1;
+  int           n, i, cx = tft.width()  / 2 - 1,
+                      cy = tft.height() / 2 - 1;
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   n     = min(cx, cy);
   start = micros();
   for(i=0; i<n; i+=5) {
-    gfx.drawTriangle(
+    tft.drawTriangle(
       cx    , cy - i, // peak
       cx - i, cy + i, // bottom left
       cx + i, cy + i, // bottom right
@@ -1240,19 +1281,19 @@ FLASHMEM unsigned long testTriangles(Adafruit_GFX& gfx) {
   return micros() - start;
 }
 
-FLASHMEM unsigned long testFilledTriangles(Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFilledTriangles() {
   unsigned long start, t = 0;
-  int           i, cx = gfx.width()  / 2 - 1,
-                   cy = gfx.height() / 2 - 1;
+  int           i, cx = tft.width()  / 2 - 1,
+                   cy = tft.height() / 2 - 1;
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   start = micros();
   for(i=min(cx,cy); i>10; i-=5) {
     start = micros();
-    gfx.fillTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
+    tft.fillTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
       tft.color565(0, i*10, i*10));
     t += micros() - start;
-    gfx.drawTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
+    tft.drawTriangle(cx, cy - i, cx - i, cy + i, cx + i, cy + i,
       tft.color565(i*10, i*10, 0));
     yield();
   }
@@ -1260,34 +1301,34 @@ FLASHMEM unsigned long testFilledTriangles(Adafruit_GFX& gfx) {
   return t;
 }
 
-FLASHMEM unsigned long testRoundRects(Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testRoundRects() {
   unsigned long start;
   int           w, i, i2,
-                cx = gfx.width()  / 2 - 1,
-                cy = gfx.height() / 2 - 1;
+                cx = tft.width()  / 2 - 1,
+                cy = tft.height() / 2 - 1;
 
-  gfx.fillScreen(ILI9341_BLACK);
-  w     = min(gfx.width(), gfx.height());
+  tft.fillScreen(ILI9341_BLACK);
+  w     = min(tft.width(), tft.height());
   start = micros();
   for(i=0; i<w; i+=6) {
     i2 = i / 2;
-    gfx.drawRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(i, 0, 0));
+    tft.drawRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(i, 0, 0));
   }
 
   return micros() - start;
 }
 
-FLASHMEM unsigned long testFilledRoundRects(Adafruit_GFX& gfx) {
+FLASHMEM unsigned long testFilledRoundRects() {
   unsigned long start;
   int           i, i2,
-                cx = gfx.width()  / 2 - 1,
-                cy = gfx.height() / 2 - 1;
+                cx = tft.width()  / 2 - 1,
+                cy = tft.height() / 2 - 1;
 
-  gfx.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(ILI9341_BLACK);
   start = micros();
-  for(i=min(gfx.width(), gfx.height()); i>20; i-=6) {
+  for(i=min(tft.width(), tft.height()); i>20; i-=6) {
     i2 = i / 2;
-    gfx.fillRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(0, i, 0));
+    tft.fillRoundRect(cx-i2, cy-i2, i, i, i/8, tft.color565(0, i, 0));
     yield();
   }
 
@@ -1320,54 +1361,495 @@ setupDisplayConnection() noexcept {
     Serial.println(F("Benchmark                Time (microseconds)"));
     delay(10);
     Serial.print(F("Screen fill              "));
-    Serial.println(testFillScreen(screen0));
+    Serial.println(testFillScreen());
     delay(500);
 
     Serial.print(F("Text                     "));
-    Serial.println(testText(screen0));
+    Serial.println(testText());
     delay(3000);
 
     Serial.print(F("Lines                    "));
-    Serial.println(testLines(ILI9341_CYAN, screen0));
+    Serial.println(testLines(ILI9341_CYAN));
     delay(500);
 
     Serial.print(F("Horiz/Vert Lines         "));
-    Serial.println(testFastLines(ILI9341_RED, ILI9341_BLUE, screen0));
+    Serial.println(testFastLines(ILI9341_RED, ILI9341_BLUE));
     delay(500);
 
     Serial.print(F("Rectangles (outline)     "));
-    Serial.println(testRects(ILI9341_GREEN, screen0));
+    Serial.println(testRects(ILI9341_GREEN));
     delay(500);
 
     Serial.print(F("Rectangles (filled)      "));
-    Serial.println(testFilledRects(ILI9341_YELLOW, ILI9341_MAGENTA, screen0));
+    Serial.println(testFilledRects(ILI9341_YELLOW, ILI9341_MAGENTA));
     delay(500);
 
     Serial.print(F("Circles (filled)         "));
-    Serial.println(testFilledCircles(10, ILI9341_MAGENTA, screen0));
+    Serial.println(testFilledCircles(10, ILI9341_MAGENTA));
 
     Serial.print(F("Circles (outline)        "));
-    Serial.println(testCircles(10, ILI9341_WHITE, screen0));
+    Serial.println(testCircles(10, ILI9341_WHITE));
     delay(500);
 
     Serial.print(F("Triangles (outline)      "));
-    Serial.println(testTriangles(screen0));
+    Serial.println(testTriangles());
     delay(500);
 
     Serial.print(F("Triangles (filled)       "));
-    Serial.println(testFilledTriangles(screen0));
+    Serial.println(testFilledTriangles());
     delay(500);
 
     Serial.print(F("Rounded rects (outline)  "));
-    Serial.println(testRoundRects(screen0));
+    Serial.println(testRoundRects());
     delay(500);
 
     Serial.print(F("Rounded rects (filled)   "));
-    Serial.println(testFilledRoundRects(screen0));
+    Serial.println(testFilledRoundRects());
     delay(500);
 
     Serial.println(F("Done!"));
 
     Serial.println("Display Connection setup complete!");
 }
+// ------ Filesystem components begin ------
 
+#if 0
+// for the i960 interface side, we pass an i960 memory address in and must
+// translate it to a teensy address
+//
+// The spaces we accept i960 addresses from are:
+// 1) PSRAM
+// 2) OnboardSRAM2
+constexpr bool alignedTo64ByteBoundaries(uint32_t address) noexcept {
+    // the lowest 6 bits must be all zeros
+    return (address & 0b111111) == 0;
+}
+constexpr bool isPSRAMAddress(uint32_t address) noexcept {
+    return address < 0x0100'0000;
+}
+constexpr bool isSRAM2Address(uint32_t address) noexcept {
+    return (address & 0xFFFF'0000) == 0xFE01'0000;
+}
+constexpr bool inValidMemorySpace(uint32_t address) noexcept {
+    return isPSRAMAddress(address) || isSRAM2Address(address);
+}
+constexpr uint32_t computePSRAMOffset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(memory960) + (base & 0x00FF'FFFF);
+}
+constexpr uint32_t computeSRAM2Offset(uint32_t base) noexcept {
+    return reinterpret_cast<uint32_t>(sramCache2) + (base & 0x0000'FFFF);
+}
+constexpr uint32_t computeChipsetMemoryAddress(uint32_t address) noexcept {
+    if (isPSRAMAddress(address)) {
+        return computePSRAMOffset(address);
+    } else if (isSRAM2Address(address)) {
+        return computeSRAM2Offset(address);
+    } else {
+        // don't allow the i960 to mess with teensy internals
+        return 0xFFFF'FFFF;
+    }
+}
+// The old fileystem interface design from the old days provided a fixed number
+// of File "slots" that the old chipset iterated over to find the first open
+// slot and use that to make a request. This works but also was implemented
+// where we exposed each byte of the path directly in MMIO space! Very goofy
+// and error prone. 
+//
+// This new design actually operates on pointers that the i960 provides which
+// are offsets into PSRAM itself! Then we can just read that data as we desire.
+// In fact, we can even hold the bus until action is complete!
+//
+class FileTracker {
+    using ErrorCodes = FileRequestErrorCodes;
+    public:
+        using OptionalFile = std::optional<std::reference_wrapper<File>>;
+        FileTracker() = default;
+        void begin(uint32_t startState = Entropy.random()) noexcept {
+            _openFiles.clear();
+            _lfsrStartState = startState;
+            _lfsrState = startState;
+        }
+        void end() {
+            _openFiles.clear();
+            _lfsrStartState = 0;
+            _lfsrState = 0;
+        }
+        bool enabled() const noexcept { return _lfsrStartState != 0; }
+        
+        uint64_t open(const char* path, uint32_t flags, uint32_t i960HandleId) noexcept {
+            FileUID result;
+            result.i960 = i960HandleId;
+            /// @todo do we need to translate the flags to an SdFat compatbile design?
+            auto handle = SD.open(path, flags);
+            if (handle) {
+                // okay, so we were able to open the file so now we need to
+                // make sure that it is possible to actually insert it with the
+                // specified index
+                //
+                // We don't want the system to lockup though so introduce a
+                // timeout value where we can ask the i960 to generate a
+                // different unique index! Interestingly enough, this means
+                // that the i960 could also use the same xorshift32 lfsr as a
+                // way to break this deadlock. We should try at least 8 times
+                // to see if we have tracks of ids that are no longer available
+                for (int i = 0; i < 8; ++i) {
+                    // try eight times to get a unique handle index
+                    auto chipsetHandleId = getNewValue();
+                    result.chipset = chipsetHandleId;
+                    if (!_openFiles.contains(result.raw)) {
+                        _openFiles.emplace(result.raw, handle);
+                        return result.raw;
+                    }
+                }
+                // close the file since were unable to use it, the i960 needs
+                // to help us by changing its 32-bit component
+                return static_cast<uint32_t>(ErrorCodes::CouldNotFindASpotForFileGivenI960UniqueId);
+            } else {
+                return static_cast<uint32_t>(ErrorCodes::CouldNotOpenFile);
+            }
+            return result.raw;
+        }
+        bool close(uint64_t uid) noexcept {
+            // just erase the file and that should cause the destructor to be
+            // called!
+            return _openFiles.erase(uid) == 1;
+        }
+        OptionalFile find(uint64_t uid) noexcept {
+            if (auto result = _openFiles.find(uid); result != _openFiles.end()) {
+                return result->second;
+            } else {
+                return std::nullopt;
+            }
+        }
+    private:
+        void doReadOperation(FilesystemOperation& operation) noexcept;
+        void doWriteOperation(FilesystemOperation& operation) noexcept;
+        void doCloseOperation(FilesystemOperation& operation) {
+            if (!close(operation.getUid())) {
+                operation.setErrorCode(ErrorCodes::CouldNotCloseFile);
+            }
+        }
+        void doFlushOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                potentialFile->get().flush();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doPeekOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().peek();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSizeOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().size();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doPositionOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().position();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSeekOperation(FilesystemOperation& operation, int mode) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                potentialFile->get().seek(operation.getPosition(), mode);
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doSetAbsolutePosition(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekSet);
+        }
+        void doSetPositionRelativeToCurrentPosition(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekCur);
+        }
+        void doSetPositionRelativeToEnd(FilesystemOperation& operation) noexcept {
+            doSeekOperation(operation, SeekEnd);
+        }
+        void doValidOperation(FilesystemOperation& operation) noexcept {
+            operation.returnComponents[0] = _openFiles.find(operation.getUid()) != _openFiles.end();
+        }
+        void doIsOpenOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().operator bool();
+            } else {
+                operation.returnComponents[0] = 0;
+            }
+
+        }
+        void doIsDirectoryOperation(FilesystemOperation& operation) noexcept {
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().isDirectory();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doAvailableOperation(FilesystemOperation& operation) noexcept {
+            // TODO: be more ambiguous instead of generating error codes?
+            auto potentialFile = find(operation.getUid());
+            if (potentialFile) {
+                operation.returnComponents[0] = potentialFile->get().available();
+            } else {
+                operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+            }
+        }
+        void doOpenOperation(FilesystemOperation& operation) noexcept;
+
+    public:
+        void processRequest(FilesystemOperation& operation) noexcept {
+            using FSOpcode = FilesystemOperation::Opcode;
+            operation.setErrorCode(ErrorCodes::None);
+            // clear these out to prevent potential state leakage
+            operation.returnComponents[0] = 0;
+            operation.returnComponents[1] = 0;
+            if (!FilesystemOperation::valid(operation.getOpcode())) {
+                operation.setErrorCode(ErrorCodes::InvalidOperation);
+                return;
+            }
+            switch (operation.getOpcode()) {
+                case FSOpcode::Close:
+                    doCloseOperation(operation);
+                    break;
+                case FSOpcode::Read:
+                    doReadOperation(operation);
+                    break;
+                case FSOpcode::Write:
+                    doWriteOperation(operation);
+                    break;
+                case FSOpcode::Flush:
+                    doFlushOperation(operation);
+                    break;
+                case FSOpcode::Peek:
+                    doPeekOperation(operation);
+                    break;
+                case FSOpcode::GetSize:
+                    doSizeOperation(operation);
+                    break;
+                case FSOpcode::GetPosition:
+                    doPositionOperation(operation);
+                    break;
+                case FSOpcode::SetPosition_Absolute:
+                    doSetAbsolutePosition(operation);
+                    break;
+                case FSOpcode::SetPosition_RelativeToCurr:
+                    doSetPositionRelativeToCurrentPosition(operation);
+                    break;
+                case FSOpcode::SetPosition_RelativeToEnd:
+                    doSetPositionRelativeToEnd(operation);
+                    break;
+                case FSOpcode::Valid:
+                    doValidOperation(operation);
+                    break;
+                case FSOpcode::IsOpen:
+                    doIsOpenOperation(operation);
+                    break;
+                case FSOpcode::IsDirectory:
+                    doIsDirectoryOperation(operation);
+                    break;
+                default:
+                    operation.setErrorCode(ErrorCodes::UnimplementedOperation);
+                    break;
+            }
+        }
+    private:
+        uint32_t getNewValue() noexcept {
+            // taken from https://en.wikipedia.org/wiki/Xorshift
+            auto x = _lfsrState;
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            _lfsrState = x;
+            return x;
+        }
+    private:
+        // use an LFSR to get a unique 32-bit id that is combined with the i960
+        // provided id field to create a unique 64-bit ID. The idea is that
+        // for each i960 provided component, we can have up to 2^32 files. When
+        // we hit a collision 8 times in a row then we ask the i960 for a new
+        // component. Since we can never use zero, it means we have a builtin
+        // error space! 
+        uint32_t _lfsrStartState = 0;
+        uint32_t _lfsrState = 0;
+        std::map<uint64_t, File> _openFiles;
+};
+//FileTracker sdcardTracker;
+constexpr bool validFilesystemOperationAddress(uint32_t address) noexcept {
+    return inValidMemorySpace(address) && alignedTo64ByteBoundaries(address);
+}
+void 
+FileTracker::doOpenOperation(FilesystemOperation& operation) noexcept {
+    if (!validFilesystemOperationAddress(operation.getOpen_Path())) {
+        operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        return;
+    } else {
+        auto convertedAddress = computeChipsetMemoryAddress(operation.getOpen_Path());
+        FileUID resultant;
+        resultant.raw = open(reinterpret_cast<const char*>(convertedAddress), operation.getOpen_Flags(), operation.getOpen_i960Orgid());
+        if (resultant.chipset == 0) {
+            // an error happened
+            operation.setErrorCode(resultant.i960);
+            operation.target.raw = 0;
+        } else {
+            operation.target = resultant;
+        }
+    }
+    auto potentialFile = find(operation.getUid());
+    if (potentialFile) {
+        operation.returnComponents[0] = potentialFile->get().available();
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
+}
+void 
+FileTracker::doReadOperation(FilesystemOperation& operation) noexcept {
+    auto outcome = find(operation.getUid());
+    if (outcome) {
+        auto addr960 = operation.args.onRead.bufferAddress;
+        auto len = operation.args.onRead.size;
+        if (!inValidMemorySpace(addr960)) {
+            operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        } else if (!inValidMemorySpace(addr960 + len)) {
+            // we would walk into illegal memory so do not allow it to go
+            // through
+            operation.setErrorCode(ErrorCodes::RequestedLengthTooLong);
+        } else {
+            auto addrChipset = computeChipsetMemoryAddress(addr960);
+            File& f = outcome->get();
+            // return the number of bytes read
+            operation.returnComponents[0] = f.read(reinterpret_cast<uint8_t*>(addrChipset), len);
+        }
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
+}
+
+void 
+FileTracker::doWriteOperation(FilesystemOperation& operation) noexcept {
+    auto outcome = find(operation.getUid());
+    if (outcome) {
+        auto addr960 = operation.args.onWrite.bufferAddress;
+        auto len = operation.args.onWrite.size;
+        if (!inValidMemorySpace(addr960)) {
+            operation.setErrorCode(ErrorCodes::InvalidBufferAddress);
+        } else if (!inValidMemorySpace(addr960 + len)) {
+            // we would walk into illegal memory so do not allow it to go
+            // through
+            operation.setErrorCode(ErrorCodes::RequestedLengthTooLong);
+        } else {
+            auto addrChipset = computeChipsetMemoryAddress(addr960);
+            File& f = outcome->get();
+            // return the number of bytes read
+            operation.returnComponents[0] = f.write(reinterpret_cast<uint8_t*>(addrChipset), len);
+        }
+    } else {
+        operation.setErrorCode(ErrorCodes::NotAnOpenFile);
+    }
+}
+struct RawFilesystemInterface {
+    using ErrorCodes = FilesystemInterfaceErrorCodes;
+    void clear() noexcept { 
+        _targetAddress.value = 0;
+        _errorCode.value = 0;
+        _tryCarryOutOperation = false;
+    }
+    void update() noexcept {
+    }
+    uint16_t getWord(uint8_t offset) const noexcept {
+        switch (offset & 0b111) {
+            case 0:
+                return _targetAddress.shorts[0];
+            case 1:
+                return _targetAddress.shorts[1];
+            case 2:
+            case 3:
+                return 0;
+            case 4:
+                return _errorCode.shorts[0];
+            case 5:
+                return _errorCode.shorts[1];
+            default:
+                return 0;
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value, bool updateLo, bool updateHi) noexcept {
+        switch (offset & 0b111) {
+            case 0:
+                _targetAddress.setWord(0, value, updateLo, updateHi);
+                break;
+            case 1:
+                _targetAddress.setWord(1, value, updateLo, updateHi);
+                break;
+            case 2:
+            case 3:
+                _tryCarryOutOperation = true;
+                break;
+            default:
+                // don't allow writing to the error code register
+                break;
+
+        }
+    }
+    void setWord(uint8_t offset, uint16_t value) noexcept { 
+        switch (offset & 0b111) {
+            case 0:
+                _targetAddress.setWord(0, value);
+                break;
+            case 1:
+                _targetAddress.setWord(1, value);
+                break;
+            case 2:
+            case 3:
+                _tryCarryOutOperation = true;
+                break;
+            default:
+                // don't allow writing to the error code register
+                break;
+        }
+    }
+    void onFinish() noexcept { 
+        if (_tryCarryOutOperation) {
+            _errorCode.clear();
+            _tryCarryOutOperation = false;
+            if (sdcardTracker.enabled()) {
+                auto addr = _targetAddress.value;
+                if (!inValidMemorySpace(addr)) {
+                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::IllegalAddressProvided);
+                } else if (!alignedTo64ByteBoundaries(addr)) {
+                    _errorCode.value = static_cast<uint32_t>(ErrorCodes::UnalignedAddressProvided);
+                } else {
+                    auto convertedAddress = computeChipsetMemoryAddress(addr);
+                    // make sure that we don't do anything goofy
+                    // TODO: can we eliminate the volatile keyword?
+                    FilesystemOperation& fsop = *reinterpret_cast<FilesystemOperation*>(convertedAddress);
+                    sdcardTracker.processRequest(fsop);
+                }
+            } else {
+                // begin was never called, probably because no sdcard could be
+                // found!
+                _errorCode.value = static_cast<uint32_t>(ErrorCodes::NotEnabled);
+            }
+        }
+    }
+private:
+    bool _tryCarryOutOperation = false;
+    SplitWord32 _targetAddress { 0 };
+    SplitWord32 _errorCode { 0 };
+    // layout for this 16-byte page is:
+    //
+};
+RawFilesystemInterface sdcardInterface;
+#endif
