@@ -96,7 +96,7 @@ X(TransmitConstantMemoryCell);
 X(ReadDataLines);
 #undef X
 RTC_DS3231 rtc;
-IntervalTimer systemTimer, displayEngineTrigger;
+IntervalTimer systemTimer;
 Adafruit_I2CDevice managementEngine{0x08, &Wire2};
 // state machines
 // right now, transaction detection is working right! Woo!
@@ -989,7 +989,6 @@ setup() {
     // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
     setupDisplayConnection();
     systemTimer.begin(triggerSystemTimer, 100'000);
-    //displayEngineTrigger.begin(triggerDisplaySubsystem, 33'333);
     displayClockSpeedInformation();
     Serial.println("-------");
     pullCPUOutOfReset();
