@@ -355,6 +355,8 @@ private:
         void clear() { }
         [[nodiscard]] uint16_t getWord(uint8_t) const noexcept { return 0; }
         void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
+        void setWord32(uint8_t, uint32_t) noexcept { }
+        [[nodiscard]] uint32_t getWord32(uint8_t) const noexcept { return 0; }
   };
   static inline MemoryBlockSink nullSink;
 public:
@@ -504,46 +506,77 @@ public:
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
-
-  using GraphicsOperation = std::function<void(const MemoryCellBlock&)>;
-  static inline const GraphicsOperation GraphicsOperationTable[256] {
-      [](auto) { },
-      [](const MemoryCellBlock& args) { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
-      [](auto) { tft.startWrite(); },
-      [](auto) { tft.endWrite(); },
-      [](const auto& args) { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
-      [](const auto& args) { tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.fillScreen(args.getWord(1)); },
-      [](const auto& args) { tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const auto& args) { tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const auto& args) { tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
-      [](const auto& args) { tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
-      [](const auto& args) { tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const auto& args) { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const auto& args) { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const auto& args) { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const auto& args) { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const auto& args) { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+#if 0
+  template<MemoryCell MC>
+  using GraphicsOperation = void (*)(const MC&) noexcept;
+  template<MemoryCell MC>
+  static inline const GraphicsOperation<MC> GraphicsOperationTable[256] {
+      [](const MC&) noexcept { },
+      [](const MC& args) noexcept { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](const MC&) noexcept { tft.startWrite(); },
+      [](const MC&) noexcept { tft.endWrite(); },
+      [](const MC& args) noexcept { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
+      [](const MC& args) noexcept { tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.fillScreen(args.getWord(1)); },
+      [](const MC& args) noexcept { tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const MC& args) noexcept { tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const MC& args) noexcept { tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
+      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
+      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1)); },
+      [](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
   };
-  static void dispatchDrawOperation(const MemoryCellBlock& cacheLine) noexcept {
-      auto fn = GraphicsOperationTable[static_cast<uint8_t>(cacheLine.getWord(0))];
+#endif
+  template<MemoryCell MC>
+  static void dispatchDrawOperation(const MC& args) noexcept {
+#if 0
+      auto fn = GraphicsOperationTable<MC>[static_cast<uint8_t>(args.getWord(0))];
       if (fn) {
-          fn(cacheLine);
+          fn(args);
       }
+#else
+      switch (static_cast<GraphicsAction>(args.getWord(0))) {
+          case GraphicsAction::DrawPixel:
+              tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              break;
+          case GraphicsAction::StartWrite:
+              tft.startWrite();
+              break;
+          case GraphicsAction::EndWrite:
+              tft.endWrite();
+              break;
+          case GraphicsAction::WritePixel:
+              tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              break;
+          case GraphicsAction::FillScreen:
+              tft.fillScreen(args.getWord(1));
+              break;
+          default:
+              break;
+      }
+#endif
   }
 
 private:
-  static void onBuiltinDeviceRead(uint16_t offset, MemoryCellBlock& cacheLine) noexcept {
+  template<MemoryCell MC>
+  static void onBuiltinDeviceRead(uint16_t offset, MC& cacheLine) noexcept {
       //auto& cacheLine = ioSpaceCache[(offset >> 4)&0xFFF];
       // unlike the memory blocks, the address used here is byte related so we
       // have to compensate for it
@@ -602,7 +635,8 @@ private:
               break;
       }
   }
-  static void onBuiltinDeviceWrite(uint16_t offset, const MemoryCellBlock& cacheLine) noexcept {
+  template<MemoryCell MC>
+  static void onBuiltinDeviceWrite(uint16_t offset, const MC& cacheLine) noexcept {
       //auto& cacheLine = ioSpaceCache[(offset >> 4)&0xFFF];
       // operations will be invoked on the lowest address since a 32-bit
       // operation is actually comprised of 2 parts. Thus, it makes more sense

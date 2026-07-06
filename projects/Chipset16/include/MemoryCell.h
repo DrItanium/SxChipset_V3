@@ -41,6 +41,8 @@ concept MemoryCell = requires(T a) {
     // only operate on 16-bit words
     { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0, ActionKind::Full16) };
+    { a.setWord32(0, 0) };
+    { a.getWord32(0) } -> std::same_as<uint32_t>;
 };
 
 union MemoryCellBlock {
