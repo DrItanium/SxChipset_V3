@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Metro.h>
 #include <RTClib.h>
 #include <IntervalTimer.h>
-#include <USBHost_t36.h>
+//#include <USBHost_t36.h>
 // gamepad qt
 #include <Adafruit_seesaw.h>
 #include <Adafruit_I2CDevice.h>
