@@ -480,7 +480,6 @@ public:
       FillRoundRect,
       DrawRotatedRect,
       FillRotatedRect,
-      RotatePoint,
       DrawChar_Square,
       DrawChar_Rect,
       SetTextSize_Square,
@@ -507,7 +506,7 @@ public:
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
 
   using GraphicsOperation = std::function<void(const MemoryCellBlock&)>;
-  static inline GraphicsOperation GraphicsOperationTable[256] {
+  static inline const GraphicsOperation GraphicsOperationTable[256] {
       [](auto) { },
       [](const MemoryCellBlock& args) { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
       [](auto) { tft.startWrite(); },
@@ -521,6 +520,20 @@ public:
       [](const auto& args) { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
       [](const auto& args) { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
       [](const auto& args) { tft.fillScreen(args.getWord(1)); },
+      [](const auto& args) { tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
+      [](const auto& args) { tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
+      [](const auto& args) { tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const auto& args) { tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
+      [](const auto& args) { tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const auto& args) { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const auto& args) { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const auto& args) { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const auto& args) { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
+      [](const auto& args) { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
   };
   static void dispatchDrawOperation(const MemoryCellBlock& cacheLine) noexcept {
       auto fn = GraphicsOperationTable[static_cast<uint8_t>(cacheLine.getWord(0))];
