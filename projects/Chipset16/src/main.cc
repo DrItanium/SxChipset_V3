@@ -112,7 +112,6 @@ FlexIOReadyPulseToLevelConverter rdyFeedback{ Pin::STATE_MACHINE__READY_LEVEL_PU
 
 
 Adafruit_ILI9341 tft(&SPI, static_cast<int>(Pin::DISPLAY_DC), static_cast<int>(Pin::DISPLAY_CS));
-DMAMEM GFXcanvas8 screen0(320, 240);
 
 static_assert(sizeof(MemoryCellBlock) == 16, "MemoryCellBlock needs to be 16 bytes in size");
 
