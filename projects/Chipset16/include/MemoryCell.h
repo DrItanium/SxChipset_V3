@@ -42,7 +42,9 @@ concept MemoryCell = requires(T a) {
     { a.getWord(0) } -> std::same_as<uint16_t>;
     { a.setWord(0, 0, ActionKind::Full16) };
     { a.setWord32(0, 0) };
+    { a.setWord64(0, 0) };
     { a.getWord32(0) } -> std::same_as<uint32_t>;
+    { a.getWord64(0) } -> std::same_as<uint64_t>;
 };
 
 union MemoryCellBlock {
@@ -51,11 +53,11 @@ private:
   uint8_t bytes[16];
   uint16_t shorts[8];
   uint32_t words[4];
+  uint64_t longWords[2];
 public:
   void clear() noexcept {
-      for (auto& a : words) {
-          a = 0;
-      }
+      longWords[0] = 0;
+      longWords[1] = 0;
   }
   [[nodiscard]] inline constexpr uint16_t getWord(uint8_t offset) const noexcept { return shorts[offset & 0b111]; }
   inline void setWord(uint8_t offset, uint16_t value, ActionKind kind) noexcept {
@@ -74,7 +76,19 @@ public:
       }
   }
   inline void setWord32(uint8_t offset, uint32_t value) noexcept { words[offset & 0b11] = value; }
+  inline void setWord64(uint8_t offset, uint64_t value) noexcept { longWords[offset & 0b1] = value; }
   [[nodiscard]] inline constexpr uint32_t getWord32(uint8_t offset) const noexcept { return words[offset & 0b11]; }
+  [[nodiscard]] inline constexpr auto getWord64(uint8_t offset) const noexcept { return longWords[offset & 0b1]; }
+};
+
+struct NullBlock final {
+    void clear() { }
+    [[nodiscard]] uint16_t getWord(uint8_t) const noexcept { return 0; }
+    void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
+    void setWord32(uint8_t, uint32_t) noexcept { }
+    void setWord64(uint8_t, uint64_t) noexcept { }
+    [[nodiscard]] constexpr uint32_t getWord32(uint8_t) const noexcept { return 0; }
+    [[nodiscard]] constexpr uint64_t getWord64(uint8_t) const noexcept { return 0; }
 };
 
 #endif // end !defined CHIPSET_MEMORY_CELL_H__

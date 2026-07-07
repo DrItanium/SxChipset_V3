@@ -55,6 +55,9 @@ constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto PrintStartupDiagnostics = false;
+uint64_t idleCycles = 0;
+uint64_t totalCycles = 0;
+uint64_t systemCounter = 0;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 enum class TimerTrackingTargets {
@@ -345,14 +348,7 @@ public:
     return digitalReadFast(Pin::BLAST) == LOW;
   }
 private:
-  struct MemoryBlockSink final {
-        void clear() { }
-        [[nodiscard]] uint16_t getWord(uint8_t) const noexcept { return 0; }
-        void setWord(uint8_t, uint16_t, ActionKind) noexcept { }
-        void setWord32(uint8_t, uint32_t) noexcept { }
-        [[nodiscard]] uint32_t getWord32(uint8_t) const noexcept { return 0; }
-  };
-  static inline MemoryBlockSink nullSink;
+  static inline NullBlock nullSink;
 public:
 
   template<MemoryCell MC>
@@ -597,6 +593,15 @@ private:
           case 0x00'48:
               cacheLine.setWord32(2, OnboardSRAM2CacheSize); 
               break;
+          case 0x00'50:
+              cacheLine.setWord64(0, idleCycles);
+              break;
+          case 0x00'58:
+              cacheLine.setWord64(1, totalCycles);
+              break;
+          case 0x00'60:
+              cacheLine.setWord64(0, systemCounter);
+              break;
           case 0x0100:
           case 0x0102:
               cacheLine.setWord(0, tft.width(), ActionKind::Full16);
@@ -642,6 +647,9 @@ private:
               break;
           case 0x0034: // system counter enable
               systemCounterEnabled = cacheLine.getWord(2) != 0;
+              break;
+          case 0x0060: // system counter override
+              systemCounter = cacheLine.getWord64(0);
               break;
           case 0x0104: 
               [](uint16_t value){
@@ -951,7 +959,8 @@ using i960::pullCPUOutOfReset;
 void 
 triggerSystemTimer() noexcept {
     if (systemCounterEnabled) {
-        digitalToggleFast(Pin::INT960_0); 
+        ++systemCounter;
+        //digitalToggleFast(Pin::INT960_0); 
     }
 }
 template<FlexIODevice TD, ReadyPulseHandlerEngine RD>
@@ -1047,7 +1056,7 @@ setup() {
     Entropy.Initialize();
     // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
     setupDisplayConnection();
-    //systemTimer.begin(triggerSystemTimer, 100'000);
+    systemTimer.begin(triggerSystemTimer, 100'000);
     displayClockSpeedInformation();
     if constexpr (PrintStartupDiagnostics) {
         Serial.println("-------");
@@ -1065,12 +1074,15 @@ tryDoTransaction() noexcept {
         } else {
             i960Interface::doMemoryTransaction<false>();
         }
-    } 
+    } else {
+        ++idleCycles;
+    }
 }
 void 
 loop() {
     do {
         tryDoTransaction();
+        ++totalCycles;
     } while (true);
 }
 
