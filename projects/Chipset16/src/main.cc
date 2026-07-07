@@ -54,6 +54,7 @@ constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
+constexpr auto PrintStartupDiagnostics = false;
 volatile bool systemCounterEnabled = false;
 bool cpuIsRunning = false;
 enum class TimerTrackingTargets {
@@ -822,8 +823,9 @@ setupSDCard() noexcept {
         Serial.println("No SDCARD found!");
         return;
     } 
-    //sdcardTracker.begin();
-    Serial.println("SDCARD Found");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("SDCARD Found");
+    }
     if (!SD.exists("prog.bin")) {
         Serial.println("prog.bin not found! No boot image will be installed");
         return;
@@ -866,21 +868,27 @@ setupRandomSeed() noexcept {
 #undef X
   newSeed += rtc.now().unixtime();
   randomSeed(newSeed);
-  //Serial.printf("Random Seed: 0x%x\n", newSeed);
+  if constexpr (PrintStartupDiagnostics) {
+      Serial.printf("Random Seed: 0x%x\n", newSeed);
+  }
 }
 FLASHMEM void 
 setupMemory() noexcept {
-  Serial.println("Clearing PSRAM");
-  for (auto& a : memory960) {
-      a.clear();
-  }
-  Serial.println("Clearing SRAM Caches");
-  for (auto& cell : ioSpaceCache) {
-      cell.clear();
-  }
-  for (auto& cell: dmaCache) {
-      cell.clear();
-  }
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("Clearing PSRAM");
+    }
+    for (auto& a : memory960) {
+        a.clear();
+    }
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("Clearing SRAM Caches");
+    }
+    for (auto& cell : ioSpaceCache) {
+        cell.clear();
+    }
+    for (auto& cell: dmaCache) {
+        cell.clear();
+    }
 }
 FLASHMEM void
 setupRTC() noexcept {
@@ -888,13 +896,17 @@ setupRTC() noexcept {
         if (rtc.lostPower()) {
             rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
         }
-        Serial.println("Found RTC!");
-        auto now = rtc.now();
-        Serial.printf("unixtime: %d\n", now.unixtime());
+        if constexpr (PrintStartupDiagnostics) {
+            Serial.println("Found RTC!");
+            auto now = rtc.now();
+            Serial.printf("unixtime: %d\n", now.unixtime());
+        }
     }
     // use the onboard rtc to act as uptime counter instead!
     rtc_set(0);
-    Serial.printf("onboard rtc value (time since startup): %d\n", rtc_get());
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.printf("onboard rtc value (time since startup): %d\n", rtc_get());
+    }
     // @todo take advantage of the rtc built into the teensy
 }
 void
@@ -910,7 +922,9 @@ displayClockSpeedInformation() noexcept {
     SplitWord64 clk3;
     managementEngine.write_then_read(setCPUClockMode_CLKAll, sizeof(setCPUClockMode_CLKAll),
             clk3.bytes, sizeof(clk3));
-    //Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.printf("CLK2: %u\nCLK1: %u\n", clk3.words[0], clk3.words[1]);
+    }
     i960Interface::setClockFrequency(clk3.words[0], clk3.words[1]);
 }
 FLASHMEM void
@@ -952,20 +966,32 @@ setup() {
     }
     delay(1000);
     Serial.println("UP!");
-    Serial.print("Wire2 starting up...");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.print("Wire2 starting up...");
+    }
     Wire2.begin();
-    Serial.println("done");
-    Serial.print("start management engine...");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("done");
+        Serial.print("start management engine...");
+    }
     managementEngine.begin();
-    Serial.println("done");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("done");
+    }
     setupRTC();
-    Serial.println("Waiting for AVR to come up!");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("Waiting for AVR to come up!");
+    }
     waitForAVRToComeUp();
-    Serial.println("AVR UP!");
-    Serial.print("Putting i960 into reset...");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("AVR UP!");
+        Serial.print("Putting i960 into reset...");
+    }
     putCPUInReset();
-    Serial.println("done");
-    Serial.print("Configuring pins...");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("done");
+        Serial.print("Configuring pins...");
+    }
     inputPin(Pin::ADS);
     outputPin(Pin::INT960_0, HIGH);
     outputPin(Pin::INT960_1, LOW);
@@ -981,12 +1007,18 @@ setup() {
     //inputPin(Pin::STATE_MACHINE__READY_LEVEL_PULSE);
     inputPin(Pin::BLAST);
     inputPin(Pin::READY_SYNC);
-    Serial.println("done");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("done");
+    }
 #ifdef USB_TRIPLE_SERIAL
-    Serial.print("Setting up other USB serial connections...");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.print("Setting up other USB serial connections...");
+    }
     SerialUSB1.begin(115200); // chipset_realtime interface
     SerialUSB2.begin(115200); // propagation of management shell interface
-    Serial.println("done");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("done");
+    }
 #endif
 
     if (!configureFlexIO(inTransactionDetector, rdyFeedback)) {
@@ -999,7 +1031,9 @@ setup() {
 
     // put your setup code here, to run once:
     if (EBIInterface::begin()) {
-        Serial.println("EBI Interface Up!");
+        if constexpr (PrintStartupDiagnostics) {
+            Serial.println("EBI Interface Up!");
+        }
     } else {
         Serial.println("EBI Interface Could Not Be Started!");
         while (true) {
@@ -1013,9 +1047,11 @@ setup() {
     Entropy.Initialize();
     // there is an RP2040 that is using PicoDVI firmware as an HDMI output port
     setupDisplayConnection();
-    systemTimer.begin(triggerSystemTimer, 100'000);
+    //systemTimer.begin(triggerSystemTimer, 100'000);
     displayClockSpeedInformation();
-    Serial.println("-------");
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("-------");
+    }
     pullCPUOutOfReset();
 }
 inline bool shouldServiceTransaction() noexcept {
@@ -1050,7 +1086,9 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     // hoping I can actually read the output pin directly but that is not
     // currently possible!
     if (inTransactionDetector.begin()) {
-        Serial.println("In Transaction Detector Successfully Started!");
+        if constexpr (PrintStartupDiagnostics) {
+            Serial.println("In Transaction Detector Successfully Started!");
+        }
     } else {
         Serial.println("In Transaction Detector Failed to start!");
         return false;
@@ -1059,7 +1097,9 @@ configureFlexIO(TD& inTransactionDetector, RD& rdyFeedback) noexcept {
     // a level. It runs at 480MHz like the other state machine does. The layout
     // is actually the same as well.
     if (rdyFeedback.begin()) {
-        Serial.println("Ready Pulse -> Level Device Successfully Started!");
+        if constexpr (PrintStartupDiagnostics) {
+            Serial.println("Ready Pulse -> Level Device Successfully Started!");
+        }
     } else {
         Serial.println("Ready Pulse -> Level Device Failed to start!");
         return false;
@@ -1332,71 +1372,73 @@ setupDisplayConnection() noexcept {
     tft.begin();
     tft.setRotation(3); // make sure that text is rendered in the correct way
     tft.fillScreen(ILI9341_BLACK);
-    Serial.println("Running graphics tests before boot!");
-    // taken from the graphicstest.ino example
-    uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-    Serial.print(F("Display Power Mode: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDMADCTL);
-    Serial.print(F("MADCTL Mode: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDPIXFMT);
-    Serial.print(F("Pixel Format: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDIMGFMT);
-    Serial.print(F("Image Format: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDSELFDIAG);
-    Serial.print(F("Self Diagnostic: 0x")); Serial.println(x, HEX); 
-    Serial.print(F("Display Width: ")); Serial.println(tft.width());
-    Serial.print(F("Display Height: ")); Serial.println(tft.height());
-    // try do do the system clear setup
-    Serial.println(F("Benchmark                Time (microseconds)"));
-    delay(10);
-    Serial.print(F("Screen fill              "));
-    Serial.println(testFillScreen());
-    delay(500);
+    if constexpr (PrintStartupDiagnostics) {
+        Serial.println("Running graphics tests before boot!");
+        // taken from the graphicstest.ino example
+        uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+        Serial.print(F("Display Power Mode: 0x")); Serial.println(x, HEX);
+        x = tft.readcommand8(ILI9341_RDMADCTL);
+        Serial.print(F("MADCTL Mode: 0x")); Serial.println(x, HEX);
+        x = tft.readcommand8(ILI9341_RDPIXFMT);
+        Serial.print(F("Pixel Format: 0x")); Serial.println(x, HEX);
+        x = tft.readcommand8(ILI9341_RDIMGFMT);
+        Serial.print(F("Image Format: 0x")); Serial.println(x, HEX);
+        x = tft.readcommand8(ILI9341_RDSELFDIAG);
+        Serial.print(F("Self Diagnostic: 0x")); Serial.println(x, HEX); 
+        Serial.print(F("Display Width: ")); Serial.println(tft.width());
+        Serial.print(F("Display Height: ")); Serial.println(tft.height());
+        // try do do the system clear setup
+        Serial.println(F("Benchmark                Time (microseconds)"));
+        delay(10);
+        Serial.print(F("Screen fill              "));
+        Serial.println(testFillScreen());
+        delay(500);
 
-    Serial.print(F("Text                     "));
-    Serial.println(testText());
-    delay(3000);
+        Serial.print(F("Text                     "));
+        Serial.println(testText());
+        delay(3000);
 
-    Serial.print(F("Lines                    "));
-    Serial.println(testLines(ILI9341_CYAN));
-    delay(500);
+        Serial.print(F("Lines                    "));
+        Serial.println(testLines(ILI9341_CYAN));
+        delay(500);
 
-    Serial.print(F("Horiz/Vert Lines         "));
-    Serial.println(testFastLines(ILI9341_RED, ILI9341_BLUE));
-    delay(500);
+        Serial.print(F("Horiz/Vert Lines         "));
+        Serial.println(testFastLines(ILI9341_RED, ILI9341_BLUE));
+        delay(500);
 
-    Serial.print(F("Rectangles (outline)     "));
-    Serial.println(testRects(ILI9341_GREEN));
-    delay(500);
+        Serial.print(F("Rectangles (outline)     "));
+        Serial.println(testRects(ILI9341_GREEN));
+        delay(500);
 
-    Serial.print(F("Rectangles (filled)      "));
-    Serial.println(testFilledRects(ILI9341_YELLOW, ILI9341_MAGENTA));
-    delay(500);
+        Serial.print(F("Rectangles (filled)      "));
+        Serial.println(testFilledRects(ILI9341_YELLOW, ILI9341_MAGENTA));
+        delay(500);
 
-    Serial.print(F("Circles (filled)         "));
-    Serial.println(testFilledCircles(10, ILI9341_MAGENTA));
+        Serial.print(F("Circles (filled)         "));
+        Serial.println(testFilledCircles(10, ILI9341_MAGENTA));
 
-    Serial.print(F("Circles (outline)        "));
-    Serial.println(testCircles(10, ILI9341_WHITE));
-    delay(500);
+        Serial.print(F("Circles (outline)        "));
+        Serial.println(testCircles(10, ILI9341_WHITE));
+        delay(500);
 
-    Serial.print(F("Triangles (outline)      "));
-    Serial.println(testTriangles());
-    delay(500);
+        Serial.print(F("Triangles (outline)      "));
+        Serial.println(testTriangles());
+        delay(500);
 
-    Serial.print(F("Triangles (filled)       "));
-    Serial.println(testFilledTriangles());
-    delay(500);
+        Serial.print(F("Triangles (filled)       "));
+        Serial.println(testFilledTriangles());
+        delay(500);
 
-    Serial.print(F("Rounded rects (outline)  "));
-    Serial.println(testRoundRects());
-    delay(500);
+        Serial.print(F("Rounded rects (outline)  "));
+        Serial.println(testRoundRects());
+        delay(500);
 
-    Serial.print(F("Rounded rects (filled)   "));
-    Serial.println(testFilledRoundRects());
-    delay(500);
+        Serial.print(F("Rounded rects (filled)   "));
+        Serial.println(testFilledRoundRects());
+        delay(500);
 
-    Serial.println(F("Done!"));
+        Serial.println(F("Done!"));
+    }
 
     Serial.println("Display Connection setup complete!");
 }
