@@ -477,15 +477,14 @@ public:
       FillRotatedRect,
       DrawChar,
       SetTextSize,
-      SetCursor,
-      SetTextColor,
-      SetTextWrap,
+      //SetCursor,
+      //SetTextColor,
+      //SetTextWrap,
 
       // @TODO add support for setFont
       // @TODO add support for drawing bitmaps...
   };
   static inline constexpr uint16_t GraphicsDeviceBaseAddress = 0x01'00;
-  static inline constexpr uint16_t GraphicsDeviceAddress_Available = GraphicsDeviceBaseAddress;
   static inline constexpr uint16_t GraphicsDeviceAddress_SetRotation = GraphicsDeviceBaseAddress + 0x02;
   static inline constexpr uint16_t GraphicsDeviceAddress_Width = GraphicsDeviceBaseAddress + 0x04;
   static inline constexpr uint16_t GraphicsDeviceAddress_Height = GraphicsDeviceBaseAddress + 0x06;
@@ -528,9 +527,9 @@ public:
       [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
       [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
       [](const MC& args) noexcept { tft.setTextSize(args.getWord(1), args.getWord(2)); },
-      [](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
-      [](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
-      [](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
+      //[](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
+      //[](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
+      //[](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
   };
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
@@ -597,6 +596,19 @@ private:
           case 0x00'48:
               cacheLine.setWord32(2, OnboardSRAM2CacheSize); 
               break;
+          case 0x0100:
+          case 0x0102:
+              cacheLine.setWord(0, tft.width(), ActionKind::Full16);
+              cacheLine.setWord(1, tft.height(), ActionKind::Full16);
+              break;
+          case 0x0104:
+              cacheLine.setWord(2, tft.getRotation(), ActionKind::Low8);
+              break;
+          case 0x0108:
+          case 0x010a:
+              cacheLine.setWord(4, tft.getCursorX(), ActionKind::Full16);
+              cacheLine.setWord(5, tft.getCursorY(), ActionKind::Full16);
+              break;
           default:
               break;
       }
@@ -613,28 +625,41 @@ private:
       // properly. Only the lowest mapped device.
       //
       switch (offset) {
-          case 0x00'08:
+          case 0x0008:
               // okay, so we actually only care about the lower word anyways
               Serial.write(static_cast<uint8_t>(cacheLine.getWord(4)));
               break;
-          case 0x00'0c:
+          case 0x000c:
               Serial.flush();
               break;
-          case 0x00'2e: 
+          case 0x002e: 
               if (cacheLine.getWord32(3) != 0) {
                   rtc.enable32K();
               } else {
                   rtc.disable32K();
               }
               break;
-          case 0x00'34: // system counter enable
+          case 0x0034: // system counter enable
               systemCounterEnabled = cacheLine.getWord(2) != 0;
               break;
-          case 0x01'00: 
-              // carry out a display operation
-              // compute the next cache line here to keep addresses sync'd
+          case 0x0104: 
+              [](uint16_t value){
+                  tft.setRotation(static_cast<uint8_t>(value));
+                  tft.invertDisplay(static_cast<uint8_t>(value >> 8) != 0);
+              }(cacheLine.getWord(2));
               break;
-          case 0x01'10:
+          case 0x0106:
+              tft.setTextWrap(static_cast<uint8_t>(cacheLine.getWord(3)) != 0);
+              break;
+          case 0x0108:
+          case 0x010a:
+              tft.setCursor(cacheLine.getWord(4), cacheLine.getWord(5));
+              break;
+          case 0x010c:
+          case 0x010e:
+              tft.setTextColor(cacheLine.getWord(6), cacheLine.getWord(7));
+              break;
+          case 0x0110:
               dispatchDrawOperation(cacheLine);
               break;
           default:
