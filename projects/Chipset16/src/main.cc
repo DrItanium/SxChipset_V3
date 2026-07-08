@@ -482,13 +482,15 @@ public:
       // @TODO add support for drawing bitmaps...
   };
   static inline constexpr uint16_t GraphicsDeviceBaseAddress = 0x01'00;
-  static inline constexpr uint16_t GraphicsDeviceAddress_SetRotation = GraphicsDeviceBaseAddress + 0x02;
-  static inline constexpr uint16_t GraphicsDeviceAddress_Width = GraphicsDeviceBaseAddress + 0x04;
-  static inline constexpr uint16_t GraphicsDeviceAddress_Height = GraphicsDeviceBaseAddress + 0x06;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Width = GraphicsDeviceBaseAddress;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Height = GraphicsDeviceBaseAddress + 0x02;
+  static inline constexpr uint16_t GraphicsDeviceAddress_SetRotation = GraphicsDeviceBaseAddress + 0x04;
+  static inline constexpr uint16_t GraphicsDeviceAddress_Invert = GraphicsDeviceBaseAddress + 0x05;
+  static inline constexpr uint16_t GraphicsDeviceAddress_TextWrap = GraphicsDeviceBaseAddress + 0x06;
   static inline constexpr uint16_t GraphicsDeviceAddress_CursorX = GraphicsDeviceBaseAddress + 0x08;
   static inline constexpr uint16_t GraphicsDeviceAddress_CursorY = GraphicsDeviceBaseAddress + 0x0a;
-  static inline constexpr uint16_t GraphicsDeviceAddress_Invert = GraphicsDeviceBaseAddress + 0x0c;
-  static inline constexpr uint16_t GraphicsCommandAddress_ReturnBase = GraphicsDeviceBaseAddress + 0x0e; 
+  static inline constexpr uint16_t GraphicsDeviceAddress_ColorFG = GraphicsDeviceBaseAddress + 0x0c;
+  static inline constexpr uint16_t GraphicsDeviceAddress_ColorBG = GraphicsDeviceBaseAddress + 0x0e;
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
@@ -587,7 +589,7 @@ private:
           case 0x00'38:
               cacheLine.setWord32(2, Entropy.random());
               break;
-          case 0x00'44: // sram cache size (~61k)
+          case 0x00'44: // sram cache size (~64k)
               cacheLine.setWord32(1, OnboardSRAM1CacheSize);
               break;
           case 0x00'48:
