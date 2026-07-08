@@ -503,39 +503,6 @@ public:
   static inline constexpr uint16_t GraphicsDevice_LinePort = GraphicsCommandBaseAddress + 0x50;
   static inline constexpr uint16_t GraphicsDevice_PixelPort = GraphicsCommandBaseAddress + 0x50;
 
-  template<MemoryCell MC>
-  using GraphicsOperation = void (*)(const MC&) noexcept;
-  template<MemoryCell MC>
-  static inline const GraphicsOperation<MC> GraphicsOperationTable[256] {
-      // these are direction sensitive
-      [](const MC&) noexcept { },
-      [](const MC& args) noexcept { tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
-      [](const MC&) noexcept { tft.startWrite(); },
-      [](const MC&) noexcept { tft.endWrite(); },
-      [](const MC& args) noexcept { tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3)); },
-      [](const MC& args) noexcept { tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.fillScreen(args.getWord(1)); },
-      [](const MC& args) noexcept { tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4)); },
-      [](const MC& args) noexcept { tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5)); },
-      [](const MC& args) noexcept { tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
-      [](const MC& args) noexcept { tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
-      [](const MC& args) noexcept { tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const MC& args) noexcept { tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const MC& args) noexcept { tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
-      [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
-      [](const MC& args) noexcept { tft.setTextSize(args.getWord(1), args.getWord(2)); },
-  };
   union DecomposedGraphicsOpcode {
         uint16_t raw;
         struct {
