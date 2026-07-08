@@ -474,9 +474,6 @@ public:
       FillRotatedRect,
       DrawChar,
       SetTextSize,
-      //SetCursor,
-      //SetTextColor,
-      //SetTextWrap,
 
       // @TODO add support for setFont
       // @TODO add support for drawing bitmaps...
@@ -539,11 +536,117 @@ public:
       [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
       [](const MC& args) noexcept { tft.setTextSize(args.getWord(1), args.getWord(2)); },
   };
+  union DecomposedGraphicsOpcode {
+        uint16_t raw;
+        struct {
+            uint16_t drawFill : 1;
+            uint16_t kind : 2;
+            uint16_t otherFlags : 5;
+            uint16_t offshoot : 5;
+            uint16_t primary : 3;
+        };
+        constexpr bool performFill() const noexcept { return drawFill != 0; }
+  };
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
-      auto fn = GraphicsOperationTable<MC>[static_cast<uint8_t>(args.getWord(0))];
-      if (fn) {
-          fn(args);
+      DecomposedGraphicsOpcode opcode;
+      opcode.raw = args.getWord(0);
+      switch (opcode.primary) {
+          case 0: // shape
+              switch (opcode.offshoot) {
+                  case 0: // circle
+                      if (opcode.performFill()) {
+                        tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+                      } else {
+                        tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+                      }
+                      break;
+                  case 1: // rect
+                      switch (opcode.kind) {
+                          case 0: // normal
+                            if (opcode.performFill()) {
+                                tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+                            } else {
+                                tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+                            }
+                            break;
+                          case 1: // square
+                            if (opcode.performFill()) {
+                                tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
+                            } else {
+                                tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
+                            }
+                            break;
+                         case 2: // rounded rectangle
+                            if (opcode.performFill()) {
+                                tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+                            } else {
+                                tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+                            }
+                            break;
+                         case 3: // rotated rectangle
+                            if (opcode.performFill()) {
+                                tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+                            } else {
+                                tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+                            }
+                            break;
+                         default:
+                            break;
+                      }
+                      break;
+                  case 2: // ellipse
+                      if (opcode.performFill()) {
+                        tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+                      } else {
+                        tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+                      }
+                      break;
+                  case 3: // triangle
+                      if (opcode.performFill()) {
+                        tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+                      } else {
+                        tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+                      }
+                      break;
+                  default:
+                      break;
+              }
+              break;
+          case 1: // draw
+              switch (opcode.offshoot) {
+                  case 0: // pixel
+                      tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
+                      break;
+                  case 1: // char
+                      tft.drawChar( args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+                      break;
+                  case 2: // fill screen
+                      tft.fillScreen(args.getWord(1));
+                      break;
+                  case 3: // line
+                      switch (opcode.kind) {
+                          case 1: // fast vertical line
+                              tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+                              break;
+                          case 2: // fast horizontal line
+                              tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+                              break;
+                          default:
+                              tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+                              break;
+                      }
+                      break;
+                  default:
+                      break;
+              }
+              break;
+          case 2: // set
+                  // assume text size for now
+              tft.setTextSize(args.getWord(1), args.getWord(2));
+              break;
+          default:
+              break;
       }
   }
 
