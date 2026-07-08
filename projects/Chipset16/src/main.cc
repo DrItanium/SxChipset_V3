@@ -442,42 +442,6 @@ public:
       }
   }
 
-  enum class GraphicsAction : uint8_t {
-      // taken from the Adafruit_GFX header
-      None,
-      DrawPixel,
-      // from the transaction API
-      StartWrite,
-      EndWrite,
-      WritePixel,
-      WriteFillRect,
-      WriteFastVLine,
-      WriteFastHLine,
-      WriteLine,
-      // control api
-      // basic draw api
-      DrawFastVLine,
-      DrawFastHLine,
-      FillRect,
-      FillScreen,
-      DrawLine,
-      DrawRect,
-      DrawCircle,
-      FillCircle,
-      DrawEllipse,
-      FillEllipse,
-      DrawTriangle,
-      FillTriangle,
-      DrawRoundRect,
-      FillRoundRect,
-      DrawRotatedRect,
-      FillRotatedRect,
-      DrawChar,
-      SetTextSize,
-
-      // @TODO add support for setFont
-      // @TODO add support for drawing bitmaps...
-  };
   static inline constexpr uint16_t GraphicsDeviceBaseAddress = 0x01'00;
   static inline constexpr uint16_t GraphicsDeviceAddress_Width = GraphicsDeviceBaseAddress;
   static inline constexpr uint16_t GraphicsDeviceAddress_Height = GraphicsDeviceBaseAddress + 0x02;
@@ -503,114 +467,74 @@ public:
   static inline constexpr uint16_t GraphicsDevice_LinePort = GraphicsCommandBaseAddress + 0x50;
   static inline constexpr uint16_t GraphicsDevice_PixelPort = GraphicsCommandBaseAddress + 0x50;
 
-  union DecomposedGraphicsOpcode {
-        uint16_t raw;
-        struct {
-            uint16_t drawFill : 1;
-            uint16_t kind : 2;
-            uint16_t otherFlags : 5;
-            uint16_t offshoot : 5;
-            uint16_t primary : 3;
-        };
-        constexpr bool performFill() const noexcept { return drawFill != 0; }
-  };
+  // ignore the multicharacter constant
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
-      DecomposedGraphicsOpcode opcode;
-      opcode.raw = args.getWord(0);
-      switch (opcode.primary) {
-          case 0: // shape
-              switch (opcode.offshoot) {
-                  case 0: // circle
-                      if (opcode.performFill()) {
-                        tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
-                      } else {
-                        tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
-                      }
-                      break;
-                  case 1: // rect
-                      switch (opcode.kind) {
-                          case 0: // normal
-                            if (opcode.performFill()) {
-                                tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
-                            } else {
-                                tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
-                            }
-                            break;
-                          case 1: // square
-                            if (opcode.performFill()) {
-                                tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
-                            } else {
-                                tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
-                            }
-                            break;
-                         case 2: // rounded rectangle
-                            if (opcode.performFill()) {
-                                tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
-                            } else {
-                                tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
-                            }
-                            break;
-                         case 3: // rotated rectangle
-                            if (opcode.performFill()) {
-                                tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
-                            } else {
-                                tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
-                            }
-                            break;
-                         default:
-                            break;
-                      }
-                      break;
-                  case 2: // ellipse
-                      if (opcode.performFill()) {
-                        tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
-                      } else {
-                        tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
-                      }
-                      break;
-                  case 3: // triangle
-                      if (opcode.performFill()) {
-                        tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
-                      } else {
-                        tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
-                      }
-                      break;
-                  default:
-                      break;
-              }
+      // use ascii strings to define the set of operations in such a way as to
+      // make it easy to encode
+      switch (args.getWord(0)) {
+          case 'FC': // Fill Circle
+              tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 1: // draw
-              switch (opcode.offshoot) {
-                  case 0: // pixel
-                      tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
-                      break;
-                  case 1: // char
-                      tft.drawChar( args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
-                      break;
-                  case 2: // fill screen
-                      tft.fillScreen(args.getWord(1));
-                      break;
-                  case 3: // line
-                      switch (opcode.kind) {
-                          case 1: // fast vertical line
-                              tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
-                              break;
-                          case 2: // fast horizontal line
-                              tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
-                              break;
-                          default:
-                              tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
-                              break;
-                      }
-                      break;
-                  default:
-                      break;
-              }
+          case 'DC': // Draw Circle
+              tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 2: // set
-                  // assume text size for now
+          case 'TS': // set Text Size
               tft.setTextSize(args.getWord(1), args.getWord(2));
+              break;
+          case 'DP': // Draw Pixel
+              tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              break;
+          case 'DH': // Draw cHar
+              tft.drawChar( args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+              break;
+          case 'SF': // Screen Fill
+              tft.fillScreen(args.getWord(1));
+              break;
+          case 'FR': // Fill Rect
+              tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
+          case 'DR': // Draw Rect
+              tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
+          case 'FS': // Fill Square
+              tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
+              break;
+          case 'DS': // Draw Square
+              tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
+              break;
+          case 'FU': // Fill roUnd rect
+              tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+              break;
+          case 'DU': // Draw roUnd rect
+              tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+              break;
+          case 'FO': // Fill rOtated rect
+              tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+              break;
+          case 'DO': // Draw rOtated rect
+              tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
+              break;
+          case 'FE': // Fill Ellipse
+              tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
+          case 'DE': // Draw Ellipse
+              tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
+          case 'FT': // Fill Triangle
+              tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+              break;
+          case 'DT': // Draw Triangle
+              tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
+              break;
+          case 'VL': // draw fast Vertical Line
+              tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+              break;
+          case 'HL': // draw fast Horizontal Line
+              tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+              break;
+          case 'DL': // Draw Line
+              tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
           default:
               break;
