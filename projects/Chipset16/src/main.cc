@@ -494,6 +494,18 @@ public:
   // allow a full operation to be written at the same time into this area of memory, we support up to 7 arguments
   static inline constexpr uint16_t GraphicsCommandBaseAddress = GraphicsDeviceBaseAddress + 0x00'10;
   static inline constexpr uint16_t GraphicsCommandAddress_OpcodeBase = GraphicsCommandBaseAddress;
+  // these are quick access mapings
+  static inline constexpr uint16_t GraphicsDevicePrintPort = GraphicsCommandBaseAddress + 0x10;
+  static inline constexpr uint16_t GraphicsDeviceScreenFillPort = GraphicsDevicePrintPort + 0x02;
+  static inline constexpr uint16_t GraphicsDeviceStartWritePort = GraphicsDevicePrintPort + 0x04;
+  static inline constexpr uint16_t GraphicsDeviceStopWritePort = GraphicsDevicePrintPort + 0x06;
+  // fast access to various Adafruit_GFX routines
+  static inline constexpr uint16_t GraphicsDevice_TrianglePort = GraphicsCommandBaseAddress + 0x20;
+  static inline constexpr uint16_t GraphicsDevice_RectanglePort = GraphicsCommandBaseAddress + 0x30;
+  static inline constexpr uint16_t GraphicsDevice_CirclePort = GraphicsCommandBaseAddress + 0x40;
+  static inline constexpr uint16_t GraphicsDevice_LinePort = GraphicsCommandBaseAddress + 0x50;
+  static inline constexpr uint16_t GraphicsDevice_PixelPort = GraphicsCommandBaseAddress + 0x50;
+
   template<MemoryCell MC>
   using GraphicsOperation = void (*)(const MC&) noexcept;
   template<MemoryCell MC>
@@ -526,9 +538,6 @@ public:
       [](const MC& args) noexcept { tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6)); },
       [](const MC& args) noexcept { tft.drawChar(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7)); },
       [](const MC& args) noexcept { tft.setTextSize(args.getWord(1), args.getWord(2)); },
-      //[](const MC& args) noexcept { tft.setCursor(args.getWord(1), args.getWord(2)); },
-      //[](const MC& args) noexcept { tft.setTextColor(args.getWord(1), args.getWord(2)); },
-      //[](const MC& args) noexcept { tft.setTextWrap(args.getWord(1) != 0); },
   };
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
@@ -604,16 +613,16 @@ private:
           case 0x00'60:
               cacheLine.setWord64(0, systemCounter);
               break;
-          case 0x0100:
-          case 0x0102:
+          case GraphicsDeviceAddress_Width:
+          case GraphicsDeviceAddress_Height:
               cacheLine.setWord(0, tft.width(), ActionKind::Full16);
               cacheLine.setWord(1, tft.height(), ActionKind::Full16);
               break;
-          case 0x0104:
+          case GraphicsDeviceAddress_SetRotation:
               cacheLine.setWord(2, tft.getRotation(), ActionKind::Low8);
               break;
-          case 0x0108:
-          case 0x010a:
+          case GraphicsDeviceAddress_CursorX:
+          case GraphicsDeviceAddress_CursorY:
               cacheLine.setWord(4, tft.getCursorX(), ActionKind::Full16);
               cacheLine.setWord(5, tft.getCursorY(), ActionKind::Full16);
               break;
@@ -653,25 +662,38 @@ private:
           case 0x0060: // system counter override
               systemCounter = cacheLine.getWord64(0);
               break;
-          case 0x0104: 
+          case GraphicsDeviceAddress_SetRotation: 
+          case GraphicsDeviceAddress_Invert:
               [](uint16_t value){
                   tft.setRotation(static_cast<uint8_t>(value));
                   tft.invertDisplay(static_cast<uint8_t>(value >> 8) != 0);
               }(cacheLine.getWord(2));
               break;
-          case 0x0106:
+          case GraphicsDeviceAddress_TextWrap:
               tft.setTextWrap(static_cast<uint8_t>(cacheLine.getWord(3)) != 0);
               break;
-          case 0x0108:
-          case 0x010a:
+          case GraphicsDeviceAddress_CursorX:
+          case GraphicsDeviceAddress_CursorY:
               tft.setCursor(cacheLine.getWord(4), cacheLine.getWord(5));
               break;
-          case 0x010c:
-          case 0x010e:
+          case GraphicsDeviceAddress_ColorFG:
+          case GraphicsDeviceAddress_ColorBG:
               tft.setTextColor(cacheLine.getWord(6), cacheLine.getWord(7));
               break;
-          case 0x0110:
+          case GraphicsCommandAddress_OpcodeBase:
               dispatchDrawOperation(cacheLine);
+              break;
+          case GraphicsDevicePrintPort:
+              tft.print(static_cast<char>(cacheLine.getWord(0)));
+              break;
+          case GraphicsDeviceScreenFillPort:
+              tft.fillScreen(cacheLine.getWord(0));
+              break;
+          case GraphicsDeviceStartWritePort:
+              tft.startWrite();
+              break;
+          case GraphicsDeviceStopWritePort:
+              tft.endWrite();
               break;
           default:
               break;
