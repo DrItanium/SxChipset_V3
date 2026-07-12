@@ -554,6 +554,9 @@ public:
           case GraphicsOpcode::WriteFastHorizontalLine:
               tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
+          case GraphicsOpcode::WriteLine:
+              tft.writeLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
           default:
               break;
       }
