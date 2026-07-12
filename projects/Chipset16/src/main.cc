@@ -545,7 +545,7 @@ public:
           case GraphicsOpcode::WritePixel:
               tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
               break;
-          case GraphicsOpcode::WriteFillRect:
+          case GraphicsOpcode::WriteFillRectangle:
               tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
           case GraphicsOpcode::WriteFastVerticalLine:
