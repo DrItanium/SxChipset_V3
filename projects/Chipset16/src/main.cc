@@ -536,6 +536,24 @@ public:
           case GraphicsOpcode::DrawLine:
               tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
+          case GraphicsOpcode::StartWrite:
+              tft.startWrite();
+              break;
+          case GraphicsOpcode::EndWrite:
+              tft.endWrite();
+              break;
+          case GraphicsOpcode::WritePixel:
+              tft.writePixel(args.getWord(1), args.getWord(2), args.getWord(3));
+              break;
+          case GraphicsOpcode::WriteFillRect:
+              tft.writeFillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
+              break;
+          case GraphicsOpcode::WriteFastVerticalLine:
+              tft.writeFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+              break;
+          case GraphicsOpcode::WriteFastHorizontalLine:
+              tft.writeFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
+              break;
           default:
               break;
       }
