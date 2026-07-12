@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FlexIO.h"
 #include <fileuids.h>
 #include "EBI.h"
+#include <GraphicsCommands.h>
 
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
@@ -466,74 +467,73 @@ public:
   static inline constexpr uint16_t GraphicsDevice_CirclePort = GraphicsCommandBaseAddress + 0x40;
   static inline constexpr uint16_t GraphicsDevice_LinePort = GraphicsCommandBaseAddress + 0x50;
   static inline constexpr uint16_t GraphicsDevice_PixelPort = GraphicsCommandBaseAddress + 0x50;
-
   // ignore the multicharacter constant
   template<MemoryCell MC>
   static void dispatchDrawOperation(const MC& args) noexcept {
       // use ascii strings to define the set of operations in such a way as to
       // make it easy to encode
-      switch (args.getWord(0)) {
-          case 'FC': // Fill Circle
+      switch (static_cast<GraphicsOpcode>(args.getWord(0))) {
+          case GraphicsOpcode::FillCircle:
               tft.fillCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 'DC': // Draw Circle
+          case GraphicsOpcode::DrawCircle:
               tft.drawCircle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 'TS': // set Text Size
+          case GraphicsOpcode::SetTextSize:
               tft.setTextSize(args.getWord(1), args.getWord(2));
               break;
-          case 'DP': // Draw Pixel
+          case GraphicsOpcode::DrawPixel:
               tft.drawPixel(args.getWord(1), args.getWord(2), args.getWord(3));
               break;
-          case 'DH': // Draw cHar
+          case GraphicsOpcode::DrawCharacter:
               tft.drawChar( args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
               break;
-          case 'SF': // Screen Fill
+          case GraphicsOpcode::ScreenFill:
               tft.fillScreen(args.getWord(1));
               break;
-          case 'FR': // Fill Rect
+          case GraphicsOpcode::FillRectangle:
               tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
-          case 'DR': // Draw Rect
+          case GraphicsOpcode::DrawRectangle:
               tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
-          case 'FS': // Fill Square
+          case GraphicsOpcode::FillSquare:
               tft.fillRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
               break;
-          case 'DS': // Draw Square
+          case GraphicsOpcode::DrawSquare:
               tft.drawRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(3), args.getWord(4));
               break;
-          case 'FU': // Fill roUnd rect
+          case GraphicsOpcode::FillRoundedRectangle:
               tft.fillRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
               break;
-          case 'DU': // Draw roUnd rect
+          case GraphicsOpcode::DrawRoundedRectangle:
               tft.drawRoundRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
               break;
-          case 'FO': // Fill rOtated rect
+          case GraphicsOpcode::FillRotatedRectangle:
               tft.fillRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
               break;
-          case 'DO': // Draw rOtated rect
+          case GraphicsOpcode::DrawRotatedRectangle:
               tft.drawRotatedRect(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6));
               break;
-          case 'FE': // Fill Ellipse
+          case GraphicsOpcode::FillEllipse:
               tft.fillEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
-          case 'DE': // Draw Ellipse
+          case GraphicsOpcode::DrawEllipse:
               tft.drawEllipse(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
-          case 'FT': // Fill Triangle
+          case GraphicsOpcode::FillTriangle:
               tft.fillTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
               break;
-          case 'DT': // Draw Triangle
+          case GraphicsOpcode::DrawTriangle:
               tft.drawTriangle(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5), args.getWord(6), args.getWord(7));
               break;
-          case 'VL': // draw fast Vertical Line
+          case GraphicsOpcode::DrawFastVerticalLine:
               tft.drawFastVLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 'HL': // draw fast Horizontal Line
+          case GraphicsOpcode::DrawFastHorizontalLine:
               tft.drawFastHLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4));
               break;
-          case 'DL': // Draw Line
+          case GraphicsOpcode::DrawLine:
               tft.drawLine(args.getWord(1), args.getWord(2), args.getWord(3), args.getWord(4), args.getWord(5));
               break;
           default:
