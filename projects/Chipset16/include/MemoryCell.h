@@ -45,6 +45,8 @@ concept MemoryCell = requires(T a) {
     { a.setWord64(0, 0) };
     { a.getWord32(0) } -> std::same_as<uint32_t>;
     { a.getWord64(0) } -> std::same_as<uint64_t>;
+    { a.getBuffer() } -> std::same_as<const uint8_t*>;
+    { a.length() } -> std::same_as<size_t>;
 };
 
 union MemoryCellBlock {
@@ -79,6 +81,8 @@ public:
   inline void setWord64(uint8_t offset, uint64_t value) noexcept { longWords[offset & 0b1] = value; }
   [[nodiscard]] inline constexpr uint32_t getWord32(uint8_t offset) const noexcept { return words[offset & 0b11]; }
   [[nodiscard]] inline constexpr auto getWord64(uint8_t offset) const noexcept { return longWords[offset & 0b1]; }
+  [[nodiscard]] inline const uint8_t* getBuffer() const noexcept { return bytes; }
+  [[nodiscard]] inline constexpr size_t length() const noexcept { return sizeof(bytes); }
 };
 
 struct NullBlock final {
@@ -89,6 +93,8 @@ struct NullBlock final {
     void setWord64(uint8_t, uint64_t) noexcept { }
     [[nodiscard]] constexpr uint32_t getWord32(uint8_t) const noexcept { return 0; }
     [[nodiscard]] constexpr uint64_t getWord64(uint8_t) const noexcept { return 0; }
+    [[nodiscard]] const uint8_t* getBuffer() const noexcept { return nullptr; }
+    [[nodiscard]] constexpr size_t length() const noexcept { return 0; }
 };
 
 #endif // end !defined CHIPSET_MEMORY_CELL_H__

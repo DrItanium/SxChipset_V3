@@ -560,6 +560,10 @@ public:
           default:
               break;
       }
+      // also, let's send some of this data over SerialUSB2 as well
+#ifdef USB_TRIPLE_SERIAL
+      SerialUSB2.write(args.getBuffer(), args.length());
+#endif
   }
 
 private:
