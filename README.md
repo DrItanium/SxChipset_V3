@@ -19,12 +19,12 @@ new terminal is run
 
 
 # Projects
-
+- Chipset16: Primary transaction handler that uses a far simpler 16-bit data bus (teensy uses this code)
 - ManagementEngine: Handles a bunch of the timing related aspects when interfacing with the i960Sx
-- Chipset: Primary transaction handler
+- PLD: Various PLD programs that I have written over the lifetime of this iteration of the chipset and previous ones. I use a tool called galette to compile them. The chips I use both the 5V (ATF22V10) and 3.3v (ATF22LV10) versions of the GAL22V10 plds. 
+- Chipset: Primary transaction handler (uses an 8-bit data bus and is _deprecated_)
 - research: contains code and sketches for different ideas I've had throughout the lifetime of this project
   - Fun fact: the code.py was actually used in my design since PIO programs are not affected by circuitpython slowness (I use FlexIO now)
-- PLD: Various PLD programs that I have written over the lifetime of this iteration of the chipset and previous ones. I use a tool called galette to compile them. The chips I use both the 5V (ATF22V10) and 3.3v (ATF22LV10) versions of the GAL22V10 plds. 
 
 # Goal
 
