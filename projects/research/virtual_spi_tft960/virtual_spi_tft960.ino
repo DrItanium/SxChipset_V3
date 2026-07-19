@@ -3,8 +3,6 @@
 // ST7789 or ILI9341, but shown on an HDMI monitor instead.
 #ifdef ARDUINO_ADAFRUIT_FEATHER_RP2040_DVI
 #include <PicoDVI.h> // Core display & graphics library
-#elif defined(ARDUINO_ADAFRUIT_FEATHER_RP2350_HSTX)
-#include <Adafruit_dvhstx.h>
 #else
 #error "Unsupported target"
 #endif
@@ -15,13 +13,8 @@
 #define PIN_DATA 9 // 3 contiguous pins start here: data, DC, clk
 #define PIN_CS   6 // Chip-select need not be contiguous
 
-#ifdef ARDUINO_ADAFRUIT_FEATHER_RP2040_DVI
 // 320x240 16-bit color display (to match common TFT display resolution):
 DVIGFX16 display(DVI_RES_320x240p60, adafruit_feather_dvi_cfg);
-#elif defined(ARDUINO_ADAFRUIT_FEATHER_RP2350_HSTX)
-DVHSTXPinout pinConfig = ADAFRUIT_FEATHER_RP2350_CFG;
-DVHSTX16 display(pinConfig, DVHSTX_RESOLUTION_320x240);
-#endif
 
 // Output of pioasm ----
 
