@@ -706,7 +706,7 @@ private:
               tft.print(static_cast<char>(cacheLine.getWord(0)));
               break;
           case GraphicsDeviceScreenFillPort:
-              tft.fillScreen(cacheLine.getWord(0));
+              tft.fillScreen(cacheLine.getWord(1));
               break;
           case GraphicsDeviceStartWritePort:
               tft.startWrite();
