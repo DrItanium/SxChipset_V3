@@ -129,7 +129,7 @@ using DataBlock = MemoryCellBlock[size / sizeof(MemoryCellBlock)];
 using DataBlock64k = DataBlock<0x10000>;
 // this is the backing storage of the first 64k of io space
 DataBlock64k ioSpaceCache;
-DataBlock64k displayCache[3];
+DMAMEM DataBlock64k displayCache[4];
 DMAMEM DataBlock64k dmaCache;
 
 // with the 16-bit data bus connection, things have changed somewhat
@@ -738,17 +738,20 @@ public:
                          }
                          break;
                      }
-          case 0x01:
-              doMemoryCellTransaction<isReadTransaction>(displayCache[0][sramIndex], lineOffset);
+          case 0x01: 
+              doMemoryCellTransaction<isReadTransaction>(dmaCache[sramIndex], lineOffset);
               break;
           case 0x02:
-              doMemoryCellTransaction<isReadTransaction>(displayCache[1][sramIndex], lineOffset);
+              doMemoryCellTransaction<isReadTransaction>(displayCache[0][sramIndex], lineOffset);
               break;
           case 0x03:
+              doMemoryCellTransaction<isReadTransaction>(displayCache[1][sramIndex], lineOffset);
+              break;
+          case 0x04:
               doMemoryCellTransaction<isReadTransaction>(displayCache[2][sramIndex], lineOffset);
               break;
-          case 0x04: 
-              doMemoryCellTransaction<isReadTransaction>(dmaCache[sramIndex], lineOffset);
+          case 0x05:
+              doMemoryCellTransaction<isReadTransaction>(displayCache[3][sramIndex], lineOffset);
               break;
           default:
               doMemoryCellTransaction<isReadTransaction>(nullSink, lineOffset);
