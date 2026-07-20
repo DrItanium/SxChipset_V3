@@ -54,6 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr uint32_t OnboardSRAMCacheSize = 0x10000;
 constexpr uint32_t OnboardSRAM1CacheSize = OnboardSRAMCacheSize - 0x1000;
 constexpr uint32_t OnboardSRAM2CacheSize = 0x10000;
+constexpr uint32_t OnboardDisplayCacheSize = 0x10000 * 4;
 constexpr auto MemoryPoolSizeInBytes = (16 * 1024 * 1024);  // 16 megabyte psram pool
 constexpr auto PrintStartupDiagnostics = false;
 uint64_t idleCycles = 0;
@@ -622,6 +623,9 @@ private:
               break;
           case 0x00'48:
               cacheLine.setWord32(2, OnboardSRAM2CacheSize); 
+              break;
+          case 0x00'4c:
+              cacheLine.setWord32(3, OnboardDisplayCacheSize);
               break;
           case 0x00'50:
               cacheLine.setWord64(0, idleCycles);
